@@ -1,0 +1,15 @@
+:root {
+  font-family: Inter, "Noto Sans SC", system-ui, sans-serif;
+  color: #101828;
+  background: #f8fafc;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --text: #101828;
+  --text-secondary: #667085;
+  --divider: #e4e7ec;
+  --brand: #155eef;
+  --brand-hover: #004eeb;
+  --positive: #039855;
+  --negative: #d92d20;
+  --pending: #dc6803;
+}

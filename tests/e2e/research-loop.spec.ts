@@ -1,0 +1,2 @@
+import { expect, test } from "@playwright/test";
+test("saves a thesis before paper purchase", async ({ page }) => { await page.goto("/"); await page.getByRole("link", { name: "研究 NVDA" }).click(); await page.getByRole("button", { name: "保存投资逻辑" }).click(); await expect(page.getByText("投资逻辑已保存")).toBeVisible(); await page.getByRole("button", { name: "确认模拟买入" }).click(); await page.getByRole("link", { name: "组合" }).click(); await expect(page.getByRole("row", { name: /NVDA/ })).toBeVisible(); });

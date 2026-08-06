@@ -1,0 +1,2 @@
+import { LocalPortfolioRepository } from "./localPortfolioRepository";
+export function PortfolioPage(){const positions=new LocalPortfolioRepository(localStorage).positions({NVDA:167.32});return <section><h1>模拟组合</h1>{positions.length? <table><tbody>{positions.map(p=><tr key={p.symbol}><th>{p.symbol}</th><td>{p.quantity}</td><td>{p.marketValue.toFixed(2)}</td><td>{p.unrealizedPnl.toFixed(2)}</td></tr>)}</tbody></table>:<p>尚无模拟持仓</p>}</section>}

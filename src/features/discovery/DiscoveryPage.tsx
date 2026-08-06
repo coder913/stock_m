@@ -7,6 +7,7 @@ import { ScreenerPanel } from "./ScreenerPanel";
 import { ScreenerResults } from "./ScreenerResults";
 import { ThemeView } from "./ThemeView";
 import { EventCalendar } from "./EventCalendar";
+import { WatchlistRepository } from "../watchlist/watchlistRepository";
 import { systemTemplates } from "./templates";
 import "./discovery.css";
 
@@ -29,13 +30,20 @@ export function DiscoveryPage({ onAddToWatchlist = () => undefined }: DiscoveryP
   const selectTemplate = (template: ScreenerTemplate) => { setSelectedTemplate(template); setConditions(copyConditions(template.conditions)); };
   const changeCondition = (id: string, value: number) => setConditions((current) => current.map((condition) => condition.id === id ? { ...condition, value } : condition));
   const save = () => { try { new SavedScreenRepository(localStorage).save({ name: screenName || selectedTemplate.name, conditions, sort }); setMessage("筛选已保存"); setScreenName(""); } catch { setMessage("保存失败，请重试"); } };
+  const addToWatchlist = (symbol: string) => {
+    onAddToWatchlist(symbol);
+    const group = new WatchlistRepository(localStorage).list()[0];
+    if (!group) { setMessage("请先在自选页创建分组"); return; }
+    new WatchlistRepository(localStorage).addSymbol(group.id, symbol);
+    setMessage(`${symbol} 已加入 ${group.name}`);
+  };
   return <section className="discovery-page">
     <header><p className="freshness">模拟数据 · 延迟 15 分钟</p><h1>发现</h1><p>用可解释条件寻找候选股票，而非生成买卖建议。</p></header>
     <nav className="discovery-tabs" aria-label="发现功能"><button type="button" aria-current={tab === "screen" ? "page" : undefined} onClick={() => setTab("screen")}>策略选股</button><button type="button" aria-current={tab === "themes" ? "page" : undefined} onClick={() => setTab("themes")}>市场主题</button><button type="button" aria-current={tab === "calendar" ? "page" : undefined} onClick={() => setTab("calendar")}>财报日历</button><button type="button" aria-current={tab === "saved" ? "page" : undefined} onClick={() => setTab("saved")}>已保存筛选</button></nav>
     {tab === "themes" ? <ThemeView themes={themes} /> : tab === "calendar" ? <EventCalendar events={events} /> : tab === "saved" ? <SavedScreens onRun={(conditions) => { setConditions(conditions); setTab("screen"); }} /> : <div className="discovery-layout"><ScreenerPanel templates={systemTemplates} conditions={conditions} onTemplateSelect={selectTemplate} onConditionValueChange={changeCondition} />
       <div className="screener-main"><div className="screener-toolbar"><strong>{results.length} 个匹配结果</strong><label>排序<select value={`${sort.metric}:${sort.direction}`} onChange={(event) => { const [metric, direction] = event.target.value.split(":") as [ScreenerMetric, "asc" | "desc"]; setSort({ metric, direction }); }}><option value="revenueGrowthYoY:desc">营收增长（高到低）</option><option value="price:asc">价格（低到高）</option></select></label></div>
       <div className="save-screen"><label>筛选名称<input value={screenName} onChange={(event) => setScreenName(event.target.value)} /></label><button type="button" onClick={save}>保存筛选</button><p role="status">{message}</p></div>
-      <ScreenerResults stocks={results} onAddToWatchlist={onAddToWatchlist} /></div></div>}
+      <ScreenerResults stocks={results} onAddToWatchlist={addToWatchlist} /></div></div>}
   </section>;
 }
 

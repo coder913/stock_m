@@ -72,3 +72,21 @@ export interface ScreenValidationError {
   code: "invalid-value" | "invalid-range" | "conflict";
   message: string;
 }
+
+export interface SavedScreen {
+  id: string;
+  name: string;
+  conditions: ScreenerCondition[];
+  sort: { metric: ScreenerMetric; direction: "asc" | "desc" };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketTheme {
+  id: string;
+  name: string;
+  kind: "industry" | "theme";
+  marketCapWeight: number;
+  changePercent: number;
+  valuationDeviation: number;
+}

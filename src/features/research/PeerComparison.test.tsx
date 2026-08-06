@@ -29,3 +29,12 @@ test("lets users remove a comparable company", async () => {
   await user.click(screen.getByRole("button", { name: "移除 AMD" }));
   expect(screen.queryByRole("row", { name: /AMD/ })).not.toBeInTheDocument();
 });
+
+test("lets users add an available comparable company", async () => {
+  const user = userEvent.setup();
+  const msft: StockSnapshot = { symbol: "MSFT", name: "微软", industry: "软件", metrics: { revenueGrowthYoY: 16, forwardPE: 30, operatingMargin: 45 } };
+  render(<PeerComparison peers={[peers[0]]} candidates={[msft]} period="TTM" source="stock_m demo dataset" />);
+  await user.selectOptions(screen.getByLabelText("添加可比公司"), "MSFT");
+  await user.click(screen.getByRole("button", { name: "添加公司" }));
+  expect(screen.getByRole("row", { name: /MSFT/ })).toBeVisible();
+});

@@ -57,7 +57,7 @@
 - Produces `PortfolioLedger.migrateLegacyOrders(): MigrationResult`.
 - Preserves `LocalPortfolioRepository.add(order)` as a compatibility adapter that appends a `buy` event.
 
-- [ ] **Step 1: Write failing ledger and migration tests**
+- [x] **Step 1: Write failing ledger and migration tests**
 
 ```ts
 import { beforeEach, expect, test } from "vitest";
@@ -116,13 +116,13 @@ test("migrates legacy orders exactly once", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/portfolio/portfolioLedger.test.ts`
 
 Expected: FAIL because `portfolioLedger.ts` and the new domain types do not exist.
 
-- [ ] **Step 3: Implement domain types and ledger validation**
+- [x] **Step 3: Implement domain types and ledger validation**
 
 ```ts
 export type LedgerEventType = "buy" | "sell" | "dividend" | "fee";
@@ -151,7 +151,7 @@ Use storage key `stock_m:portfolio-ledger:v1` and migration marker `stock_m:port
 
 Update `LocalPortfolioRepository.add` to call `PortfolioLedger.append`. Keep the existing `positions(prices)` implementation unchanged in Task 1 so the intermediate commit builds without importing Task 2 files that do not exist yet. Task 2 replaces `positions(prices)` with a `calculatePortfolio` adapter after analytics is available.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/portfolio/portfolioLedger.test.ts src/features/portfolio/localPortfolioRepository.test.ts src/features/research/ResearchFlow.test.tsx
@@ -175,7 +175,7 @@ git commit -m "feat: add immutable portfolio ledger"
 - Produces `calculatePortfolio(input: PortfolioAnalyticsInput): PortfolioAnalyticsResult`.
 - Produces `calculateDrawdown(values: number[]): { current: number; maximum: number }`.
 
-- [ ] **Step 1: Write failing analytics tests**
+- [x] **Step 1: Write failing analytics tests**
 
 ```ts
 import { expect, test } from "vitest";
@@ -254,19 +254,19 @@ test("calculates sector exposure, top-five concentration, and drawdown boundarie
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/portfolio/portfolioAnalytics.test.ts`
 
 Expected: FAIL because analytics functions do not exist.
 
-- [ ] **Step 3: Implement pure calculations**
+- [x] **Step 3: Implement pure calculations**
 
 Process events chronologically. Maintain quantity, remaining cost, and realized P&L per symbol. A partial sell uses the moving weighted average cost immediately before the sell. Dividends increase cash and cumulative P&L; fees decrease both. Calculate weights and exposures only when every open position has a price. Return `undefined` for valuation-dependent totals when any price is missing.
 
 Drawdown is a positive percentage from the running peak. The current drawdown uses the last value; maximum drawdown is the largest observed decline. Empty or single-value histories return zero.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/portfolio/portfolioAnalytics.test.ts src/features/portfolio/localPortfolioRepository.test.ts
@@ -291,7 +291,7 @@ git commit -m "feat: add portfolio analytics"
 - Produces `AlertRepository.reconcile(candidates, calculatedAt): PortfolioAlert[]`.
 - Produces `acknowledge(id)`, `snooze(id, until)`, `resolve(id)`, and `restoreDue(now)`.
 
-- [ ] **Step 1: Write failing threshold and lifecycle tests**
+- [x] **Step 1: Write failing threshold and lifecycle tests**
 
 ```ts
 import { beforeEach, expect, test } from "vitest";
@@ -350,13 +350,13 @@ test("snoozes and restores an alert on its due date", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/portfolio/alertEngine.test.ts src/features/portfolio/alertRepository.test.ts`
 
 Expected: FAIL because alert modules do not exist.
 
-- [ ] **Step 3: Implement exact approved rules**
+- [x] **Step 3: Implement exact approved rules**
 
 Evaluate:
 
@@ -369,7 +369,7 @@ Evaluate:
 
 Use `rule + symbol-or-portfolio + naturalPeriod` for `dedupeKey`. Reconciliation keeps a single active alert, upgrades severity, preserves user status unless a snooze is due, and stores the last successful calculation timestamp under `stock_m:portfolio-alerts:v1`.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/portfolio/alertEngine.test.ts src/features/portfolio/alertRepository.test.ts
@@ -392,7 +392,7 @@ git commit -m "feat: add portfolio risk alerts"
 - Produces `ReviewRepository.list(week?)`, `getSnapshot(id)`, and `diff(leftId, rightId)`.
 - Stores reviews under `stock_m:portfolio-reviews:v1` and snapshots under `stock_m:portfolio-snapshots:v1`.
 
-- [ ] **Step 1: Write failing version and immutability tests**
+- [x] **Step 1: Write failing version and immutability tests**
 
 ```ts
 import { beforeEach, expect, test } from "vitest";
@@ -445,19 +445,19 @@ test("allows a no-operation review", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/portfolio/reviewRepository.test.ts`
 
 Expected: FAIL because `ReviewRepository` does not exist.
 
-- [ ] **Step 3: Implement versioned writes and explicit diffs**
+- [x] **Step 3: Implement versioned writes and explicit diffs**
 
 The repository assigns the next version within a week, writes a deep-cloned snapshot before the review, and rolls back neither object silently if storage fails. Throw a typed `ReviewWriteError` containing the unchanged draft so the UI can retry.
 
 `diff` compares total value, cash, position quantities, open alert count, `judgment`, `action`, `result`, and `nextObservations`. It returns numerical changes plus a stable list of changed field names.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/portfolio/reviewRepository.test.ts
@@ -486,7 +486,7 @@ git commit -m "feat: add versioned weekly reviews"
 - Produces reusable `LedgerEventDialog({ defaultSymbol?, availableQuantity?, onSubmit })`.
 - Produces `createPortfolioTestDependencies(options?): PortfolioPageDependencies` for deterministic interaction tests.
 
-- [ ] **Step 1: Write failing page interaction tests**
+- [x] **Step 1: Write failing page interaction tests**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -528,13 +528,13 @@ test("records a dividend using the amount form", async () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/portfolio/PortfolioPage.test.tsx`
 
 Expected: FAIL because the page does not expose the approved tabs, analytics, or event dialog.
 
-- [ ] **Step 3: Implement focused portfolio components**
+- [x] **Step 3: Implement focused portfolio components**
 
 `PortfolioPage` owns active-tab state and dependency wiring only. `PortfolioOverview` renders accessible summary cards, an equity-history table paired with the visual chart, sector exposure, concentration, and risk contribution. `HoldingsAndLedger` renders semantic holdings and event-history tables.
 
@@ -550,7 +550,7 @@ Keep form values in state after write failure and expose `重试保存`. Show `�
 
 Update the research page’s simulated-buy action to append through `PortfolioLedger` and keep its existing thesis-first guard.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/portfolio/PortfolioPage.test.tsx src/features/research/ResearchFlow.test.tsx
@@ -576,7 +576,7 @@ git commit -m "feat: add portfolio analytics interface"
 - Produces working “复盘中心” tab and `/journal` history route.
 - Produces `createReviewTestDependencies(): ReviewCenterDependencies`.
 
-- [ ] **Step 1: Write failing alert and review interactions**
+- [x] **Step 1: Write failing alert and review interactions**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -610,13 +610,13 @@ test("prefills and versions a weekly review", async () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/portfolio/ReviewCenter.test.tsx`
 
 Expected: FAIL because `ReviewCenter` does not exist.
 
-- [ ] **Step 3: Implement alert actions, review drafts, and history**
+- [x] **Step 3: Implement alert actions, review drafts, and history**
 
 Sort active alerts by critical, warning, then info. Filter by open, snoozed, resolved, or all. Display severity text, rule, threshold, current value, source, and calculation time. Require a date for snooze.
 
@@ -626,7 +626,7 @@ Extend `portfolioTestFixtures.ts` with `createReviewTestDependencies()`. Seed on
 
 Replace the existing `/journal` route stub with review history using the same repository in read-only mode.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/portfolio/ReviewCenter.test.tsx src/app/AppShell.test.tsx
@@ -649,7 +649,7 @@ git commit -m "feat: add portfolio review center"
 - Consumes all Tasks 1–6.
 - Produces verified thesis-to-trade-to-alert-to-review flows using installed stable Chrome.
 
-- [ ] **Step 1: Add the complete browser flow**
+- [x] **Step 1: Add the complete browser flow**
 
 ```ts
 test("trades, handles a concentration alert, and submits a weekly review", async ({ page }) => {
@@ -675,7 +675,7 @@ test("trades, handles a concentration alert, and submits a weekly review", async
 });
 ```
 
-- [ ] **Step 2: Update documentation**
+- [x] **Step 2: Update documentation**
 
 Document:
 
@@ -693,7 +693,7 @@ npm run build
 npm run test:e2e
 ```
 
-- [ ] **Step 3: Run complete validation**
+- [x] **Step 3: Run complete validation**
 
 ```bash
 npm test
@@ -704,7 +704,7 @@ git diff --check
 
 Expected: all unit and interaction tests pass, TypeScript and Vite production build succeed, all Chrome browser flows pass, and the diff has no whitespace errors.
 
-- [ ] **Step 4: Mark this plan complete and commit**
+- [x] **Step 4: Mark this plan complete and commit**
 
 Change every completed checkbox in this plan from `[ ]` to `[x]`, then:
 

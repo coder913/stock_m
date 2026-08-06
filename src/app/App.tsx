@@ -2,7 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { TodayPage } from "../features/today/TodayPage";
 import { ResearchPage } from "../features/research/ResearchPage";
-import { PortfolioPage } from "../features/portfolio/PortfolioPage";
+import { JournalPage, PortfolioPage } from "../features/portfolio/PortfolioPage";
 import { DiscoveryPage } from "../features/discovery/DiscoveryPage";
 import { WatchlistPage } from "../features/watchlist/WatchlistPage";
 
@@ -17,7 +17,7 @@ export function App() {
           <Route path="discover" element={<DiscoveryPage />} />
           <Route path="watchlist" element={<WatchlistPage />} />
           <Route path="portfolio" element={<PortfolioPage />} />
-          <Route path="journal" element={<RoutePlaceholder title="日志" />} />
+          <Route path="journal" element={<JournalPage />} />
           <Route path="stocks/:symbol" element={<ResearchPage />} />
         </Route>
       </Routes>

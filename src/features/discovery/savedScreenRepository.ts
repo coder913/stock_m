@@ -33,7 +33,7 @@ export class SavedScreenRepository {
 
   duplicate(id: string): SavedScreen {
     const source = this.require(id);
-    return this.save({ name: `${source.name} 副本`, conditions: source.conditions, sort: source.sort });
+    return this.save({ name: `${source.name}副本`, conditions: source.conditions, sort: source.sort });
   }
 
   remove(id: string): void {

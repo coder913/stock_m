@@ -6,8 +6,9 @@ interface PeerComparisonProps { peers: StockSnapshot[]; period: "TTM" | "FY1" | 
 const metric = (value: number | undefined, suffix = "") => value === undefined ? "数据缺失" : `${value}${suffix}`;
 
 export function PeerComparison({ peers, period, source }: PeerComparisonProps) {
+  const [selected, setSelected] = useState(peers);
   if (period === "mixed") return <section><h2>同业比较</h2><p role="alert">财务周期不一致，无法进行直接比较。</p></section>;
-  return <section className="peer-comparison"><h2>同业比较</h2><p>{period} · {source}</p><table><thead><tr><th>代码</th><th>公司</th><th>营收增长</th><th>预期市盈率</th><th>营业利润率</th></tr></thead><tbody>{peers.slice(0, 5).map((peer) => <tr key={peer.symbol}><th scope="row">{peer.symbol}</th><td>{peer.name}</td><td>{metric(peer.metrics.revenueGrowthYoY, "%")}</td><td>{metric(peer.metrics.forwardPE)}</td><td>{metric(peer.metrics.operatingMargin, "%")}</td></tr>)}</tbody></table></section>;
+  return <section className="peer-comparison"><h2>同业比较</h2><p>{period} · {source}</p><table><thead><tr><th>代码</th><th>公司</th><th>营收增长</th><th>预期市盈率</th><th>营业利润率</th><th>操作</th></tr></thead><tbody>{selected.slice(0, 5).map((peer) => <tr key={peer.symbol}><th scope="row">{peer.symbol}</th><td>{peer.name}</td><td>{metric(peer.metrics.revenueGrowthYoY, "%")}</td><td>{metric(peer.metrics.forwardPE)}</td><td>{metric(peer.metrics.operatingMargin, "%")}</td><td><button type="button" onClick={() => setSelected((current) => current.filter((item) => item.symbol !== peer.symbol))}>移除 {peer.symbol}</button></td></tr>)}</tbody></table></section>;
 }
 
 export function ResearchPeerComparison({ symbol }: { symbol: string }) {

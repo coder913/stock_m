@@ -58,7 +58,7 @@
 - Produces provider-independent metric metadata for period and unit normalization.
 - Produces immutable `systemTemplates: readonly ScreenerTemplate[]`.
 
-- [ ] **Step 1: Write failing screening tests**
+- [x] **Step 1: Write failing screening tests**
 
 ```ts
 import { expect, test } from "vitest";
@@ -98,13 +98,13 @@ test("reports conflicting conditions on the same metric", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/discovery/screener.test.ts`
 
 Expected: FAIL because discovery modules do not exist.
 
-- [ ] **Step 3: Implement types and engine**
+- [x] **Step 3: Implement types and engine**
 
 ```ts
 export type ScreenerOperator = ">" | ">=" | "<" | "<=" | "=" | "between";
@@ -129,7 +129,7 @@ export interface StockSnapshot {
 
 `runScreen` must return false for missing or non-finite metric values. `between` includes both bounds. Invalid numeric input blocks execution and identifies its condition; conflicting bounds identify the shared metric. Define the exact four approved templates from the specification, freeze each system template and its condition array, and copy template conditions before editing.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/discovery/screener.test.ts
@@ -153,7 +153,7 @@ git commit -m "feat: add discovery screening engine"
 - Produces `DiscoveryRepository.listStocks()`, `listThemes()`, `listEvents()`, and `getPeers(symbol)` using a shared source/freshness/update-time envelope.
 - Produces `SavedScreenRepository.list()`, `save(input)`, `rename(id, name)`, `duplicate(id)`, and `remove(id)`.
 
-- [ ] **Step 1: Write failing repository tests**
+- [x] **Step 1: Write failing repository tests**
 
 ```ts
 test("saves independent screen definitions", () => {
@@ -171,19 +171,19 @@ test("returns source and freshness with discovery data", async () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify expected failure**
+- [x] **Step 2: Run tests and verify expected failure**
 
 Run: `npm test -- src/features/discovery/*Repository.test.ts`
 
 Expected: FAIL because repositories do not exist.
 
-- [ ] **Step 3: Implement repositories**
+- [x] **Step 3: Implement repositories**
 
 Store screens under `stock_m:saved-screens:v1`. Generate IDs with `crypto.randomUUID()`. Copy condition arrays on every read and write. `remove` deletes only the requested ID.
 
 The mock discovery repository returns at least NVDA, AAPL, MSFT, AMZN, AMD, LLY, and XOM, with complete documented metrics where available and intentional missing values for missing-data tests. Saved screens persist definitions and sorting only, never result rows. Repository errors are typed so the UI can retain an unsaved draft and retry.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/discovery
@@ -208,7 +208,7 @@ git commit -m "feat: add discovery repositories"
 - Consumes system templates, `runScreen`, repositories, and `onAddToWatchlist(symbol)`.
 - Produces functional `/discover` route.
 
-- [ ] **Step 1: Write failing interaction test**
+- [x] **Step 1: Write failing interaction test**
 
 ```tsx
 test("selecting a template updates conditions and matching results", async () => {
@@ -228,19 +228,19 @@ test("keeps a draft and offers retry when saving fails", async () => {
 });
 ```
 
-- [ ] **Step 2: Run test and verify expected failure**
+- [x] **Step 2: Run test and verify expected failure**
 
 Run: `npm test -- src/features/discovery/DiscoveryPage.test.tsx`
 
 Expected: FAIL because `DiscoveryPage` does not exist.
 
-- [ ] **Step 3: Implement page**
+- [x] **Step 3: Implement page**
 
 Render four tab buttons, four template buttons, accessible condition rows, result count, sorting, pagination, and a semantic results table with the approved default columns. Changes recalculate immediately. Render `研究 {symbol}` links and `加入自选 {symbol}` buttons. Display `数据缺失` for undefined metrics and source, update time, and `延迟 15 分钟` above results. Empty results explain which conditions can be relaxed.
 
 The “已保存筛选” tab runs, duplicates, renames, and removes saved screens. Saving a modified system template creates a user screen without mutating the template. At 1280 px hide nonessential columns; at 1024 px move the condition editor into a keyboard-accessible drawer.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/discovery/DiscoveryPage.test.tsx
@@ -266,7 +266,7 @@ git commit -m "feat: add strategy screener interface"
 - Produces `createGroup`, `renameGroup`, `moveGroup`, `removeGroup`, `restoreGroup`, `addSymbol`, and `removeSymbol`.
 - Consumes discovery result row actions.
 
-- [ ] **Step 1: Write failing soft-delete test**
+- [x] **Step 1: Write failing soft-delete test**
 
 ```ts
 test("removing and restoring a group preserves memberships", () => {
@@ -280,17 +280,17 @@ test("removing and restoring a group preserves memberships", () => {
 });
 ```
 
-- [ ] **Step 2: Run test and verify expected failure**
+- [x] **Step 2: Run test and verify expected failure**
 
 Run: `npm test -- src/features/watchlist`
 
 Expected: FAIL because watchlist modules do not exist.
 
-- [ ] **Step 3: Implement persistence and UI**
+- [x] **Step 3: Implement persistence and UI**
 
 Use storage key `stock_m:watchlists:v1`. A stock may belong to multiple groups. Render group creation, rename, ordering, soft delete, restore, and rows with price, valuation state, next event, and thesis state. Deleting a group must not modify research, thesis, or paper-portfolio repositories.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/watchlist
@@ -315,7 +315,7 @@ git commit -m "feat: add grouped watchlists"
 - Consumes repository themes, events, and peers.
 - Produces comparable-company table and discovery tab content.
 
-- [ ] **Step 1: Write failing period-mismatch test**
+- [x] **Step 1: Write failing period-mismatch test**
 
 ```tsx
 test("blocks direct comparison when financial periods differ", () => {
@@ -325,17 +325,17 @@ test("blocks direct comparison when financial periods differ", () => {
 });
 ```
 
-- [ ] **Step 2: Run test and verify expected failure**
+- [x] **Step 2: Run test and verify expected failure**
 
 Run: `npm test -- src/features/research/PeerComparison.test.tsx`
 
 Expected: FAIL because `PeerComparison` does not exist.
 
-- [ ] **Step 3: Implement views**
+- [x] **Step 3: Implement views**
 
 Theme rows provide industry and theme views; area represents market-cap weight, while direction symbol, percentage, and valuation deviation accompany color. Calendar supports week and list views, prioritizes watchlist and paper-portfolio symbols, and marks dates `预计` or `已确认`. Peer comparison defaults to no more than five same-industry, similar-market-cap companies, allows users to add or remove peers, and shows metric unit, period, source, and missing-data labels.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 npm test -- src/features/research/PeerComparison.test.tsx
@@ -357,7 +357,7 @@ git commit -m "feat: add themes events and peer comparison"
 - Consumes all Tasks 1–5.
 - Produces verified discovery-to-research user flow.
 
-- [ ] **Step 1: Add browser flow**
+- [x] **Step 1: Add browser flow**
 
 ```ts
 test("discovers NVDA and adds it to a watchlist", async ({ page }) => {
@@ -380,7 +380,7 @@ test("opens a prioritized watchlist event from the calendar", async ({ page }) =
 });
 ```
 
-- [ ] **Step 2: Update documentation**
+- [x] **Step 2: Update documentation**
 
 Document the four templates, saved-screen storage, grouped watchlists, delayed demo data, and commands:
 
@@ -390,7 +390,7 @@ npm run build
 npm run test:e2e
 ```
 
-- [ ] **Step 3: Run complete validation**
+- [x] **Step 3: Run complete validation**
 
 ```bash
 npm test
@@ -400,7 +400,7 @@ npm run test:e2e
 
 Expected: unit and interaction suites pass, production build succeeds, and both Playwright flows pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/e2e/discovery-flow.spec.ts README.md vite.config.ts

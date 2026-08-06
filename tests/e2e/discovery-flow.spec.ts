@@ -8,6 +8,8 @@ test("discovers NVDA, adds it to a watchlist, and opens research", async ({ page
   await page.getByRole("button", { name: "高质量成长" }).click();
   await expect(page.getByRole("row", { name: /NVDA/ })).toBeVisible();
   await page.getByRole("button", { name: "加入自选 NVDA" }).click();
+  await page.getByLabel("自选分组").selectOption({ label: "AI 基础设施" });
+  await page.getByRole("button", { name: "确认加入" }).click();
   await expect(page.getByRole("status")).toContainText("NVDA 已加入 AI 基础设施");
   await page.getByRole("link", { name: "研究 NVDA" }).click();
   await expect(page.getByRole("heading", { name: /NVDA/ })).toBeVisible();

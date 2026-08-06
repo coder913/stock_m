@@ -1,0 +1,14 @@
+import type { PortfolioSnapshot, ReviewDiff, WeeklyReview, WeeklyReviewInput } from "./domain";
+const reviewKey = "stock_m:portfolio-reviews:v1"; const snapshotKey = "stock_m:portfolio-snapshots:v1";
+const clone = <T,>(value: T): T => structuredClone(value); const frozen = <T extends object>(value: T): T => Object.freeze(clone(value));
+
+export class ReviewRepository {
+  constructor(private readonly storage: Storage) {}
+  submit(input: WeeklyReviewInput): WeeklyReview { const reviews = this.readReviews(); const snapshots = this.readSnapshots(); const version = reviews.filter((review) => review.week === input.week).length + 1; const snapshot = frozen({ ...clone(input.snapshot), id: globalThis.crypto?.randomUUID?.() ?? `snapshot-${Date.now()}` }); const review = frozen({ id: globalThis.crypto?.randomUUID?.() ?? `review-${Date.now()}`, week: input.week, version, snapshotId: snapshot.id, judgment: input.judgment, action: input.action, result: input.result, nextObservations: [...input.nextObservations], createdAt: new Date().toISOString(), summary: { tradeCount: input.events.length, openAlertCount: input.alerts.filter((alert) => alert.status === "open").length } }); snapshots.push(snapshot); reviews.push(review); this.storage.setItem(snapshotKey, JSON.stringify(snapshots)); this.storage.setItem(reviewKey, JSON.stringify(reviews)); return review; }
+  list(week?: string): WeeklyReview[] { return this.readReviews().filter((review) => !week || review.week === week).map(frozen); }
+  getSnapshot(id: string): PortfolioSnapshot { const snapshot = this.readSnapshots().find((item) => item.id === id); if (!snapshot) throw new Error("未找到组合快照"); return frozen(snapshot); }
+  diff(leftId: string, rightId: string): ReviewDiff { const left = this.require(leftId); const right = this.require(rightId); const leftSnapshot = this.getSnapshot(left.snapshotId); const rightSnapshot = this.getSnapshot(right.snapshotId); const fields = ["judgment", "action", "result", "nextObservations"].filter((field) => JSON.stringify(left[field as keyof WeeklyReview]) !== JSON.stringify(right[field as keyof WeeklyReview])); return { totalValueChange: leftSnapshot.totalValue === undefined || rightSnapshot.totalValue === undefined ? undefined : rightSnapshot.totalValue - leftSnapshot.totalValue, changedFields: fields }; }
+  private require(id: string): WeeklyReview { const review = this.readReviews().find((item) => item.id === id); if (!review) throw new Error("未找到周报"); return review; }
+  private readReviews(): WeeklyReview[] { try { return JSON.parse(this.storage.getItem(reviewKey) || "[]") as WeeklyReview[]; } catch { return []; } }
+  private readSnapshots(): PortfolioSnapshot[] { try { return JSON.parse(this.storage.getItem(snapshotKey) || "[]") as PortfolioSnapshot[]; } catch { return []; } }
+}

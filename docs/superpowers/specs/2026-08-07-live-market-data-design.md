@@ -98,7 +98,8 @@ flowchart LR
 所有数据接口返回统一信封：
 
 ```ts
-type DataSource = "alpaca" | "sec" | "finnhub" | "fred";
+type ProviderSource = "alpaca" | "sec" | "finnhub" | "fred";
+type DataSource = ProviderSource | "composite";
 
 interface DataEnvelope<T> {
   data: T;
@@ -120,6 +121,7 @@ interface DataEnvelope<T> {
 - `stale` 仅表示当前时间已超过 `expiresAt`，不能用来推断数据错误。
 - `delayMinutes` 仅在供应商明确给出或数据产品固定延迟时设置。
 - `notices` 包含延迟、旧缓存、部分字段缺失和供应商限制等用户可读说明。
+- 合并多个供应商的响应使用 `source: "composite"`；每个子项继续保留自己的 `ProviderSource`。
 - 不允许用当前请求时间代替未知的 `asOf`。
 
 关键领域对象至少包含：
@@ -186,6 +188,7 @@ interface MarketEvent {
   title: string;
   scheduledAt: string;
   timing: "before-market" | "during-market" | "after-market" | "all-day" | "unknown";
+  source: ProviderSource;
   sourceUrl?: string;
 }
 
@@ -255,6 +258,10 @@ Finnhub 免费档仅用于个人用途。网关必须限制调用频率并缓存
 4. 页面显示“数据准备中”的标的，不将其错误地从筛选结果中排除。
 
 本阶段不实现全市场股票主数据同步。用户加入不受支持或不存在的 symbol 时，返回明确错误且不写入股票池。
+
+免费数据可稳定计算的筛选指标包括价格、涨跌幅、营收与 EPS 同比、毛利率变化、自由现金流、自由现金流收益率、净债务/EBITDA、财报超预期、距 20 日高点、相对成交量、20 日平均成交额、市值、经营利润率、三个月回报和历史 beta。行业毛利率中位数由当前股票池二次计算。
+
+远期 PE、相对行业远期 PE、PEG 和未来年度 EPS 修正依赖稳定的分析师预期数据，本阶段保持缺失并标记“当前免费数据源不支持”。默认筛选模板只使用可计算指标；历史保存的含不支持指标筛选仍可读取，但不会把缺失值当作零或匹配。
 
 ## 10. 缓存与刷新策略
 
@@ -345,6 +352,7 @@ flowchart TD
 
 - 默认真实股票池及用户自定义股票池。
 - 用真实报价和缓存财务数据运行现有筛选规则。
+- 默认模板调整为“高质量成长”“现金流价值”“财报改善”和“放量突破”，只使用当前免费数据能够稳定计算的指标。
 - 对尚未准备好筛选字段的标的显示“数据准备中”。
 - 筛选结果显示数据覆盖率，避免把缺失值解释为不满足条件。
 

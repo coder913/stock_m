@@ -7,13 +7,19 @@ import { registerCacheRoutes } from "./routes/cacheRoutes";
 import { registerMarketRoutes, type MarketProvider } from "./routes/marketRoutes";
 import type { MarketDataGateway } from "./core/marketDataGateway";
 import { registerCompanyRoutes, type SecCompanyProvider } from "./routes/companyRoutes";
+import type { CompanyProfileProvider } from "./routes/companyRoutes";
+import { registerDiscoveryRoutes } from "./routes/discoveryRoutes";
+import { registerEventRoutes, type EventsProvider } from "./routes/eventRoutes";
+import type { UniverseService } from "./universe/universeService";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
   cache: HealthCache;
   refreshRegistry?: RefreshRegistry;
   market?: { gateway: MarketDataGateway; provider: MarketProvider };
-  company?: { gateway: MarketDataGateway; sec: SecCompanyProvider };
+  company?: { gateway: MarketDataGateway; sec: SecCompanyProvider; profile?: CompanyProfileProvider };
+  discovery?: { universe: UniverseService };
+  events?: { gateway: MarketDataGateway; provider: EventsProvider };
 }
 
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
@@ -31,6 +37,8 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   }));
   if (dependencies.market) registerMarketRoutes(app, { ...dependencies.market, refreshRegistry });
   if (dependencies.company) registerCompanyRoutes(app, { ...dependencies.company, refreshRegistry });
+  if (dependencies.discovery) registerDiscoveryRoutes(app, dependencies.discovery);
+  if (dependencies.events) registerEventRoutes(app, { ...dependencies.events, refreshRegistry });
   registerCacheRoutes(app, refreshRegistry);
   return app;
 }

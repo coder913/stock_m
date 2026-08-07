@@ -112,3 +112,32 @@ export interface MacroObservation {
   unit: string;
   observedAt: string;
 }
+
+export interface StockMetrics {
+  price?: number;
+  dailyChangePercent?: number;
+  revenueGrowthYoY?: number;
+  epsGrowthYoY?: number;
+  grossMargin?: number;
+  freeCashFlow?: number;
+  freeCashFlowYield?: number;
+  netDebtToEbitda?: number;
+  earningsSurprise?: number;
+  grossMarginYoYChange?: number;
+  priceVs20DayHigh?: number;
+  relativeVolume?: number;
+  averageDollarVolume20d?: number;
+  operatingMargin?: number;
+  return3Months?: number;
+  beta?: number;
+  grossMarginVsIndustryMedian?: number;
+  forwardPE?: number;
+  forwardPEToIndustryMedian?: number;
+  peg?: number;
+  nextFyEpsRevision30d?: number;
+}
+
+export interface UniverseCoverage { status: "ready" | "preparing" | "partial" | "unavailable"; availableMetrics: number; totalMetrics: number; }
+export interface UniverseStockSnapshot { symbol: string; kind: "stock" | "etf"; name?: string; sector?: string; marketCapitalization?: number; metrics: StockMetrics; coverage: UniverseCoverage; }
+export interface DiscoveryUniverseSnapshot { version: string; items: UniverseStockSnapshot[]; generatedAt: string; }
+export interface MarketTheme { id: string; name: string; symbols: string[]; changePercent?: number; coverage: UniverseCoverage; etfSymbol?: string; valuationDeviation?: number; }

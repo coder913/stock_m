@@ -1,0 +1,15 @@
+// @vitest-environment node
+import { expect, test } from "vitest";
+import { calculateScreenerMetrics } from "./metricCalculator";
+
+test("calculates supported free-source screener metrics and leaves forward estimates absent", () => {
+  const metrics = calculateScreenerMetrics({ quote: { price: 120, previousClose: 100, volume: 300 }, dailyBars: Array.from({ length: 20 }, (_, index) => ({ symbol: "NVDA", startedAt: `2026-07-${index + 1}`, open: 100, high: 125, low: 90, close: 120, volume: 200, adjusted: true })), financials: [
+    { symbol: "NVDA", statement: "income", concept: "Revenues", label: "Revenue", value: 1200, unit: "USD", periodEnd: "2026-01-01", form: "10-K", filedAt: "2026-01-01", accessionNumber: "a" },
+    { symbol: "NVDA", statement: "income", concept: "Revenues", label: "Revenue", value: 1000, unit: "USD", periodEnd: "2025-01-01", form: "10-K", filedAt: "2025-01-01", accessionNumber: "b" },
+    { symbol: "NVDA", statement: "income", concept: "OperatingIncomeLoss", label: "Operating income", value: 240, unit: "USD", periodEnd: "2026-01-01", form: "10-K", filedAt: "2026-01-01", accessionNumber: "a" },
+    { symbol: "NVDA", statement: "cash-flow", concept: "NetCashProvidedByUsedInOperatingActivities", label: "CFO", value: 300, unit: "USD", periodEnd: "2026-01-01", form: "10-K", filedAt: "2026-01-01", accessionNumber: "a" },
+    { symbol: "NVDA", statement: "cash-flow", concept: "PaymentsToAcquirePropertyPlantAndEquipment", label: "Capex", value: 80, unit: "USD", periodEnd: "2026-01-01", form: "10-K", filedAt: "2026-01-01", accessionNumber: "a" },
+  ], marketCapUsdMillions: 10_000 });
+  expect(metrics.price).toBe(120); expect(metrics.dailyChangePercent).toBeCloseTo(20); expect(metrics.revenueGrowthYoY).toBeCloseTo(20); expect(metrics.operatingMargin).toBeCloseTo(20); expect(metrics.freeCashFlow).toBe(220); expect(metrics.freeCashFlowYield).toBeCloseTo(2.2); expect(metrics.priceVs20DayHigh).toBeCloseTo(-4); expect(metrics.relativeVolume).toBeCloseTo(1.5);
+  expect(metrics.forwardPE).toBeUndefined(); expect(metrics.peg).toBeUndefined(); expect(metrics.nextFyEpsRevision30d).toBeUndefined();
+});

@@ -3,3 +3,8 @@ dist/
 .superpowers/
 playwright-report/
 test-results/
+.env
+.data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

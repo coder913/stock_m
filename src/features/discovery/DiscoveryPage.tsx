@@ -9,12 +9,14 @@ import { ThemeView } from "./ThemeView";
 import { EventCalendar } from "./EventCalendar";
 import { WatchlistRepository } from "../watchlist/watchlistRepository";
 import { systemTemplates } from "./templates";
+import { MarketApiClient } from "../market/marketApiClient";
 import "./discovery.css";
 
 const copyConditions = (conditions: readonly ScreenerCondition[]): ScreenerCondition[] => conditions.map((condition) => ({ ...condition, value: Array.isArray(condition.value) ? [...condition.value] as [number, number] : condition.value }));
-interface DiscoveryPageProps { onAddToWatchlist?: (symbol: string) => void; }
+interface DiscoveryPageProps { onAddToWatchlist?: (symbol: string) => void; marketClient?: Pick<MarketApiClient, "getUniverse">; }
+const defaultMarketClient = new MarketApiClient();
 
-export function DiscoveryPage({ onAddToWatchlist = () => undefined }: DiscoveryPageProps) {
+export function DiscoveryPage({ onAddToWatchlist = () => undefined, marketClient = defaultMarketClient }: DiscoveryPageProps) {
   const [stocks, setStocks] = useState<StockSnapshot[]>([]);
   const [conditions, setConditions] = useState<ScreenerCondition[]>(() => copyConditions(systemTemplates[0].conditions));
   const [selectedTemplate, setSelectedTemplate] = useState<ScreenerTemplate>(systemTemplates[0]);
@@ -26,7 +28,7 @@ export function DiscoveryPage({ onAddToWatchlist = () => undefined }: DiscoveryP
   const [events, setEvents] = useState<Awaited<ReturnType<typeof mockDiscoveryRepository.listEvents>>["items"]>([]);
   const [pendingSymbol, setPendingSymbol] = useState<string | null>(null);
   const [groupId, setGroupId] = useState("");
-  useEffect(() => { void mockDiscoveryRepository.listStocks().then((result) => setStocks(result.items)); }, []);
+  useEffect(() => { void marketClient.getUniverse().then((result) => setStocks(result.data.items.map((item) => ({ symbol: item.symbol, name: item.name ?? item.symbol, industry: item.sector ?? "未分类", metrics: item.metrics })))).catch(() => void mockDiscoveryRepository.listStocks().then((result) => setStocks(result.items))); }, [marketClient]);
   useEffect(() => { void mockDiscoveryRepository.listThemes().then((result) => setThemes(result.items)); void mockDiscoveryRepository.listEvents().then((result) => setEvents(result.items)); }, []);
   const results = useMemo(() => runScreen(stocks, conditions).sort((left, right) => ((left.metrics[sort.metric] ?? -Infinity) - (right.metrics[sort.metric] ?? -Infinity)) * (sort.direction === "asc" ? 1 : -1)), [conditions, sort, stocks]);
   const errors = validateConditions(conditions);

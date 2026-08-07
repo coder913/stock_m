@@ -61,3 +61,15 @@ test("system templates cannot be mutated", () => {
   expect(Object.isFrozen(systemTemplates[0])).toBe(true);
   expect(Object.isFrozen(systemTemplates[0].conditions)).toBe(true);
 });
+
+test("default templates use only metrics supported by the live free-data universe", () => {
+  expect(systemTemplates.map((template) => ({
+    id: template.id,
+    metrics: template.conditions.map((condition) => condition.metric),
+  }))).toEqual([
+    { id: "quality-growth", metrics: ["revenueGrowthYoY", "operatingMargin", "freeCashFlow"] },
+    { id: "cashflow-value", metrics: ["freeCashFlowYield", "netDebtToEbitda"] },
+    { id: "earnings-improvement", metrics: ["revenueGrowthYoY", "grossMarginYoYChange", "earningsSurprise"] },
+    { id: "volume-breakout", metrics: ["priceVs20DayHigh", "relativeVolume", "averageDollarVolume20d"] },
+  ]);
+});

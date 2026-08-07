@@ -8,6 +8,7 @@ export interface DataEnvelope<T> {
   fetchedAt: string;
   expiresAt: string;
   stale: boolean;
+  fallback?: boolean;
   delayMinutes?: number;
   notices: string[];
 }

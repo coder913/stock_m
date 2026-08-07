@@ -27,6 +27,7 @@ test("uses fixture APIs from discovery through research and portfolio", async ({
   await expect(page.getByRole("row", { name: /NVDA/ })).toBeVisible();
   await page.getByRole("link", { name: "研究 NVDA" }).click();
   await expect(page.getByRole("heading", { name: /NVIDIA Corp/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: "NVDA 日 K 线" })).toBeVisible();
   await expect(page.getByRole("link", { name: /查看 10-K 原文/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /打开原文：NVIDIA 发布新产品/ })).toHaveAttribute("href", "https://example.test/news/nvda");
   await expect(page.getByText("NVDA 分红")).toBeVisible();

@@ -21,3 +21,27 @@ test("calculates margins, debt and earnings surprise only with valid denominator
   expect(metrics.netDebtToEbitda).toBeCloseTo(2);
   expect(metrics.earningsSurprise).toBeCloseTo(20);
 });
+
+test("calculates year-over-year gross-margin change from matching revenue and cost periods", () => {
+  const fact = (concept: string, value: number, periodEnd: string) => ({ symbol: "NVDA", statement: "income" as const, concept, label: concept, value, unit: "USD", periodEnd, form: "10-K", filedAt: periodEnd, accessionNumber: `${concept}:${periodEnd}` });
+  const metrics = calculateScreenerMetrics({ financials: [
+    fact("Revenues", 1000, "2026-01-31"),
+    fact("CostOfRevenue", 350, "2026-01-31"),
+    fact("Revenues", 800, "2025-01-31"),
+    fact("CostOfRevenue", 320, "2025-01-31"),
+  ] });
+
+  expect(metrics.grossMarginYoYChange).toBeCloseTo(5);
+});
+
+test("does not combine revenue and cost facts from different reporting periods", () => {
+  const fact = (concept: string, value: number, periodEnd: string) => ({ symbol: "NVDA", statement: "income" as const, concept, label: concept, value, unit: "USD", periodEnd, form: "10-K", filedAt: periodEnd, accessionNumber: `${concept}:${periodEnd}` });
+  const metrics = calculateScreenerMetrics({ financials: [
+    fact("Revenues", 1000, "2026-01-31"),
+    fact("Revenues", 800, "2025-01-31"),
+    fact("CostOfRevenue", 320, "2025-01-31"),
+  ] });
+
+  expect(metrics.grossMargin).toBeUndefined();
+  expect(metrics.grossMarginYoYChange).toBeUndefined();
+});

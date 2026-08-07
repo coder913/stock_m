@@ -28,7 +28,7 @@ export class MarketDataGateway {
 
   private staleOrThrow<T>(cached: { data: T; source: DataEnvelope<T>["source"]; asOf: string; fetchedAt: string; expiresAt: string; delayMinutes?: number; notices: string[] } | undefined, notice: string, now: string): DataEnvelope<T> {
     if (!cached) throw new ApiError("PROVIDER_UNAVAILABLE", "暂时无法获取数据", 503, true);
-    return { ...this.toEnvelope(cached, cached.expiresAt <= now), notices: [...cached.notices, notice] };
+    return { ...this.toEnvelope(cached, cached.expiresAt <= now), fallback: true, notices: [...cached.notices, notice] };
   }
 
   private toEnvelope<T>(record: { data: T; source: DataEnvelope<T>["source"]; asOf: string; fetchedAt: string; expiresAt: string; delayMinutes?: number; notices: string[] }, stale: boolean): DataEnvelope<T> {

@@ -1212,7 +1212,7 @@ coverage: {
 
 Remove production use of `mockDiscoveryRepository`. Render ready results, a preparation count, and overall metric coverage. Keep `runScreen` pure: a missing required metric does not match, but preparing rows are separately counted and explained.
 
-- [ ] **Step 6: Replace unsupported default templates**
+- [x] **Step 6: Replace unsupported default templates**
 
 Use these exact real-data templates:
 
@@ -1290,7 +1290,7 @@ git commit -m "feat: add real-data discovery universe"
 - Each section loads and fails independently.
 - Existing thesis-first simulated-buy guard remains unchanged.
 
-- [ ] **Step 1: Write failing independent-section tests**
+- [x] **Step 1: Write failing independent-section tests**
 
 ```tsx
 test("shows quote and filings even when financial facts fail", async () => {
@@ -1317,7 +1317,7 @@ test("does not enable paper buy before a thesis version exists", async () => {
 });
 ```
 
-- [ ] **Step 2: Run research tests and verify failure**
+- [x] **Step 2: Run research tests and verify failure**
 
 Run:
 
@@ -1327,19 +1327,19 @@ npm test -- src/features/research/ResearchPage.test.tsx src/features/research/Re
 
 Expected: FAIL because `ResearchPage` still loads one mock aggregate.
 
-- [ ] **Step 3: Split research into bounded sections**
+- [x] **Step 3: Split research into bounded sections**
 
 `ResearchPage` owns symbol, profile heading, thesis, and simulated-buy orchestration. `PriceHistory`, `FinancialTrends`, and `FilingsList` own only presentation. `ResearchDataSection` renders loading/error/retry/status consistently for one envelope.
 
 Financial trends group facts by `label + unit`, sort by `periodEnd`, and never combine different units. Filing links open SEC in a new tab with accessible external-link text.
 
-- [ ] **Step 4: Connect real data and preserve thesis behavior**
+- [x] **Step 4: Connect real data and preserve thesis behavior**
 
 Load sections in parallel through independent hooks. Use the current live quote as the default simulated-buy price only when it exists. If price is missing, disable buy and show `当前报价不可用`.
 
 Update peer comparison to request the live discovery snapshot for the current industry and preserve missing metrics.
 
-- [ ] **Step 5: Verify milestone-one UI and commit**
+- [x] **Step 5: Verify milestone-one UI and commit**
 
 Run:
 
@@ -1426,7 +1426,7 @@ Expected: FAIL because news, actions, FRED, and unified routes are not implement
 
 Parse only headline, summary, source, timestamps, symbols, image URL, and original URL. Do not store or reproduce article bodies. Normalize Alpaca action types into dividend, split, or generic corporate-action events. Preserve source IDs for deduplication. Register the `news` manual-refresh handler.
 
-- [ ] **Step 5: Implement the approved macro catalog**
+- [x] **Step 5: Implement the approved macro catalog**
 
 Use a versioned catalog:
 
@@ -1449,7 +1449,7 @@ Cache observations and releases for 24 hours. Add the exact FRED attribution not
 
 Merge Finnhub earnings, Alpaca corporate actions, and FRED releases. Deduplicate by provider source ID; sort date-only events after timed events on the same date. If one source fails, return successful event groups plus a notice naming the unavailable group. Extend the `events` manual-refresh handler to refresh all three event groups.
 
-- [ ] **Step 7: Verify milestone-two gateway and commit**
+- [x] **Step 7: Verify milestone-two gateway and commit**
 
 Run:
 
@@ -1613,7 +1613,7 @@ Expected:
 - all stable-Chrome browser flows pass;
 - no whitespace errors are reported.
 
-- [ ] **Step 8: Verify secret exclusion and production mock exclusion**
+- [x] **Step 8: Verify secret exclusion and production mock exclusion**
 
 Run:
 
@@ -1629,7 +1629,7 @@ Expected:
 - second command returns no production-page imports;
 - only intended plan completion and documentation changes remain, plus the user-owned untracked `chrome/` directory.
 
-- [ ] **Step 9: Mark the plan complete and commit**
+- [x] **Step 9: Mark the plan complete and commit**
 
 Change each completed checkbox in this plan from `[ ]` to `[x]`, then:
 

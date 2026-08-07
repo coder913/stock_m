@@ -11,6 +11,7 @@ import type { CompanyProfileProvider } from "./routes/companyRoutes";
 import { registerDiscoveryRoutes } from "./routes/discoveryRoutes";
 import { registerEventRoutes, type EventsProvider } from "./routes/eventRoutes";
 import type { UniverseService } from "./universe/universeService";
+import { registerMacroRoutes, type MacroProvider } from "./routes/macroRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
@@ -20,6 +21,7 @@ export interface AppDependencies {
   company?: { gateway: MarketDataGateway; sec: SecCompanyProvider; profile?: CompanyProfileProvider; news?: import("./routes/companyRoutes").NewsProvider };
   discovery?: { universe: UniverseService };
   events?: { gateway: MarketDataGateway; provider: EventsProvider };
+  macro?: { gateway: MarketDataGateway; provider: MacroProvider };
 }
 
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
@@ -39,6 +41,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.company) registerCompanyRoutes(app, { ...dependencies.company, refreshRegistry });
   if (dependencies.discovery) registerDiscoveryRoutes(app, dependencies.discovery);
   if (dependencies.events) registerEventRoutes(app, { ...dependencies.events, refreshRegistry });
+  if (dependencies.macro) registerMacroRoutes(app, { ...dependencies.macro, refreshRegistry });
   registerCacheRoutes(app, refreshRegistry);
   return app;
 }

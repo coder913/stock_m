@@ -12,8 +12,9 @@ export class MarketApiClient {
   getCompany(symbol: string) { return this.request<CompanyProfile>(`/api/companies/${encodeURIComponent(symbol)}`); }
   getFinancials(symbol: string) { return this.request<FinancialFact[]>(`/api/companies/${encodeURIComponent(symbol)}/financials`); }
   getFilings(symbol: string) { return this.request<SecFiling[]>(`/api/companies/${encodeURIComponent(symbol)}/filings`); }
+  getNews(symbol: string, from = "", to = "") { return this.request<import("./apiDomain").CompanyNewsItem[]>(`/api/companies/${encodeURIComponent(symbol)}/news?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`); }
   getUniverse(symbols?: string[]) { return this.request<DiscoveryUniverseSnapshot>(`/api/discovery/universe${symbols?.length ? `?symbols=${encodeURIComponent(symbols.join(","))}` : ""}`); }
   getEvents(query: { from: string; to: string; symbols?: string[] }) { return this.request<MarketEvent[]>(`/api/events?${new URLSearchParams({ from: query.from, to: query.to, ...(query.symbols?.length ? { symbols: query.symbols.join(",") } : {}) })}`); }
-  getMacroSeries(ids: string[]) { return this.request<MacroObservation[]>(`/api/macro?ids=${encodeURIComponent(ids.join(","))}`); }
+  getMacroSeries(ids: string[]) { return this.request<MacroObservation[]>(`/api/macro/series?ids=${encodeURIComponent(ids.join(","))}`); }
   refresh(request: RefreshRequest) { return this.request<unknown>("/api/cache/refresh", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(request) }); }
 }

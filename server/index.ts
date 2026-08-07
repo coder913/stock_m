@@ -9,6 +9,7 @@ import { AlpacaProvider } from "./providers/alpacaProvider";
 import { SecProvider } from "./providers/secProvider";
 import { FinnhubProvider } from "./providers/finnhubProvider";
 import { UniverseService } from "./universe/universeService";
+import { FredProvider } from "./providers/fredProvider";
 
 const config = loadServerConfig(process.env);
 mkdirSync(".data", { recursive: true });
@@ -17,6 +18,7 @@ const gateway = new MarketDataGateway({ cache, now: () => new Date().toISOString
 const alpaca = new AlpacaProvider(config.secrets.alpaca);
 const sec = new SecProvider(config.secrets.secUserAgent);
 const finnhub = new FinnhubProvider(config.secrets.finnhub?.apiKey);
+const fred = new FredProvider(config.secrets.fred?.apiKey);
 const app = buildApp({
   config,
   cache,
@@ -27,7 +29,8 @@ const app = buildApp({
     gateway, sec, profile: finnhub, news: alpaca,
   },
   discovery: { universe: new UniverseService({ getQuotes: (symbols) => alpaca.getQuotes(symbols), getCompanyProfile: (symbol) => finnhub.getCompanyProfile(symbol), getFinancialFacts: (symbol) => sec.getFinancialFacts(symbol) }) },
-  events: { gateway, provider: finnhub },
+  events: { gateway, provider: { getEarnings: (...args) => finnhub.getEarnings(...args), getCorporateActions: (...args) => alpaca.getCorporateActions(...args), getReleaseEvents: (...args) => fred.getReleaseEvents(...args) } },
+  macro: { gateway, provider: fred },
 });
 
 void app.listen({ host: config.host, port: config.port });

@@ -52,9 +52,9 @@ export interface StockSnapshot {
 
 export interface CompanyEvent {
   id: string;
-  symbol: string;
+  symbol?: string;
   date: string;
-  type: "earnings" | "dividend" | "split" | "company";
+  type: "earnings" | "dividend" | "split" | "company" | "macro" | "corporate-action";
   title: string;
   status: "expected" | "confirmed";
   source: string;

@@ -6,12 +6,14 @@ import { RefreshRegistry } from "./core/refreshRegistry";
 import { registerCacheRoutes } from "./routes/cacheRoutes";
 import { registerMarketRoutes, type MarketProvider } from "./routes/marketRoutes";
 import type { MarketDataGateway } from "./core/marketDataGateway";
+import { registerCompanyRoutes, type SecCompanyProvider } from "./routes/companyRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
   cache: HealthCache;
   refreshRegistry?: RefreshRegistry;
   market?: { gateway: MarketDataGateway; provider: MarketProvider };
+  company?: { gateway: MarketDataGateway; sec: SecCompanyProvider };
 }
 
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
@@ -28,6 +30,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
     cache: dependencies.cache.health(),
   }));
   if (dependencies.market) registerMarketRoutes(app, { ...dependencies.market, refreshRegistry });
+  if (dependencies.company) registerCompanyRoutes(app, { ...dependencies.company, refreshRegistry });
   registerCacheRoutes(app, refreshRegistry);
   return app;
 }

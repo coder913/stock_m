@@ -1,0 +1,12 @@
+{
+  "facts": {
+    "us-gaap": {
+      "RevenueFromContractWithCustomerExcludingAssessedTax": {
+        "units": { "USD": [{ "fy": 2026, "fp": "FY", "form": "10-K", "filed": "2026-03-01", "end": "2026-01-31", "val": 130500000000, "accn": "0001045810-26-000042" }] }
+      },
+      "NetIncomeLoss": {
+        "units": { "USD": [{ "fy": 2026, "fp": "FY", "form": "10-K", "filed": "2026-03-01", "end": "2026-01-31", "val": 72880000000, "accn": "0001045810-26-000042" }] }
+      }
+    }
+  }
+}

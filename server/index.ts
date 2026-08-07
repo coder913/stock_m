@@ -6,6 +6,7 @@ import { SqliteMarketDataCache } from "./cache/sqliteMarketDataCache";
 import { loadServerConfig } from "./config";
 import { MarketDataGateway } from "./core/marketDataGateway";
 import { AlpacaProvider } from "./providers/alpacaProvider";
+import { SecProvider } from "./providers/secProvider";
 
 const config = loadServerConfig(process.env);
 mkdirSync(".data", { recursive: true });
@@ -16,6 +17,10 @@ const app = buildApp({
   market: {
     gateway: new MarketDataGateway({ cache, now: () => new Date().toISOString() }),
     provider: new AlpacaProvider(config.secrets.alpaca),
+  },
+  company: {
+    gateway: new MarketDataGateway({ cache, now: () => new Date().toISOString() }),
+    sec: new SecProvider(config.secrets.secUserAgent),
   },
 });
 

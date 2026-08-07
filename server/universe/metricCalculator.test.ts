@@ -13,3 +13,11 @@ test("calculates supported free-source screener metrics and leaves forward estim
   expect(metrics.price).toBe(120); expect(metrics.dailyChangePercent).toBeCloseTo(20); expect(metrics.revenueGrowthYoY).toBeCloseTo(20); expect(metrics.operatingMargin).toBeCloseTo(20); expect(metrics.freeCashFlow).toBe(220); expect(metrics.freeCashFlowYield).toBeCloseTo(2.2); expect(metrics.priceVs20DayHigh).toBeCloseTo(-4); expect(metrics.relativeVolume).toBeCloseTo(1.5);
   expect(metrics.forwardPE).toBeUndefined(); expect(metrics.peg).toBeUndefined(); expect(metrics.nextFyEpsRevision30d).toBeUndefined();
 });
+
+test("calculates margins, debt and earnings surprise only with valid denominators", () => {
+  const fact = (concept: string, value: number) => ({ symbol: "NVDA", statement: "income" as const, concept, label: concept, value, unit: "USD", periodEnd: "2026-01-01", form: "10-K", filedAt: "2026-01-01", accessionNumber: concept });
+  const metrics = calculateScreenerMetrics({ financials: [fact("Revenues", 1000), fact("CostOfRevenue", 400), fact("LongTermDebt", 500), fact("CashAndCashEquivalentsAtCarryingValue", 100), fact("EarningsBeforeInterestTaxesDepreciationAndAmortization", 200)], earnings: { epsActual: 1.2, epsEstimate: 1 } });
+  expect(metrics.grossMargin).toBeCloseTo(60);
+  expect(metrics.netDebtToEbitda).toBeCloseTo(2);
+  expect(metrics.earningsSurprise).toBeCloseTo(20);
+});

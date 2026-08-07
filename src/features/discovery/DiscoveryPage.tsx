@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ScreenerCondition, ScreenerMetric, ScreenerTemplate, StockSnapshot } from "./domain";
-import { mockDiscoveryRepository } from "./mockDiscoveryRepository";
 import { SavedScreenRepository } from "./savedScreenRepository";
 import { runScreen, validateConditions } from "./screener";
 import { ScreenerPanel } from "./ScreenerPanel";
@@ -10,10 +9,12 @@ import { EventCalendar } from "./EventCalendar";
 import { WatchlistRepository } from "../watchlist/watchlistRepository";
 import { systemTemplates } from "./templates";
 import { MarketApiClient } from "../market/marketApiClient";
+import type { MarketEvent } from "../market/apiDomain";
 import "./discovery.css";
 
 const copyConditions = (conditions: readonly ScreenerCondition[]): ScreenerCondition[] => conditions.map((condition) => ({ ...condition, value: Array.isArray(condition.value) ? [...condition.value] as [number, number] : condition.value }));
-interface DiscoveryPageProps { onAddToWatchlist?: (symbol: string) => void; marketClient?: Pick<MarketApiClient, "getUniverse">; }
+const toCompanyEvent = (event: MarketEvent): import("./domain").CompanyEvent => ({ id: event.id, symbol: event.symbol, date: event.scheduledAt, type: event.type === "corporate-action" ? "corporate-action" : event.type, title: event.title, status: "confirmed", source: event.source });
+interface DiscoveryPageProps { onAddToWatchlist?: (symbol: string) => void; marketClient?: Pick<MarketApiClient, "getUniverse" | "getEvents">; }
 const defaultMarketClient = new MarketApiClient();
 
 export function DiscoveryPage({ onAddToWatchlist = () => undefined, marketClient = defaultMarketClient }: DiscoveryPageProps) {
@@ -24,12 +25,12 @@ export function DiscoveryPage({ onAddToWatchlist = () => undefined, marketClient
   const [screenName, setScreenName] = useState("");
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState<"screen" | "themes" | "calendar" | "saved">("screen");
-  const [themes, setThemes] = useState<Awaited<ReturnType<typeof mockDiscoveryRepository.listThemes>>["items"]>([]);
-  const [events, setEvents] = useState<Awaited<ReturnType<typeof mockDiscoveryRepository.listEvents>>["items"]>([]);
+  const [themes, setThemes] = useState<import("./domain").MarketTheme[]>([]);
+  const [events, setEvents] = useState<import("./domain").CompanyEvent[]>([]);
   const [pendingSymbol, setPendingSymbol] = useState<string | null>(null);
   const [groupId, setGroupId] = useState("");
-  useEffect(() => { void marketClient.getUniverse().then((result) => setStocks(result.data.items.map((item) => ({ symbol: item.symbol, name: item.name ?? item.symbol, industry: item.sector ?? "未分类", metrics: item.metrics })))).catch(() => void mockDiscoveryRepository.listStocks().then((result) => setStocks(result.items))); }, [marketClient]);
-  useEffect(() => { void mockDiscoveryRepository.listThemes().then((result) => setThemes(result.items)); void mockDiscoveryRepository.listEvents().then((result) => setEvents(result.items)); }, []);
+  useEffect(() => { void marketClient.getUniverse().then((result) => { const mapped = result.data.items.map((item) => ({ symbol: item.symbol, name: item.name ?? item.symbol, industry: item.sector ?? "未分类", metrics: item.metrics })); setStocks(mapped); const groups = new Map<string, typeof mapped>(); for (const item of mapped) groups.set(item.industry, [...(groups.get(item.industry) ?? []), item]); setThemes([...groups.entries()].map(([name, items]) => ({ id: name, name, kind: "industry", marketCapWeight: items.length, changePercent: items.reduce((sum, item) => sum + (item.metrics.dailyChangePercent ?? 0), 0) / items.length, valuationDeviation: 0 }))); }).catch((reason: unknown) => setMessage(reason instanceof Error ? reason.message : "股票池数据暂不可用")); }, [marketClient]);
+  useEffect(() => { const from = new Date().toISOString().slice(0, 10); const to = new Date(Date.now() + 31 * 86_400_000).toISOString().slice(0, 10); void marketClient.getEvents({ from, to }).then((result) => setEvents(result.data.map(toCompanyEvent))).catch(() => undefined); }, [marketClient]);
   const results = useMemo(() => runScreen(stocks, conditions).sort((left, right) => ((left.metrics[sort.metric] ?? -Infinity) - (right.metrics[sort.metric] ?? -Infinity)) * (sort.direction === "asc" ? 1 : -1)), [conditions, sort, stocks]);
   const errors = validateConditions(conditions);
   const selectTemplate = (template: ScreenerTemplate) => { setSelectedTemplate(template); setConditions(copyConditions(template.conditions)); };

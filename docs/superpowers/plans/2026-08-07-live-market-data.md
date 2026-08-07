@@ -93,7 +93,7 @@
 - Produces `buildApp(dependencies): FastifyInstance`.
 - Exposes `GET /api/health`.
 
-- [ ] **Step 1: Install gateway dependencies and add scripts**
+- [x] **Step 1: Install gateway dependencies and add scripts**
 
 Run:
 
@@ -115,7 +115,7 @@ Update scripts to include:
 }
 ```
 
-- [ ] **Step 2: Write failing configuration and health tests**
+- [x] **Step 2: Write failing configuration and health tests**
 
 ```ts
 // server/config.test.ts
@@ -159,7 +159,7 @@ test("reports configuration without returning keys", async () => {
 });
 ```
 
-- [ ] **Step 3: Run the focused tests and verify failure**
+- [x] **Step 3: Run the focused tests and verify failure**
 
 Run:
 
@@ -169,7 +169,7 @@ npm test -- server/config.test.ts server/app.test.ts
 
 Expected: FAIL because `config.ts`, `app.ts`, and shared contracts do not exist.
 
-- [ ] **Step 4: Implement shared contracts and provider interfaces**
+- [x] **Step 4: Implement shared contracts and provider interfaces**
 
 Create exact shared primitives:
 
@@ -306,7 +306,7 @@ export interface ProviderResult<T> {
 }
 ```
 
-- [ ] **Step 5: Implement validated configuration, health, and process entry**
+- [x] **Step 5: Implement validated configuration, health, and process entry**
 
 `loadServerConfig` must use Zod, default to `127.0.0.1:8787`, store secrets only in private fields, and expose booleans through `publicStatus`. `buildApp` registers JSON error handling and `/api/health`. When passed a `staticDir`, it registers `@fastify/static` and an SPA fallback for non-API GET routes. `server/index.ts` loads `dotenv/config`, opens dependencies, serves `dist` outside Vite development, and listens. `createTestDependencies(overrides?)` supplies an in-memory cache, fixed clock, unconfigured provider status, and allows individual test overrides.
 
@@ -338,7 +338,7 @@ export default defineConfig({
 
 Add `.env`, `.data/`, and `*.sqlite*` to `.gitignore`; add documented empty fields to `.env.example`.
 
-- [ ] **Step 6: Verify foundation and commit**
+- [x] **Step 6: Verify foundation and commit**
 
 Run:
 
@@ -371,7 +371,7 @@ git commit -m "feat: add market data gateway foundation"
 - Produces `RefreshRegistry.register(resource, handler)` and validated `POST /api/cache/refresh`.
 - Consumes injected `clock`, `fetcher`, TTL, cache key, and provider source.
 
-- [ ] **Step 1: Write failing cache transaction tests**
+- [x] **Step 1: Write failing cache transaction tests**
 
 ```ts
 // @vitest-environment node
@@ -390,7 +390,7 @@ test("persists provider cooldown without storing credentials", () => {
 });
 ```
 
-- [ ] **Step 2: Write failing gateway fallback tests**
+- [x] **Step 2: Write failing gateway fallback tests**
 
 ```ts
 test("returns a stale last-success value after a provider 429", async () => {
@@ -427,7 +427,7 @@ test("force refresh bypasses a fresh cache but retains it on failure", async () 
 });
 ```
 
-- [ ] **Step 3: Run the focused tests and verify failure**
+- [x] **Step 3: Run the focused tests and verify failure**
 
 Run:
 
@@ -437,7 +437,7 @@ npm test -- server/cache/sqliteMarketDataCache.test.ts server/core/marketDataGat
 
 Expected: FAIL because cache and gateway modules do not exist.
 
-- [ ] **Step 4: Implement schema and transactional writes**
+- [x] **Step 4: Implement schema and transactional writes**
 
 Use these tables:
 
@@ -463,7 +463,7 @@ CREATE TABLE IF NOT EXISTS provider_state (
 
 Serialize and validate before entering the transaction. Replace one key with one `INSERT ... ON CONFLICT DO UPDATE` transaction. `health()` reports writable status, counts, and oldest timestamps only.
 
-- [ ] **Step 5: Implement cache-first orchestration**
+- [x] **Step 5: Implement cache-first orchestration**
 
 `readThrough` behavior must be exact:
 
@@ -500,7 +500,7 @@ type RefreshRequest =
 
 The registry rejects unregistered resources with 400. Provider tasks register their own handlers, all of which call `readThrough` with `forceRefresh: true`.
 
-- [ ] **Step 6: Verify cache behavior and commit**
+- [x] **Step 6: Verify cache behavior and commit**
 
 Run:
 
@@ -534,7 +534,7 @@ git commit -m "feat: add resilient market data cache"
 - Registers `quotes` and `bars` manual-refresh handlers.
 - Uses 60-second quote/minute-bar TTL and 15-minute daily-bar TTL.
 
-- [ ] **Step 1: Save minimal Alpaca fixtures and write failing adapter tests**
+- [x] **Step 1: Save minimal Alpaca fixtures and write failing adapter tests**
 
 ```ts
 test("normalizes delayed SIP snapshots without claiming realtime", async () => {
@@ -556,7 +556,7 @@ test("keeps a missing quote price undefined", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing route validation tests**
+- [x] **Step 2: Write failing route validation tests**
 
 ```ts
 test("rejects more than 100 symbols without truncating", async () => {
@@ -582,7 +582,7 @@ test("manually refreshes quotes through the refresh endpoint", async () => {
 });
 ```
 
-- [ ] **Step 3: Run tests and verify failure**
+- [x] **Step 3: Run tests and verify failure**
 
 Run:
 
@@ -592,7 +592,7 @@ npm test -- server/providers/alpacaProvider.test.ts server/routes/marketRoutes.t
 
 Expected: FAIL because the Alpaca adapter and market routes do not exist.
 
-- [ ] **Step 4: Implement Alpaca boundary parsing**
+- [x] **Step 4: Implement Alpaca boundary parsing**
 
 Use Zod schemas at the response boundary. Map latest trade, daily bar, previous daily bar, latest quote, and feed metadata into `MarketQuote`. Derive change only when both price and previous close exist. Preserve `undefined` otherwise.
 
@@ -607,11 +607,11 @@ Map HTTP responses:
 invalid JSON or schema -> ProviderSchemaError
 ```
 
-- [ ] **Step 5: Implement cached market routes**
+- [x] **Step 5: Implement cached market routes**
 
 Validate symbol syntax with `/^[A-Z0-9.-]+$/`, deduplicate while preserving order, and cap batches at 100. Use cache keys containing feed, timeframe, date range, and sorted symbols. Return the exact `DataEnvelope<T>` contract.
 
-- [ ] **Step 6: Verify real-market routes and commit**
+- [x] **Step 6: Verify real-market routes and commit**
 
 Run:
 
@@ -644,7 +644,7 @@ git commit -m "feat: add alpaca market data adapter"
 - Produces normalized income, balance-sheet, and cash-flow facts without cross-unit arithmetic.
 - Exposes `/api/companies/:symbol/financials` and `/api/companies/:symbol/filings`.
 
-- [ ] **Step 1: Write failing SEC normalization tests**
+- [x] **Step 1: Write failing SEC normalization tests**
 
 ```ts
 test("retains SEC provenance for normalized revenue facts", async () => {
@@ -672,7 +672,7 @@ test("requires an identifiable User-Agent on every SEC request", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing company route tests**
+- [x] **Step 2: Write failing company route tests**
 
 ```ts
 test("returns only supported filing forms in newest-first order", async () => {
@@ -683,7 +683,7 @@ test("returns only supported filing forms in newest-first order", async () => {
 });
 ```
 
-- [ ] **Step 3: Run tests and verify failure**
+- [x] **Step 3: Run tests and verify failure**
 
 Run:
 
@@ -693,7 +693,7 @@ npm test -- server/providers/secProvider.test.ts server/routes/companyRoutes.tes
 
 Expected: FAIL because SEC modules and routes do not exist.
 
-- [ ] **Step 4: Implement CIK, submissions, and fact parsing**
+- [x] **Step 4: Implement CIK, submissions, and fact parsing**
 
 Normalize ticker lookup to a zero-padded 10-digit CIK. Build filing URLs from CIK and accession number. Include only `10-K`, `10-K/A`, `10-Q`, `10-Q/A`, `8-K`, and `8-K/A`. Register `financials` and `filings` manual-refresh handlers.
 
@@ -713,11 +713,11 @@ export const secConceptMap = {
 
 When multiple concepts map to one label, select one concept per issuer and period using a documented priority order; never sum them.
 
-- [ ] **Step 5: Register cached routes**
+- [x] **Step 5: Register cached routes**
 
 Use 24-hour TTL for ticker mapping and filing lists. Financial facts remain cached until the newest submissions accession number changes; include that accession number in the cache version key.
 
-- [ ] **Step 6: Verify SEC behavior and commit**
+- [x] **Step 6: Verify SEC behavior and commit**
 
 Run:
 
@@ -757,7 +757,7 @@ git commit -m "feat: add sec filings and fundamentals"
 - Produces `UniverseService.getSnapshot(symbols): DiscoveryUniverseSnapshot`.
 - Exposes `/api/companies/:symbol`, `/api/discovery/universe`, `/api/discovery/themes`, and earnings through `/api/events`.
 
-- [ ] **Step 1: Write failing Finnhub tests**
+- [x] **Step 1: Write failing Finnhub tests**
 
 ```ts
 test("normalizes a company profile and keeps optional values missing", async () => {
@@ -779,7 +779,7 @@ test("maps earnings timing without inventing an exact clock time", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing universe hydration tests**
+- [x] **Step 2: Write failing universe hydration tests**
 
 ```ts
 test("returns quotes first and marks metrics still being prepared", async () => {
@@ -798,7 +798,7 @@ test("uses at most four concurrent profile or fundamentals loads", async () => {
 });
 ```
 
-- [ ] **Step 3: Write failing screener-metric formula tests**
+- [x] **Step 3: Write failing screener-metric formula tests**
 
 ```ts
 test("calculates only metrics supported by free-source inputs", () => {
@@ -831,7 +831,7 @@ test("calculates only metrics supported by free-source inputs", () => {
 });
 ```
 
-- [ ] **Step 4: Run tests and verify failure**
+- [x] **Step 4: Run tests and verify failure**
 
 Run:
 
@@ -841,11 +841,11 @@ npm test -- server/providers/finnhubProvider.test.ts server/universe/metricCalcu
 
 Expected: FAIL because Finnhub and universe modules do not exist.
 
-- [ ] **Step 5: Implement profiles and earnings**
+- [x] **Step 5: Implement profiles and earnings**
 
 Use Zod response schemas and map Finnhub error payloads before normalization. Cache profiles for 24 hours and earnings calendars for 6 hours. Merge SEC CIK and regulatory metadata into the company route; Finnhub remains authoritative only for display fields such as website, logo, and description. Register `company` manual refresh and add earnings refresh to the `events` handler.
 
-- [ ] **Step 6: Implement the supported screener formulas**
+- [x] **Step 6: Implement the supported screener formulas**
 
 Use these formulas and return `undefined` when an input is missing or a denominator is zero:
 
@@ -871,7 +871,7 @@ Use a second universe pass for `grossMarginVsIndustryMedian`. Leave `forwardPE`,
 
 Add shared `UniverseStockSnapshot`, `DiscoveryUniverseSnapshot`, `UniverseCoverage`, and `MarketTheme` types to `apiDomain.ts`.
 
-- [ ] **Step 7: Implement the versioned 100-symbol universe**
+- [x] **Step 7: Implement the versioned 100-symbol universe**
 
 Define a static array with `{ symbol, kind }` using this exact 100-symbol first version:
 
@@ -904,11 +904,11 @@ expect(new Set(defaultUniverse.map((item) => item.symbol)).size)
 
 `UniverseService` batch-loads quotes first, reads cached profile/fundamental metrics next, and hydrates missing data with concurrency `4`. Missing metrics remain absent and produce coverage metadata.
 
-- [ ] **Step 8: Derive real themes from universe data**
+- [x] **Step 8: Derive real themes from universe data**
 
 Group ready stocks by real profile sector. Produce market-cap-weighted change and available-metric coverage. Produce ETF-backed themes for semiconductors (`SOXX`), technology (`XLK`), financials (`XLF`), healthcare (`XLV`), consumer discretionary (`XLY`), staples (`XLP`), energy (`XLE`), industrials (`XLI`), utilities (`XLU`), materials (`XLB`), and real estate (`XLRE`). Do not calculate `valuationDeviation` when forward valuation is unavailable.
 
-- [ ] **Step 9: Verify company and discovery routes, then commit**
+- [x] **Step 9: Verify company and discovery routes, then commit**
 
 Run:
 
@@ -941,7 +941,7 @@ git commit -m "feat: add company profiles and live universe"
 - Produces `<MarketDataState envelope error onRetry />`.
 - Keeps mock repositories available only as explicitly injected test fixtures.
 
-- [ ] **Step 1: Write failing API error and envelope tests**
+- [x] **Step 1: Write failing API error and envelope tests**
 
 ```ts
 test("parses a stale envelope without discarding its data", async () => {
@@ -970,7 +970,7 @@ test("throws a typed retryable API error", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing hook and status presentation tests**
+- [x] **Step 2: Write failing hook and status presentation tests**
 
 ```tsx
 test("keeps current data visible while manually refreshing", async () => {
@@ -990,7 +990,7 @@ test("labels stale delayed data with its timestamp", () => {
 });
 ```
 
-- [ ] **Step 3: Run tests and verify failure**
+- [x] **Step 3: Run tests and verify failure**
 
 Run:
 
@@ -1000,7 +1000,7 @@ npm test -- src/features/market/marketApiClient.test.ts src/features/market/useM
 
 Expected: FAIL because the browser client, hook, and status component do not exist.
 
-- [ ] **Step 4: Implement the browser boundary**
+- [x] **Step 4: Implement the browser boundary**
 
 `MarketApiClient` accepts an injected `fetch` and base URL, validates response shape, encodes symbols, and never knows provider credentials. `refresh(request)` posts only the typed refresh request to `/api/cache/refresh`. `useMarketRequest` aborts stale requests on dependency change and preserves prior data during manual refresh; its `refresh()` first invokes the matching client refresh and then reloads the envelope.
 
@@ -1014,7 +1014,7 @@ Expected: FAIL because the browser client, hook, and status component do not exi
 
 Do not use color as the only distinction.
 
-- [ ] **Step 5: Verify shared browser behavior and commit**
+- [x] **Step 5: Verify shared browser behavior and commit**
 
 Run:
 
@@ -1048,7 +1048,7 @@ git commit -m "feat: add typed market data browser client"
 - Watchlist batches the union of all active-group symbols.
 - Portfolio converts quote envelopes into the existing `calculatePortfolio` input and records quote provenance in snapshots.
 
-- [ ] **Step 1: Replace test fixtures with injected clients and write failing tests**
+- [x] **Step 1: Replace test fixtures with injected clients and write failing tests**
 
 ```tsx
 test("today shows quote source, delay, and manual refresh", async () => {
@@ -1078,7 +1078,7 @@ test("portfolio keeps total value unavailable when one live quote is missing", a
 });
 ```
 
-- [ ] **Step 2: Run page tests and verify failure**
+- [x] **Step 2: Run page tests and verify failure**
 
 Run:
 
@@ -1088,11 +1088,11 @@ npm test -- src/features/today/TodayPage.test.tsx src/features/watchlist/Watchli
 
 Expected: FAIL because the pages still read mock or constant quote data.
 
-- [ ] **Step 3: Implement Today and Watchlist quote loading**
+- [x] **Step 3: Implement Today and Watchlist quote loading**
 
 Keep local watchlist group operations unchanged. Add quote rows and shared status metadata. An empty watchlist must not issue an API request. A failed refresh must keep the last envelope visible.
 
-- [ ] **Step 4: Implement portfolio quote valuation**
+- [x] **Step 4: Implement portfolio quote valuation**
 
 Remove the module-level hard-coded `quotes`. Fetch only symbols present in the immutable ledger. Convert:
 
@@ -1109,7 +1109,7 @@ const analyticsQuotes = Object.fromEntries(
 
 Add `quoteSource`, `quoteAsOf`, and `quoteStale` to submitted snapshot metadata without mutating prior snapshots.
 
-- [ ] **Step 5: Verify core quote integration and commit**
+- [x] **Step 5: Verify core quote integration and commit**
 
 Run:
 
@@ -1145,7 +1145,7 @@ git commit -m "feat: use live quotes across core pages"
 - Preserves existing pure `runScreen` and saved-screen behavior.
 - Replaces default templates with conditions supported by the approved free data sources.
 
-- [ ] **Step 1: Write failing user-universe tests**
+- [x] **Step 1: Write failing user-universe tests**
 
 ```ts
 test("adds a valid symbol once and persists removals from defaults", () => {
@@ -1163,7 +1163,7 @@ test("rejects invalid symbols before persistence", () => {
 });
 ```
 
-- [ ] **Step 2: Write failing discovery coverage tests**
+- [x] **Step 2: Write failing discovery coverage tests**
 
 ```tsx
 test("does not treat preparing metrics as a failed screen", async () => {
@@ -1184,7 +1184,7 @@ test("validates a symbol with the gateway before adding it", async () => {
 });
 ```
 
-- [ ] **Step 3: Run discovery tests and verify failure**
+- [x] **Step 3: Run discovery tests and verify failure**
 
 Run:
 
@@ -1194,7 +1194,7 @@ npm test -- src/features/discovery/universeRepository.test.ts src/features/disco
 
 Expected: FAIL because discovery still uses `mockDiscoveryRepository`.
 
-- [ ] **Step 4: Implement user universe and live repository**
+- [x] **Step 4: Implement user universe and live repository**
 
 Store only `addedSymbols` and `removedDefaultSymbols`; derive the final list against the versioned defaults. Validate a new symbol using `/api/companies/:symbol` before writing.
 
@@ -1208,7 +1208,7 @@ coverage: {
 };
 ```
 
-- [ ] **Step 5: Integrate real screening without changing missing-value semantics**
+- [x] **Step 5: Integrate real screening without changing missing-value semantics**
 
 Remove production use of `mockDiscoveryRepository`. Render ready results, a preparation count, and overall metric coverage. Keep `runScreen` pure: a missing required metric does not match, but preparing rows are separately counted and explained.
 
@@ -1258,7 +1258,7 @@ Use these exact real-data templates:
 
 Keep unsupported metrics in saved-screen deserialization for backward compatibility, but label them `当前免费数据源不支持` and exclude them from the “新增条件” menu. Render real derived themes rather than mock themes.
 
-- [ ] **Step 7: Verify discovery and commit**
+- [x] **Step 7: Verify discovery and commit**
 
 Run:
 
@@ -1377,7 +1377,7 @@ git commit -m "feat: connect research to real company data"
 - Exposes `/api/companies/:symbol/news`, `/api/events`, and `/api/macro/series`.
 - Uses 10-minute news TTL, 6-hour corporate-action TTL, and 24-hour macro TTL.
 
-- [ ] **Step 1: Write failing Alpaca news and action tests**
+- [x] **Step 1: Write failing Alpaca news and action tests**
 
 ```ts
 test("keeps only news metadata and original links", async () => {
@@ -1396,7 +1396,7 @@ test("normalizes dividends and splits as market events", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing FRED and unified-event tests**
+- [x] **Step 2: Write failing FRED and unified-event tests**
 
 ```ts
 test("normalizes selected macro observations without changing units", async () => {
@@ -1412,7 +1412,7 @@ test("marks date-only macro releases as all-day", async () => {
 });
 ```
 
-- [ ] **Step 3: Run provider and route tests and verify failure**
+- [x] **Step 3: Run provider and route tests and verify failure**
 
 Run:
 
@@ -1422,7 +1422,7 @@ npm test -- server/providers/alpacaProvider.test.ts server/providers/fredProvide
 
 Expected: FAIL because news, actions, FRED, and unified routes are not implemented.
 
-- [ ] **Step 4: Implement news and company actions**
+- [x] **Step 4: Implement news and company actions**
 
 Parse only headline, summary, source, timestamps, symbols, image URL, and original URL. Do not store or reproduce article bodies. Normalize Alpaca action types into dividend, split, or generic corporate-action events. Preserve source IDs for deduplication. Register the `news` manual-refresh handler.
 
@@ -1445,7 +1445,7 @@ export const macroSeries = {
 
 Cache observations and releases for 24 hours. Add the exact FRED attribution notice to macro envelopes. Register the `macro` manual-refresh handler.
 
-- [ ] **Step 6: Merge and sort unified events**
+- [x] **Step 6: Merge and sort unified events**
 
 Merge Finnhub earnings, Alpaca corporate actions, and FRED releases. Deduplicate by provider source ID; sort date-only events after timed events on the same date. If one source fails, return successful event groups plus a notice naming the unavailable group. Extend the `events` manual-refresh handler to refresh all three event groups.
 
@@ -1495,7 +1495,7 @@ git commit -m "feat: add news corporate actions and macro events"
 - Playwright runs against a fixture-backed Fastify server that also serves `dist`.
 - `npm run test:data:smoke` checks configured live providers without fixed-price assertions.
 
-- [ ] **Step 1: Write failing news and event interaction tests**
+- [x] **Step 1: Write failing news and event interaction tests**
 
 ```tsx
 test("research links to the original article without rendering article content", async () => {
@@ -1514,7 +1514,7 @@ test("filters the calendar to macro events", async () => {
 });
 ```
 
-- [ ] **Step 2: Implement research, calendar, and Today event UI**
+- [x] **Step 2: Implement research, calendar, and Today event UI**
 
 Render article metadata only. Use textual event-type badges. A stock event links to `/stocks/:symbol`; a macro event has no fabricated stock link. Show FRED attribution below macro data.
 

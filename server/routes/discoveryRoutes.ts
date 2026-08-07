@@ -6,7 +6,8 @@ const sectorEtfs: Record<string, string> = { Semiconductors: "SOXX", Technology:
 export function registerDiscoveryRoutes(app: FastifyInstance, dependencies: { universe: UniverseService }): void {
   app.get("/api/discovery/universe", async (request) => {
     const symbols = (request.query as { symbols?: string }).symbols?.split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
-    return dependencies.universe.getSnapshot(symbols?.length ? symbols : undefined);
+    const data = await dependencies.universe.getSnapshot(symbols?.length ? symbols : undefined);
+    return { data, source: "composite", asOf: data.generatedAt, fetchedAt: data.generatedAt, expiresAt: new Date(new Date(data.generatedAt).getTime() + 60_000).toISOString(), stale: false, notices: [] };
   });
   app.get("/api/discovery/themes", async () => {
     const snapshot = await dependencies.universe.getSnapshot();

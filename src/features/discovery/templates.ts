@@ -29,9 +29,8 @@ export const systemTemplates: readonly ScreenerTemplate[] = Object.freeze([
     name: "高质量成长",
     description: "以增长、盈利质量和现金流识别成长候选。",
     conditions: [
-      { id: "revenue-growth", metric: "revenueGrowthYoY", operator: ">=", value: 20, period: "TTM" },
-      { id: "eps-growth", metric: "epsGrowthYoY", operator: ">", value: 0, period: "TTM" },
-      { id: "gross-margin", metric: "grossMarginVsIndustryMedian", operator: ">=", value: 0, period: "TTM" },
+      { id: "revenue-growth", metric: "revenueGrowthYoY", operator: ">=", value: 10, period: "TTM" },
+      { id: "operating-margin", metric: "operatingMargin", operator: ">=", value: 15, period: "TTM" },
       { id: "free-cash-flow", metric: "freeCashFlow", operator: ">", value: 0, period: "TTM" },
     ],
   }),

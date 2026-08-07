@@ -1,15 +1,23 @@
 # stock_m
 
-美股研究与模拟决策工作台。当前版本提供延迟模拟行情、策略选股、自选分组、研究页、同业比较、不可变模拟交易账本、组合风险提醒与版本化周度复盘。
+面向美股研究与模拟决策的本地工作台。生产页面统一通过本机 Fastify 网关读取行情、公司资料、财务数据、新闻和事件；浏览器不会接触供应商密钥，也不会发送真实订单。
 
-所有价格与事件均为确定性模拟数据，仅供产品演示与研究，不构成投资建议，也不会发送真实订单。
-
-## 运行
+## 快速开始
 
 ```powershell
+Copy-Item .env.example .env
 npm install
 npm run dev
 ```
+
+在 `.env` 中配置需要启用的数据源：
+
+- [Alpaca](https://app.alpaca.markets/signup)：行情、K 线、新闻和公司行为。
+- [SEC EDGAR](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)：财务事实和监管文件；`SEC_USER_AGENT` 必须包含可联系的邮箱。
+- [Finnhub](https://finnhub.io/register)：公司资料和财报日历。
+- [FRED](https://fred.stlouisfed.org/docs/api/api_key.html)：宏观序列和发布事件；页面保留 FRED 归属说明。
+
+供应商凭据只在服务端读取。不要把 `.env`、密钥或账户资料提交到 Git。
 
 ## 验证
 
@@ -17,35 +25,44 @@ npm run dev
 npm test
 npm run build
 npm run test:e2e
+npm run test:data:smoke
 ```
 
-## Live market data
+`npm run test:e2e` 会先构建生产前端，再启动 fixture-backed Fastify 服务器。该服务器注册与生产相同的 `/api/*` 路由，但使用确定性的 Alpaca、SEC、Finnhub 和 FRED fixture providers，因此浏览器测试不依赖外网或实时价格。
+
+测试服务器额外提供一次性故障注入接口：
 
 ```powershell
-Copy-Item .env.example .env
-npm install
-npm run dev
-npm test
-npm run build
-npm run test:e2e
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:4173/api/testing/fail-next `
+  -ContentType application/json `
+  -Body '{"source":"alpaca","code":429}'
 ```
 
-Provider credentials are server-only. Alpaca supplies delayed quotes, news metadata and corporate actions; SEC EDGAR supplies filings and financial facts; Finnhub supplies company display data and earnings; FRED supplies approved macro series with the required FRED attribution. Configure `SEC_USER_AGENT` with a contact email.
+下一次对应供应商请求会返回模拟的 `429` 或 `503`，用于验证冷却、最后成功缓存和部分供应商失败。该路由只存在于 E2E 服务器，不会注册到生产服务。
 
-The local cache is stored under `.data/stock-m-cache.sqlite`. Quote and news requests use short TTLs; filings and macro series use longer TTLs. Manual refresh is available through the local API. A provider 429 enters cooldown and the app displays the last successful response as stale data when one exists. Back up or remove the `.data` folder only while the app is stopped.
+`npm run test:data:smoke` 仅检查已配置真实供应商的认证、响应结构、来源和时间戳，不断言固定价格或事件数量。Playwright 使用本机安装的稳定版 Chrome。
 
-## 研究与发现
+## 缓存与失败降级
 
-- 内置高质量成长、合理估值、财报改善和放量突破四套可编辑模板。
-- 已保存筛选保存在浏览器本地存储 `stock_m:saved-screens:v1`；自选分组保存在 `stock_m:watchlists:v1`。
-- 数据来自确定性的延迟演示数据集，并在页面上明确标明，不构成投资建议。
+本地缓存位于 `.data/stock-m-cache.sqlite`。仅校验成功的数据可以覆盖最后成功值。
 
-## 持仓与复盘
+| 数据 | TTL |
+| --- | ---: |
+| 市场状态、报价、分钟 K 线 | 1 分钟 |
+| 日 K 线 | 15 分钟 |
+| 新闻 | 10 分钟 |
+| 统一事件 | 6 小时 |
+| 公司资料、财务、文件、宏观序列 | 24 小时 |
 
-- 模拟交易写入 `stock_m:portfolio-ledger:v1`；旧版 `stock_m:orders` 在首次使用时迁移一次。
-- 组合页展示成本、盈亏、行业暴露、集中度和回撤；缺少价格会显示“估值不可用”。
-- 应用内提醒采用固定阈值：单股 20%/30%、行业 35%/45%、回撤 10%/15%。
-- 周报和组合快照分别保存在 `stock_m:portfolio-reviews:v1` 与 `stock_m:portfolio-snapshots:v1`。
-- 浏览器测试使用已安装的稳定版 Chrome。
+手动刷新通过 `POST /api/cache/refresh` 完成。供应商返回 429 时会进入冷却；已有缓存时继续显示最后成功数据，并明确标记刷新失败或数据陈旧。备份或删除 `.data` 前请先停止服务。
 
-产品设计见 `docs/superpowers/specs/2026-08-04-stock-m-design.md` 和 `docs/superpowers/specs/2026-08-06-discovery-research-design.md`，实施计划见 `docs/superpowers/plans/2026-08-06-discovery-research.md`。
+## 数据边界
+
+- 默认股票池约 100 只高流动性美股与 ETF，不代表全市场扫描。
+- Alpaca IEX/延迟数据会展示实际来源和延迟，不描述为全市场实时行情。
+- 新闻仅保存并展示元数据、摘要和原文链接，不复制文章正文。
+- 缺失值保持缺失，不自动替换为零。
+- 投资逻辑、模拟账本、提醒和周度复盘保存在浏览器本地。
+
+详细设计与实施记录见 `docs/superpowers/specs/2026-08-07-live-market-data-design.md` 和 `docs/superpowers/plans/2026-08-07-live-market-data.md`。

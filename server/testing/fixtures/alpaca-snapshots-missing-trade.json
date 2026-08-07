@@ -1,0 +1,7 @@
+{
+  "XOM": {
+    "latestQuote": { "bp": 114.6, "ap": 114.8, "t": "2026-08-07T14:00:00Z" },
+    "dailyBar": { "c": 114.7, "v": 300000 },
+    "previousDailyBar": { "c": 115.1 }
+  }
+}

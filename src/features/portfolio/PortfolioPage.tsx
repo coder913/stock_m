@@ -1,16 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertRepository } from "./alertRepository";
 import { evaluatePortfolioAlerts } from "./alertEngine";
 import { calculatePortfolio } from "./portfolioAnalytics";
 import { PortfolioLedger } from "./portfolioLedger";
 import { ReviewRepository } from "./reviewRepository";
 import type { LedgerEventType } from "./domain";
+import { MarketApiClient } from "../market/marketApiClient";
 import "./portfolio.css";
 
-const quotes = { NVDA: { price: 167.32, previousClose: 162.58 }, AMD: { price: 158.11, previousClose: 153.2 }, MSFT: { price: 505.41, previousClose: 500 } };
+const fallbackQuotes = { NVDA: { price: 167.32, previousClose: 162.58 }, AMD: { price: 158.11, previousClose: 153.2 }, MSFT: { price: 505.41, previousClose: 500 } };
 const sectors = { NVDA: "半导体", AMD: "半导体", MSFT: "软件" };
+const defaultMarketClient = new MarketApiClient();
 
-export function PortfolioPage() {
+export function PortfolioPage({ marketClient = defaultMarketClient }: { marketClient?: Pick<MarketApiClient, "getQuotes"> }) {
   const ledger = useMemo(() => new PortfolioLedger(localStorage), []);
   const alertRepository = useMemo(() => new AlertRepository(localStorage), []);
   const [tab, setTab] = useState<"overview" | "ledger" | "review">("overview");
@@ -19,7 +21,12 @@ export function PortfolioPage() {
   const [dialog, setDialog] = useState(false);
   const [symbol, setSymbol] = useState("NVDA"); const [quantity, setQuantity] = useState("1"); const [price, setPrice] = useState("167.32"); const [amount, setAmount] = useState("1"); const [reason, setReason] = useState(""); const [message, setMessage] = useState("");
   const [snoozeId, setSnoozeId] = useState<string | null>(null); const [snoozeUntil, setSnoozeUntil] = useState("");
-  const result = useMemo(() => calculatePortfolio({ events: ledger.list(), initialCash: 10_000, quotes, sectors, history: [10_000, 10_500, 10_200] }), [ledger, version]);
+  const events = ledger.list();
+  const symbols = useMemo(() => [...new Set(events.flatMap((event) => event.symbol ? [event.symbol] : []))], [version]);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; previousClose: number }> | undefined>();
+  useEffect(() => { if (symbols.length) void marketClient.getQuotes(symbols).then((envelope) => setLiveQuotes(Object.fromEntries(envelope.data.filter((quote) => quote.price !== undefined).map((quote) => [quote.symbol, { price: quote.price!, previousClose: quote.previousClose ?? quote.price! }])))).catch(() => undefined); }, [marketClient, symbols]);
+  const quotes = liveQuotes ?? fallbackQuotes;
+  const result = useMemo(() => calculatePortfolio({ events, initialCash: 10_000, quotes, sectors, history: [10_000, 10_500, 10_200] }), [events, quotes, version]);
   const alerts = useMemo(() => evaluatePortfolioAlerts({ naturalPeriod: "2026-W32", positions: result.positions.map((position) => ({ symbol: position.symbol, weight: position.weight })), sectorExposure: result.sectorExposure, drawdownPercent: result.drawdown.current }), [result]);
   const storedAlerts = useMemo(() => { alertRepository.reconcile(alerts, new Date().toISOString()); return alertRepository.list().filter((alert) => alert.status !== "resolved"); }, [alertRepository, alerts, version]);
   const save = () => { try { ledger.append(eventType === "buy" ? { type: "buy", symbol, quantity: Number(quantity), price: Number(price), thesisVersionId: "v1", occurredAt: new Date().toISOString() } : eventType === "sell" ? { type: "sell", symbol, quantity: Number(quantity), price: Number(price), reason, occurredAt: new Date().toISOString() } : eventType === "dividend" ? { type: "dividend", symbol, amount: Number(amount), reason: reason || "现金分红", occurredAt: new Date().toISOString() } : { type: "fee", amount: Number(amount), reason: reason || "模拟费用", occurredAt: new Date().toISOString() }); setDialog(false); setVersion((item) => item + 1); setMessage("交易已记录"); } catch (error) { setMessage(error instanceof Error ? error.message : "保存失败"); } };

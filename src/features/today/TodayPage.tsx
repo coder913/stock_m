@@ -2,22 +2,29 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Signal, TodayDashboard } from "../market/domain";
 import { mockMarketRepository } from "../market/mockMarketRepository";
+import { MarketApiClient } from "../market/marketApiClient";
+import type { DataEnvelope, MarketQuote } from "../market/apiDomain";
 import "./today.css";
 
 const freshnessLabel = (minutes: number) => `延迟 ${minutes} 分钟`;
+const defaultMarketClient = new MarketApiClient();
 
-export function TodayPage() {
+export function TodayPage({ marketClient = defaultMarketClient }: { marketClient?: Pick<MarketApiClient, "getQuotes" | "refresh"> }) {
   const [data, setData] = useState<TodayDashboard | null>(null);
   const [selectedSymbol, setSelectedSymbol] = useState("NVDA");
+  const [liveQuotes, setLiveQuotes] = useState<DataEnvelope<MarketQuote[]> | null>(null);
 
   useEffect(() => { void mockMarketRepository.getToday().then(setData); }, []);
+  const loadQuotes = () => void marketClient.getQuotes(["SPY", "QQQ", "DIA", "IWM"]).then(setLiveQuotes).catch(() => undefined);
+  useEffect(() => { loadQuotes(); }, [marketClient]);
   if (!data) return <p role="status">正在加载今日数据</p>;
   const selected = data.signals.find((signal) => signal.symbol === selectedSymbol) ?? data.signals[0];
   const delayed = data.freshness.kind === "delayed" ? freshnessLabel(data.freshness.minutes) : "模拟数据";
 
   return <div className="today-page">
+    <button type="button" onClick={() => { void marketClient.refresh({ resource: "quotes", symbols: ["SPY", "QQQ", "DIA", "IWM"] }).then(loadQuotes); }}>刷新市场数据</button>
     <p className="freshness">{delayed}</p>
-    <section className="market-pulse" aria-label="市场脉冲">{data.pulses.map((pulse) => <div key={pulse.symbol}><strong>{pulse.symbol}</strong><span>{pulse.price}</span></div>)}</section>
+    <section className="market-pulse" aria-label="市场脉冲">{(liveQuotes?.data.length ? liveQuotes.data : data.pulses).map((pulse) => <div key={pulse.symbol}><strong>{pulse.symbol}</strong><span>{pulse.price}</span></div>)}</section>
     <div className="today-grid"><section><h1>今天值得关注</h1>
       <div className="signal-list">{data.signals.map((signal) => <button key={signal.symbol} type="button" aria-pressed={signal.symbol === selected.symbol} onClick={() => setSelectedSymbol(signal.symbol)} aria-label={`查看 ${signal.symbol}`}><strong>{signal.symbol}</strong><span>{signal.trigger}</span></button>)}</div>
       <SignalDetail signal={selected} />

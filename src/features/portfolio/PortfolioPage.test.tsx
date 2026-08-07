@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { PortfolioPage } from "./PortfolioPage";
 import { PortfolioLedger } from "./portfolioLedger";
 
@@ -31,4 +31,13 @@ test("snoozes a concentration alert and creates a versioned weekly review", asyn
   expect(screen.getByText("已暂缓至 2026-08-10")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "提交周报" }));
   expect(await screen.findByRole("status")).toHaveTextContent("2026-W32 · 版本 1");
+});
+
+test("uses the live quote for an existing ledger position", async () => {
+  const ledger = new PortfolioLedger(localStorage);
+  ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "v1", occurredAt: "2026-08-06T10:00:00Z" });
+  const client = { getQuotes: vi.fn().mockResolvedValue({ data: [{ symbol: "NVDA", price: 175, previousClose: 170, currency: "USD", marketSession: "regular" }], source: "alpaca", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, notices: [] }) };
+  render(<PortfolioPage marketClient={client as never} />);
+  expect(await screen.findByText("10150.00")).toBeVisible();
+  expect(client.getQuotes).toHaveBeenCalledWith(["NVDA"]);
 });

@@ -24,7 +24,7 @@ const app = buildApp({
     gateway, provider: alpaca,
   },
   company: {
-    gateway, sec, profile: finnhub,
+    gateway, sec, profile: finnhub, news: alpaca,
   },
   discovery: { universe: new UniverseService({ getQuotes: (symbols) => alpaca.getQuotes(symbols), getCompanyProfile: (symbol) => finnhub.getCompanyProfile(symbol), getFinancialFacts: (symbol) => sec.getFinancialFacts(symbol) }) },
   events: { gateway, provider: finnhub },

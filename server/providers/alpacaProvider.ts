@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MarketQuote, MarketStatus, PriceBar } from "../../src/features/market/apiDomain";
+import type { CompanyNewsItem, MarketEvent, MarketQuote, MarketStatus, PriceBar } from "../../src/features/market/apiDomain";
 import { ProviderRateLimitError, ProviderTimeoutError } from "../core/errors";
 import type { ProviderResult } from "../core/providerTypes";
 
@@ -35,6 +35,8 @@ export class AlpacaProvider {
     const clock = z.object({ is_open: z.boolean(), next_open: z.string().optional(), next_close: z.string().optional() }).parse(await response.json());
     return { source: "alpaca", asOf: new Date().toISOString(), data: { isOpen: clock.is_open, session: clock.is_open ? "regular" : "closed", nextOpen: clock.next_open, nextClose: clock.next_close } };
   }
+  async getNews(symbols: string[], from: string, to: string): Promise<ProviderResult<CompanyNewsItem[]>> { const response = await this.request(`https://data.alpaca.markets/v1beta1/news?symbols=${encodeURIComponent(symbols.join(","))}&start=${from}&end=${to}`); const payload = z.object({ news: z.array(z.object({ id: z.union([z.string(), z.number()]), headline: z.string(), summary: z.string().optional(), author: z.string().optional(), created_at: z.string(), url: z.string(), symbols: z.array(z.string()).optional(), images: z.array(z.object({ url: z.string() })).optional() })) }).parse(await response.json()); return { source: "alpaca", asOf: new Date().toISOString(), data: payload.news.map((item) => ({ id: `alpaca:news:${item.id}`, symbols: item.symbols ?? symbols, headline: item.headline, summary: item.summary, sourceName: item.author ?? "Alpaca News", publishedAt: item.created_at, url: item.url, imageUrl: item.images?.[0]?.url })) }; }
+  async getCorporateActions(symbols: string[], from: string, to: string): Promise<ProviderResult<MarketEvent[]>> { const response = await this.request(`https://data.alpaca.markets/v1/corporate-actions?symbols=${encodeURIComponent(symbols.join(","))}&start=${from}&end=${to}`); const payload = z.object({ corporate_actions: z.array(z.object({ id: z.union([z.string(), z.number()]), symbol: z.string(), type: z.string(), date: z.string() })) }).parse(await response.json()); return { source: "alpaca", asOf: new Date().toISOString(), data: payload.corporate_actions.map((item) => ({ id: `alpaca:action:${item.id}`, type: item.type.includes("dividend") ? "dividend" : item.type.includes("split") ? "split" : "corporate-action", symbol: item.symbol, title: `${item.symbol} ${item.type}`, scheduledAt: item.date, timing: "all-day", source: "alpaca" })) }; }
 
   private async request(url: string): Promise<Response> {
     try {

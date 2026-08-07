@@ -17,7 +17,7 @@ export interface AppDependencies {
   cache: HealthCache;
   refreshRegistry?: RefreshRegistry;
   market?: { gateway: MarketDataGateway; provider: MarketProvider };
-  company?: { gateway: MarketDataGateway; sec: SecCompanyProvider; profile?: CompanyProfileProvider };
+  company?: { gateway: MarketDataGateway; sec: SecCompanyProvider; profile?: CompanyProfileProvider; news?: import("./routes/companyRoutes").NewsProvider };
   discovery?: { universe: UniverseService };
   events?: { gateway: MarketDataGateway; provider: EventsProvider };
 }

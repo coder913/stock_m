@@ -19,6 +19,21 @@ npm run build
 npm run test:e2e
 ```
 
+## Live market data
+
+```powershell
+Copy-Item .env.example .env
+npm install
+npm run dev
+npm test
+npm run build
+npm run test:e2e
+```
+
+Provider credentials are server-only. Alpaca supplies delayed quotes, news metadata and corporate actions; SEC EDGAR supplies filings and financial facts; Finnhub supplies company display data and earnings; FRED supplies approved macro series with the required FRED attribution. Configure `SEC_USER_AGENT` with a contact email.
+
+The local cache is stored under `.data/stock-m-cache.sqlite`. Quote and news requests use short TTLs; filings and macro series use longer TTLs. Manual refresh is available through the local API. A provider 429 enters cooldown and the app displays the last successful response as stale data when one exists. Back up or remove the `.data` folder only while the app is stopped.
+
 ## 研究与发现
 
 - 内置高质量成长、合理估值、财报改善和放量突破四套可编辑模板。

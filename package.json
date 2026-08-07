@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:data:smoke": "tsx server/testing/liveSmoke.ts",
     "start": "tsx server/index.ts"
   },
   "dependencies": {

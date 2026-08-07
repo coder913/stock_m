@@ -1,0 +1,2 @@
+.market-data-state { display: flex; gap: 8px; flex-wrap: wrap; color: var(--muted, #718096); font-size: 12px; }
+.market-data-error { color: #c53030; }

@@ -2,10 +2,13 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { ServerConfig } from "./config";
 import { ApiError } from "./core/errors";
 import type { HealthCache } from "./core/providerTypes";
+import { RefreshRegistry } from "./core/refreshRegistry";
+import { registerCacheRoutes } from "./routes/cacheRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
   cache: HealthCache;
+  refreshRegistry?: RefreshRegistry;
 }
 
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
@@ -20,5 +23,6 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
     providers: dependencies.config.providers,
     cache: dependencies.cache.health(),
   }));
+  registerCacheRoutes(app, dependencies.refreshRegistry ?? new RefreshRegistry());
   return app;
 }

@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import fastifyStatic from "@fastify/static";
+import { resolve } from "node:path";
 import type { ServerConfig } from "./config";
 import { ApiError } from "./core/errors";
 import type { HealthCache } from "./core/providerTypes";
@@ -22,6 +24,7 @@ export interface AppDependencies {
   discovery?: { universe: UniverseService };
   events?: { gateway: MarketDataGateway; provider: EventsProvider };
   macro?: { gateway: MarketDataGateway; provider: MacroProvider };
+  staticDir?: string;
 }
 
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
@@ -43,5 +46,6 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.events) registerEventRoutes(app, { ...dependencies.events, refreshRegistry });
   if (dependencies.macro) registerMacroRoutes(app, { ...dependencies.macro, refreshRegistry });
   registerCacheRoutes(app, refreshRegistry);
+  if (dependencies.staticDir) { void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false }); app.get("/*", (_request, reply) => reply.sendFile("index.html")); }
   return app;
 }

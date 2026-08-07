@@ -1518,7 +1518,7 @@ test("filters the calendar to macro events", async () => {
 
 Render article metadata only. Use textual event-type badges. A stock event links to `/stocks/:symbol`; a macro event has no fabricated stock link. Show FRED attribution below macro data.
 
-- [ ] **Step 3: Create deterministic fixture providers and failing E2E flow**
+- [x] **Step 3: Create deterministic fixture providers and failing E2E flow**
 
 ```ts
 test("uses live contracts from discovery through portfolio and stale fallback", async ({ page }) => {
@@ -1549,7 +1549,7 @@ npm run test:e2e -- tests/e2e/live-market-data.spec.ts
 
 Expected: FAIL until the fixture-backed test server and Playwright configuration exist.
 
-- [ ] **Step 4: Implement the fixture-backed browser server**
+- [x] **Step 4: Implement the fixture-backed browser server**
 
 `createFixtureProviders` returns deterministic provider implementations using the saved fixtures. `e2eServer.ts` uses an in-memory or temporary SQLite database, registers a test-only `POST /api/testing/fail-next` route, passes `dist` as `staticDir` to the shared app, and relies on the shared SPA fallback for non-API routes.
 
@@ -1568,7 +1568,7 @@ export default defineConfig({
 
 Add `"test:e2e:server": "tsx server/testing/e2eServer.ts"` to `package.json`.
 
-- [ ] **Step 5: Implement safe live smoke checks**
+- [x] **Step 5: Implement safe live smoke checks**
 
 `liveSmoke.ts` loads real configuration, prints one line per configured provider, and checks only:
 
@@ -1579,7 +1579,7 @@ Add `"test:e2e:server": "tsx server/testing/e2eServer.ts"` to `package.json`.
 
 It must skip unconfigured providers and must not assert a fixed price, percentage, event count, or filing date. Tests inject fake providers and assert secret values never appear in output.
 
-- [ ] **Step 6: Update existing E2E tests and README**
+- [x] **Step 6: Update existing E2E tests and README**
 
 Keep existing thesis, discovery, watchlist, ledger, alert, and review assertions, but make them run through the fixture gateway. README must document:
 
@@ -1595,7 +1595,7 @@ npm run test:data:smoke
 
 Also document provider signup links, local-only licensing assumption, cache location, TTL table, manual refresh, 429 cooldown, stale fallback, cache backup/removal, SEC user-agent format, FRED attribution, and stable Chrome requirement.
 
-- [ ] **Step 7: Run the complete validation suite**
+- [x] **Step 7: Run the complete validation suite**
 
 Run:
 

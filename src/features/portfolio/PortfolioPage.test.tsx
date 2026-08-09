@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { PortfolioPage } from "./PortfolioPage";
 import { PortfolioLedger } from "./portfolioLedger";
+import { MemoryRouter } from "react-router-dom";
 
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
@@ -40,4 +41,27 @@ test("uses the live quote for an existing ledger position", async () => {
   render(<PortfolioPage marketClient={client as never} />);
   expect(await screen.findByText("10150.00")).toBeVisible();
   expect(client.getQuotes).toHaveBeenCalledWith(["NVDA"]);
+});
+
+test("renders thesis health without changing holdings", async () => {
+  const ledger = new PortfolioLedger(localStorage);
+  ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
+  const service = { evaluate: vi.fn().mockResolvedValue({ conditions: [], alertsCreated: 0, warnings: [] }), getHealth: vi.fn().mockReturnValue({ breachedCount: 1, expiringCount: 0, unreadAlertCount: 1, items: [{ symbol: "NVDA", thesisVersionId: "thesis-1", status: "review-needed", breachedCount: 1, expiringCount: 0, unreadAlertCount: 1 }] }) };
+  const client = { getQuotes: vi.fn().mockResolvedValue({ data: [{ symbol: "NVDA", price: 175, previousClose: 170, currency: "USD", marketSession: "regular" }], source: "alpaca", asOf: "2026-08-09T10:00:00Z", fetchedAt: "2026-08-09T10:00:00Z", expiresAt: "2026-08-09T10:01:00Z", stale: false, notices: [] }) };
+  render(<MemoryRouter><PortfolioPage marketClient={client as never} monitorService={service as never} /></MemoryRouter>);
+
+  expect(await screen.findByText("需要复核")).toBeVisible();
+  expect(screen.getByText("受损条件 1")).toBeVisible();
+  expect(screen.getByRole("link", { name: "复核 NVDA" })).toHaveAttribute("href", "/stocks/NVDA");
+  expect(ledger.list()).toHaveLength(1);
+});
+
+test("keeps valuation visible when thesis monitoring fails", async () => {
+  const ledger = new PortfolioLedger(localStorage);
+  ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
+  const service = { evaluate: vi.fn().mockRejectedValue(new Error("offline")), getHealth: vi.fn() };
+  render(<MemoryRouter><PortfolioPage monitorService={service as never} /></MemoryRouter>);
+  expect(await screen.findByText("逻辑健康暂时不可用")).toBeVisible();
+  expect(screen.getByText("10134.64")).toBeVisible();
+  expect(ledger.list()).toHaveLength(1);
 });

@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import type { CompanyProfile, MarketQuote } from "../market/apiDomain";
 import { MarketApiClient } from "../market/marketApiClient";
 import { LocalPortfolioRepository } from "../portfolio/localPortfolioRepository";
-import { LocalThesisRepository } from "../thesis/localThesisRepository";
+import { ResearchMonitorPanel } from "../monitoring/ResearchMonitorPanel";
 import { CompanyActions } from "./CompanyActions";
 import { CompanyNews } from "./CompanyNews";
 import { FilingsList } from "./FilingsList";
@@ -20,7 +20,7 @@ export function ResearchPage({ marketClient = defaultMarketClient }: { marketCli
   const { symbol = "" } = useParams();
   const [core, setCore] = useState<{ profile: CompanyProfile; quote?: MarketQuote }>();
   const [coreError, setCoreError] = useState<string>();
-  const [thesisSaved, setThesisSaved] = useState(false);
+  const [thesisId, setThesisId] = useState<string>();
   const [message, setMessage] = useState("");
   const news = useResearchRequest(`${symbol}:news`, marketClient, () => marketClient.getNews(symbol));
   const events = useResearchRequest(`${symbol}:events`, marketClient, () => marketClient.getEvents({
@@ -44,20 +44,9 @@ export function ResearchPage({ marketClient = defaultMarketClient }: { marketCli
   if (coreError) return <section><p role="alert">{coreError}</p><Link to="/">返回今日</Link></section>;
   if (!core) return <p role="status">正在加载研究数据</p>;
 
-  const save = () => {
-    const thesis = new LocalThesisRepository(localStorage).save({
-      symbol,
-      coreJudgment: "数据中心需求支持增长",
-      evidence: ["收入趋势"],
-      risks: ["估值压缩"],
-      validationConditions: ["下季财报"],
-    });
-    setThesisSaved(Boolean(thesis));
-    setMessage("投资逻辑已保存");
-  };
   const buy = () => {
-    if (core.quote?.price === undefined) return;
-    new LocalPortfolioRepository(localStorage).add({ symbol, quantity: 10, price: core.quote.price, thesisVersionId: "v1" });
+    if (core.quote?.price === undefined || !thesisId) return;
+    new LocalPortfolioRepository(localStorage).add({ symbol, quantity: 10, price: core.quote.price, thesisVersionId: thesisId });
     setMessage("已加入模拟组合");
   };
 
@@ -79,9 +68,9 @@ export function ResearchPage({ marketClient = defaultMarketClient }: { marketCli
         <ResearchDataSection title="公司行为" request={events} errorMessage="公司行为暂时不可用" emptyMessage="暂无公司行为">
           {(items) => <CompanyActions items={items.filter((event) => event.type !== "earnings")} showHeading={false} />}
         </ResearchDataSection>
+        <ResearchMonitorPanel symbol={symbol} marketClient={marketClient} onThesisSaved={setThesisId} />
         <div>
-          <button type="button" onClick={save}>保存投资逻辑</button>
-          <button type="button" disabled={!thesisSaved || core.quote?.price === undefined} onClick={buy}>确认模拟买入</button>
+          <button type="button" disabled={!thesisId || core.quote?.price === undefined} onClick={buy}>确认模拟买入</button>
           <p role="status">{message}</p>
         </div>
       </article>

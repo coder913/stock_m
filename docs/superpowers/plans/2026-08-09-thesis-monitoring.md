@@ -62,7 +62,7 @@
 - Produces `evaluateCondition({ condition, snapshot, previousDecisive, now }): ConditionEvaluation`.
 - Later tasks must import these types instead of creating page-specific copies.
 
-- [ ] **Step 1: Write failing stable-version and metric-rule tests**
+- [x] **Step 1: Write failing stable-version and metric-rule tests**
 
 ```ts
 // src/features/monitoring/conditionVersion.test.ts
@@ -103,7 +103,7 @@ test("keeps the last decisive status when current data is stale", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -113,7 +113,7 @@ npm test -- src/features/monitoring/conditionVersion.test.ts src/features/monito
 
 Expected: FAIL because the monitoring domain, version function, and evaluator do not exist.
 
-- [ ] **Step 3: Implement the exact domain contracts**
+- [x] **Step 3: Implement the exact domain contracts**
 
 ```ts
 export type MonitorMetric = "price" | "dailyChangePercent" | "revenueGrowthYoY" | "operatingMargin" | "freeCashFlow" | "freeCashFlowYield" | "netDebtToEbitda" | "earningsSurprise" | "grossMarginYoYChange" | "priceVs20DayHigh" | "relativeVolume" | "averageDollarVolume20d";
@@ -140,7 +140,7 @@ export interface MonitorSnapshot {
 
 Define the remaining contracts exactly as approved in the spec. Add `changed: boolean` and `previousStatus?: ConditionStatus` to `ConditionEvaluation`; these are computed fields used by `ThesisMonitorService`, not persisted user decisions.
 
-- [ ] **Step 4: Implement canonical hashing and metric/event evaluation**
+- [x] **Step 4: Implement canonical hashing and metric/event evaluation**
 
 `conditionVersion` must recursively sort object keys, preserve array order, exclude generated fields (`id`, `conditionVersion`, `createdAt`, `updatedAt`, `deletedAt`, `symbol`, `thesisVersionId`), and return a lowercase eight-character FNV-1a hex hash.
 
@@ -160,7 +160,7 @@ const status = condition.direction === "support"
 
 Event evaluation must keep `before-date` and `within-range` pending until their window closes, and keep `not-occurred-by-date` pending until `to`. Macro events ignore symbol; company events require an exact normalized symbol match.
 
-- [ ] **Step 5: Add boundary and event tests, then verify GREEN**
+- [x] **Step 5: Add boundary and event tests, then verify GREEN**
 
 Add table cases for all five operators, inclusive `between`, reversed bounds rejection, support/risk direction, expired-without-data, each event occurrence mode, and market-date comparison.
 
@@ -172,7 +172,7 @@ npm run build
 git diff --check
 ```
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```powershell
 git add src/features/monitoring/domain.ts src/features/monitoring/conditionVersion.ts src/features/monitoring/conditionVersion.test.ts src/features/monitoring/conditionEvaluator.ts src/features/monitoring/conditionEvaluator.test.ts
@@ -202,7 +202,7 @@ git commit -m "feat: add thesis condition evaluator"
 - `ThesisReviewRepository.record(input)`, `latest(thesisVersionId)`, and `list(thesisVersionId)`.
 - `LocalThesisRepository.getLatest(symbol)` and immutable `createdAt` on saved theses.
 
-- [ ] **Step 1: Write failing repository tests**
+- [x] **Step 1: Write failing repository tests**
 
 ```ts
 test("binds normalized conditions to one immutable thesis version", () => {
@@ -229,7 +229,7 @@ test("isolates a corrupt stored record without dropping valid records", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 npm test -- src/features/monitoring/*Repository.test.ts src/features/thesis/localThesisRepository.test.ts
@@ -237,7 +237,7 @@ npm test -- src/features/monitoring/*Repository.test.ts src/features/thesis/loca
 
 Expected: FAIL because the repositories and thesis methods do not exist.
 
-- [ ] **Step 3: Implement condition and evaluation persistence**
+- [x] **Step 3: Implement condition and evaluation persistence**
 
 Use exact storage keys:
 
@@ -250,7 +250,7 @@ Validate persisted objects with local type guards before returning them. Return 
 
 `EvaluationRepository.append` deduplicates by `conditionId + conditionVersion + dataState + status + asOf`. `latestDecisive` returns only a fresh confirmed or breached evaluation. Including the condition identity prevents two theses that share the same normalized rule from collapsing into one history entry.
 
-- [ ] **Step 4: Implement alert and review persistence**
+- [x] **Step 4: Implement alert and review persistence**
 
 Use:
 
@@ -267,7 +267,7 @@ const reviewKey = "stock_m:thesis-reviews:v1";
 
 `ThesisReviewRepository.record` accepts only `reaffirmed`, `invalidated`, or `archived`, and stores an immutable condition-status snapshot plus optional note.
 
-- [ ] **Step 5: Upgrade thesis versions without converting legacy text**
+- [x] **Step 5: Upgrade thesis versions without converting legacy text**
 
 Extend `Thesis`:
 
@@ -286,7 +286,7 @@ export interface Thesis {
 
 `save(input, now = new Date().toISOString())` adds `createdAt`. `getLatest(symbol)` returns the highest version. When old stored theses lack `createdAt`, return them with `createdAt: "1970-01-01T00:00:00.000Z"`; do not rewrite storage and do not parse `validationConditions`.
 
-- [ ] **Step 6: Verify repositories and commit**
+- [x] **Step 6: Verify repositories and commit**
 
 ```powershell
 npm test -- src/features/monitoring src/features/thesis/localThesisRepository.test.ts
@@ -313,7 +313,7 @@ git commit -m "feat: persist thesis monitoring history"
 - `ThesisMonitorService.getHealth(symbols): ThesisHealthSummary`.
 - Consumes Task 1 evaluator and Task 2 repositories.
 
-- [ ] **Step 1: Write failing snapshot-loader tests**
+- [x] **Step 1: Write failing snapshot-loader tests**
 
 ```ts
 test("batches quotes, universe metrics, and one event window", async () => {
@@ -334,7 +334,7 @@ test("marks only the failed resource unavailable", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing service transition tests**
+- [x] **Step 2: Write failing service transition tests**
 
 ```ts
 test("creates one alert when a condition changes from confirmed to breached", async () => {
@@ -357,7 +357,7 @@ test("does not alert or overwrite a decisive result when a provider becomes stal
 });
 ```
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 ```powershell
 npm test -- src/features/monitoring/monitorSnapshotLoader.test.ts src/features/monitoring/thesisMonitorService.test.ts
@@ -365,7 +365,7 @@ npm test -- src/features/monitoring/monitorSnapshotLoader.test.ts src/features/m
 
 Expected: FAIL because loader and service do not exist.
 
-- [ ] **Step 4: Implement resource-aware snapshot loading**
+- [x] **Step 4: Implement resource-aware snapshot loading**
 
 Use one request per resource group:
 
@@ -379,7 +379,7 @@ await Promise.allSettled([
 
 Quotes own `price` and `dailyChangePercent`. Universe data owns all other monitor metrics. If an envelope has `stale` or `fallback`, set the corresponding values to `stale`. A missing field in a successful fresh envelope is `missing`; a rejected resource is `unavailable`. Do not fall back to mock repositories.
 
-- [ ] **Step 5: Implement service orchestration and derived health**
+- [x] **Step 5: Implement service orchestration and derived health**
 
 For each active condition:
 
@@ -407,7 +407,7 @@ return "normal";
 
 The service constructor must receive all repositories, loader, evaluator, and clock dependencies; do not instantiate localStorage internally.
 
-- [ ] **Step 6: Verify service and commit**
+- [x] **Step 6: Verify service and commit**
 
 ```powershell
 npm test -- src/features/monitoring
@@ -437,7 +437,7 @@ git commit -m "feat: orchestrate thesis monitoring"
 - `ResearchMonitorPanel({ symbol, marketClient, onThesisSaved })` owns thesis/condition saving, evaluation refresh, and review decisions.
 - `onThesisSaved(thesisId)` supplies the real immutable thesis id to the existing paper-buy guard.
 
-- [ ] **Step 1: Write failing editor validation tests**
+- [x] **Step 1: Write failing editor validation tests**
 
 ```tsx
 test("adds a structured risk price condition", async () => {
@@ -458,7 +458,7 @@ test("requires both bounds for a between condition", async () => {
 });
 ```
 
-- [ ] **Step 2: Write failing research integration test**
+- [x] **Step 2: Write failing research integration test**
 
 ```tsx
 test("saves conditions against the new thesis id and uses it for paper buy", async () => {
@@ -477,7 +477,7 @@ test("shows a stale evaluation without changing the previous status", async () =
 });
 ```
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 ```powershell
 npm test -- src/features/monitoring/ConditionEditor.test.tsx src/features/monitoring/ResearchMonitorPanel.test.tsx src/features/research/ResearchPage.test.tsx src/features/research/ResearchFlow.test.tsx
@@ -485,7 +485,7 @@ npm test -- src/features/monitoring/ConditionEditor.test.tsx src/features/monito
 
 Expected: FAIL because condition UI and monitor panel do not exist.
 
-- [ ] **Step 4: Implement accessible condition editing**
+- [x] **Step 4: Implement accessible condition editing**
 
 The editor must:
 
@@ -498,7 +498,7 @@ The editor must:
 - support draft deletion before save and repository soft deletion after save;
 - use labels for every input and keyboard-operable buttons.
 
-- [ ] **Step 5: Implement research monitoring and real thesis binding**
+- [x] **Step 5: Implement research monitoring and real thesis binding**
 
 Replace the hard-coded thesis save inside `ResearchPage` with `ResearchMonitorPanel`. Keep default field values for the existing demonstration flow, but render editable core judgment, evidence, risks, and legacy validation text. On save:
 
@@ -511,7 +511,7 @@ await monitorService.evaluate({ symbols: [symbol], now });
 
 The paper-buy button remains disabled until `onThesisSaved` supplies an id and a live quote exists. Use that exact id in `LocalPortfolioRepository.add` instead of the literal `"v1"`.
 
-- [ ] **Step 6: Verify research flow and commit**
+- [x] **Step 6: Verify research flow and commit**
 
 ```powershell
 npm test -- src/features/monitoring src/features/research src/features/thesis src/features/portfolio/localPortfolioRepository.test.ts
@@ -537,7 +537,7 @@ git commit -m "feat: add research thesis monitoring"
 - `TodayPage` receives optional `monitorService` and `monitorAlertRepository` dependencies for tests; defaults use localStorage.
 - Today triggers one monitor run on mount and after successful “刷新市场数据”.
 
-- [ ] **Step 1: Write failing queue interaction tests**
+- [x] **Step 1: Write failing queue interaction tests**
 
 ```tsx
 test("orders high breaches before expiry and supports inbox actions", async () => {
@@ -563,7 +563,7 @@ test("runs monitoring after market refresh and shows review-needed alerts", asyn
 });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 npm test -- src/features/monitoring/ReviewQueue.test.tsx src/features/today/TodayPage.test.tsx
@@ -571,7 +571,7 @@ npm test -- src/features/monitoring/ReviewQueue.test.tsx src/features/today/Toda
 
 Expected: FAIL because Today has no monitoring queue.
 
-- [ ] **Step 3: Implement queue ordering and actions**
+- [x] **Step 3: Implement queue ordering and actions**
 
 Sort by:
 
@@ -583,11 +583,11 @@ Sort by:
 
 Each row renders symbol, condition name, transition, explanation, data time, severity, read state, research link, and action buttons. Snooze requires a future date. Archived and future-snoozed alerts disappear from Today immediately.
 
-- [ ] **Step 4: Integrate Today evaluation without blocking market content**
+- [x] **Step 4: Integrate Today evaluation without blocking market content**
 
 Market pulse and events must render even if monitoring fails. Show monitoring failure only inside the review section. After quote refresh succeeds, await `monitorService.evaluate`, then reload alerts. Restore due snoozes using the same injected clock before listing pending alerts.
 
-- [ ] **Step 5: Verify Today and commit**
+- [x] **Step 5: Verify Today and commit**
 
 ```powershell
 npm test -- src/features/monitoring/ReviewQueue.test.tsx src/features/today/TodayPage.test.tsx
@@ -613,7 +613,7 @@ git commit -m "feat: add today thesis review queue"
 - `PortfolioPage` accepts an optional `monitorService`, evaluates held symbols on mount, and links health rows to research.
 - Existing portfolio concentration alerts remain separate from thesis-monitor alerts.
 
-- [ ] **Step 1: Write failing portfolio-health tests**
+- [x] **Step 1: Write failing portfolio-health tests**
 
 ```tsx
 test("renders aggregate and per-position thesis health without changing holdings", async () => {
@@ -633,7 +633,7 @@ test("shows unmonitored instead of assuming a position is healthy", async () => 
 });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 npm test -- src/features/monitoring/PortfolioHealth.test.tsx src/features/portfolio/PortfolioPage.test.tsx
@@ -641,7 +641,7 @@ npm test -- src/features/monitoring/PortfolioHealth.test.tsx src/features/portfo
 
 Expected: FAIL because portfolio health UI and service integration do not exist.
 
-- [ ] **Step 3: Implement health presentation and integration**
+- [x] **Step 3: Implement health presentation and integration**
 
 Render cards for breached, expiring within seven days, and unread alert counts. Render exact labels:
 
@@ -657,7 +657,7 @@ const healthLabels = {
 
 Evaluate only non-zero positions. If monitoring fails, keep valuation and ledger usable and show “逻辑健康暂时不可用” in the health section. Never append a sell or other ledger event from health state.
 
-- [ ] **Step 4: Verify portfolio and commit**
+- [x] **Step 4: Verify portfolio and commit**
 
 ```powershell
 npm test -- src/features/monitoring/PortfolioHealth.test.tsx src/features/portfolio
@@ -685,7 +685,7 @@ git commit -m "feat: show portfolio thesis health"
 - `ConditionTimeline` combines evaluation and review history without mutating it.
 - Review decisions write through `ThesisReviewRepository` and refresh derived health.
 
-- [ ] **Step 1: Write failing monitor-page tests**
+- [x] **Step 1: Write failing monitor-page tests**
 
 ```tsx
 test("filters the inbox and records a reaffirmed review", async () => {
@@ -709,7 +709,7 @@ test("shows evaluation and review entries in chronological order", () => {
 });
 ```
 
-- [ ] **Step 2: Write failing route and navigation test**
+- [x] **Step 2: Write failing route and navigation test**
 
 ```tsx
 test("adds the monitoring center to primary navigation", () => {
@@ -718,7 +718,7 @@ test("adds the monitoring center to primary navigation", () => {
 });
 ```
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 ```powershell
 npm test -- src/features/monitoring/MonitorPage.test.tsx src/app/AppShell.test.tsx
@@ -726,13 +726,13 @@ npm test -- src/features/monitoring/MonitorPage.test.tsx src/app/AppShell.test.t
 
 Expected: FAIL because page, route, timeline, and navigation item do not exist.
 
-- [ ] **Step 4: Implement monitor inbox and filters**
+- [x] **Step 4: Implement monitor inbox and filters**
 
 Views are tabs with accessible names “待处理”, “稍后处理”, and “已归档”. Filters include symbol, severity, `toStatus`, and inclusive date range. Query repositories on every action; do not maintain a divergent page-only copy. Empty states must name the active view.
 
 Timeline entries display local time but sort by stored ISO time. Review forms require a decision and allow an optional note. `invalidated` and `archived` require a non-blank note; `reaffirmed` note remains optional.
 
-- [ ] **Step 5: Add route and six-item navigation**
+- [x] **Step 5: Add route and six-item navigation**
 
 Modify `App.tsx`:
 
@@ -742,7 +742,7 @@ Modify `App.tsx`:
 
 Add `["/monitor", "监控"]` between Portfolio and Journal. Update the navigation test to assert exactly six labels: 今日、发现、自选、组合、监控、日志.
 
-- [ ] **Step 6: Verify monitor center and commit**
+- [x] **Step 6: Verify monitor center and commit**
 
 ```powershell
 npm test -- src/features/monitoring src/app/AppShell.test.tsx
@@ -770,7 +770,7 @@ git commit -m "feat: add thesis monitoring center"
 - E2E server adds test-only `POST /api/testing/market-state`.
 - Browser flow proves persistence, transition alerts, review decisions, portfolio health, idempotency, and stale-data safety.
 
-- [ ] **Step 1: Write failing fixture mutation tests**
+- [x] **Step 1: Write failing fixture mutation tests**
 
 ```ts
 test("changes the next fixture quote without changing other symbols", async () => {
@@ -787,7 +787,7 @@ test("validates the test-only market-state route", async () => {
 });
 ```
 
-- [ ] **Step 2: Run fixture tests and verify RED**
+- [x] **Step 2: Run fixture tests and verify RED**
 
 ```powershell
 npm test -- server/testing/createFixtureProviders.test.ts
@@ -796,7 +796,7 @@ npm run test:e2e -- tests/e2e/thesis-monitoring.spec.ts
 
 Expected: fixture unit test fails because `setQuote` does not exist; Playwright fails because the test route and monitoring UI do not exist.
 
-- [ ] **Step 3: Implement deterministic market-state mutation**
+- [x] **Step 3: Implement deterministic market-state mutation**
 
 The route accepts only:
 
@@ -810,7 +810,7 @@ interface MarketStateRequest {
 
 Validate symbol with `/^[A-Z0-9.-]+$/`, require finite positive prices, mutate only fixture state, and advance the injected E2E clock by two minutes so the one-minute quote cache expires. Never register this route in `server/app.ts` or production `server/index.ts`.
 
-- [ ] **Step 4: Add the complete Chrome flow**
+- [x] **Step 4: Add the complete Chrome flow**
 
 ```ts
 test("monitors a thesis from condition creation through human review", async ({ page }) => {
@@ -847,7 +847,7 @@ test("monitors a thesis from condition creation through human review", async ({ 
 
 Add a second flow that injects `fail-next` after one confirmed evaluation and asserts the condition remains confirmed with “等待新数据” and no new breached alert.
 
-- [ ] **Step 5: Update README**
+- [x] **Step 5: Update README**
 
 Document:
 
@@ -858,7 +858,7 @@ Document:
 - explicit statement that invalidated does not sell a position;
 - `npm run test:e2e -- tests/e2e/thesis-monitoring.spec.ts`.
 
-- [ ] **Step 6: Run complete validation and scans**
+- [x] **Step 6: Run complete validation and scans**
 
 ```powershell
 npm test
@@ -867,7 +867,7 @@ npm run test:e2e
 npm run test:data:smoke
 git diff --check
 rg -n "ALPACA_API_SECRET_KEY|FINNHUB_API_KEY|FRED_API_KEY" dist
-rg -n "mockMarketRepository|mockDiscoveryRepository" src --glob "!*.test.ts" --glob "!*.test.tsx"
+rg -n "mockMarketRepository|mockDiscoveryRepository" src --glob "!*.test.ts" --glob "!*.test.tsx" --glob "!mockMarketRepository.ts" --glob "!mockDiscoveryRepository.ts"
 ```
 
 Expected:
@@ -880,7 +880,7 @@ Expected:
 - no provider environment-variable names in `dist`;
 - no production-page imports of mock repositories.
 
-- [ ] **Step 7: Mark the plan complete and commit**
+- [x] **Step 7: Mark the plan complete and commit**
 
 Change every completed checkbox in this plan from `[ ]` to `[x]`. Stage only intended files; preserve `readme_work.md` and `chrome/` unless the user separately requests otherwise.
 

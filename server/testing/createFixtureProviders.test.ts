@@ -31,3 +31,12 @@ test("fails only the next matching provider request", async () => {
     data: [{ symbol: "NVDA", price: 167.32 }],
   });
 });
+
+test("changes the next fixture quote without changing other symbols", async () => {
+  const fixtures = createFixtureProviders();
+  fixtures.setQuote("NVDA", 190, 167.32);
+  const quotes = await fixtures.alpaca.getQuotes(["NVDA", "MSFT"]);
+
+  expect(quotes.data[0]).toMatchObject({ symbol: "NVDA", price: 190, previousClose: 167.32 });
+  expect(quotes.data[1]).toMatchObject({ symbol: "MSFT", price: 505.41 });
+});

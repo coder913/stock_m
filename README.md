@@ -28,6 +28,12 @@ npm run test:e2e
 npm run test:data:smoke
 ```
 
+只运行投资逻辑监控浏览器流程：
+
+```powershell
+npm run test:e2e -- tests/e2e/thesis-monitoring.spec.ts
+```
+
 `npm run test:e2e` 会先构建生产前端，再启动 fixture-backed Fastify 服务器。该服务器注册与生产相同的 `/api/*` 路由，但使用确定性的 Alpaca、SEC、Finnhub 和 FRED fixture providers，因此浏览器测试不依赖外网或实时价格。
 
 测试服务器额外提供一次性故障注入接口：
@@ -40,6 +46,8 @@ Invoke-RestMethod -Method Post `
 ```
 
 下一次对应供应商请求会返回模拟的 `429` 或 `503`，用于验证冷却、最后成功缓存和部分供应商失败。该路由只存在于 E2E 服务器，不会注册到生产服务。
+
+E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某只 fixture 股票的价格和前收盘价。该接口会推进测试时钟使一分钟报价缓存过期，只用于验证监控状态迁移，不会注册到生产服务。
 
 `npm run test:data:smoke` 仅检查已配置真实供应商的认证、响应结构、来源和时间戳，不断言固定价格或事件数量。Playwright 使用本机安装的稳定版 Chrome。
 
@@ -65,4 +73,19 @@ Invoke-RestMethod -Method Post `
 - 缺失值保持缺失，不自动替换为零。
 - 投资逻辑、模拟账本、提醒和周度复盘保存在浏览器本地。
 
-详细设计与实施记录见 `docs/superpowers/specs/2026-08-07-live-market-data-design.md` 和 `docs/superpowers/plans/2026-08-07-live-market-data.md`。
+## 投资逻辑监控
+
+研究页可为每个不可变投资逻辑版本添加结构化指标或事件条件。条件、评估历史、提醒和人工复核分别保存在以下浏览器本地版本库：
+
+- `stock_m:thesis-conditions:v1`
+- `stock_m:condition-evaluations:v1`
+- `stock_m:monitor-alerts:v1`
+- `stock_m:thesis-reviews:v1`
+
+条件状态包括“待验证、成立、受损、已过期”。只有 fresh 且字段完整的数据可以改变成立/受损结论；stale、missing 或 unavailable 会显示“等待新数据”，并保留上一次 fresh 的有效结论，不产生错误的受损或恢复提醒。
+
+监控在 Today、研究页和组合页首次加载、用户点击“刷新监控”，或市场数据手动刷新成功后运行。当前版本没有服务端定时任务、后台监控、邮件或浏览器系统通知；应用关闭时不会继续评估。
+
+Today 展示需要复核的提醒，支持已读、稍后处理、归档和跳转研究页；`/monitor` 提供待处理、稍后处理、已归档视图、筛选和完整时间线。条件由系统确定性评估，但整条投资逻辑只能由用户标记为“仍成立、已失效、已归档”。“已失效”只更新健康展示，绝不会自动卖出持仓或创建订单。
+
+详细设计与实施记录见 `docs/superpowers/specs/2026-08-07-live-market-data-design.md`、`docs/superpowers/plans/2026-08-07-live-market-data.md`、`docs/superpowers/specs/2026-08-09-thesis-monitoring-design.md` 和 `docs/superpowers/plans/2026-08-09-thesis-monitoring.md`。

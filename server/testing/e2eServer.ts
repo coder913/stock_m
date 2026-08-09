@@ -25,4 +25,13 @@ app.post("/api/testing/fail-next", (request, reply) => {
   fixtures.failNext(body.source, body.code);
   return { ok: true };
 });
+app.post("/api/testing/market-state", (request, reply) => {
+  const body = request.body as { symbol?: string; price?: number; previousClose?: number };
+  if (!body.symbol || !/^[A-Z0-9.-]+$/.test(body.symbol) || !Number.isFinite(body.price) || body.price! <= 0 || (body.previousClose !== undefined && (!Number.isFinite(body.previousClose) || body.previousClose <= 0))) {
+    return reply.status(400).send({ code: "INVALID_MARKET_STATE", message: "测试行情参数无效", retryable: false });
+  }
+  now = new Date(new Date(now).getTime() + 2 * 60_000).toISOString();
+  fixtures.setQuote(body.symbol, body.price!, body.previousClose);
+  return { ok: true, now };
+});
 void app.listen({ host: "127.0.0.1", port: 4173 });

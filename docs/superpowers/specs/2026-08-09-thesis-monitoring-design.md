@@ -197,7 +197,7 @@ interface MonitorAlert {
 `conditionVersion` 是条件规范化 JSON 的稳定哈希。提醒去重键使用：
 
 ```text
-conditionVersion + ":" + toStatus + ":" + asOf
+thesisVersionId + ":" + conditionId + ":" + conditionVersion + ":" + toStatus + ":" + asOf
 ```
 
 ## 8. 首版指标与事件目录
@@ -282,6 +282,8 @@ conditionVersion + ":" + toStatus + ":" + asOf
 - `archived`：停止跟踪。
 
 每次人工操作必须保存时间、逻辑版本、备注和当时的条件摘要。
+
+`reaffirmed` 表示用户已经处理复核快照中记录的风险。派生健康状态恢复为 `normal`，并在当前受损/过期条件集合与复核快照保持一致时维持该状态；新增风险、条件版本变化或条件状态变化会再次派生 `review-needed`。这一规则只影响派生健康状态，不会改写条件评估历史。
 
 ## 11. 评估触发与幂等
 

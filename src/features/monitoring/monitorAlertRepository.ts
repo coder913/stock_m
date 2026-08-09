@@ -50,8 +50,12 @@ export class MonitorAlertRepository {
 
   list(query: AlertListQuery): MonitorAlert[] {
     return this.read().filter((alert) => {
-      if (query.view === "archived" ? !alert.archivedAt : Boolean(alert.archivedAt)) return false;
-      if (query.view === "snoozed" ? !alert.snoozedUntil || alert.snoozedUntil <= query.now : Boolean(alert.snoozedUntil && alert.snoozedUntil > query.now)) return false;
+      if (query.view === "archived") {
+        if (!alert.archivedAt) return false;
+      } else {
+        if (alert.archivedAt) return false;
+        if (query.view === "snoozed" ? !alert.snoozedUntil || alert.snoozedUntil <= query.now : Boolean(alert.snoozedUntil && alert.snoozedUntil > query.now)) return false;
+      }
       if (query.symbol && alert.symbol !== query.symbol.toUpperCase()) return false;
       if (query.severity && alert.severity !== query.severity) return false;
       if (query.toStatus && alert.toStatus !== query.toStatus) return false;

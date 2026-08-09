@@ -5,6 +5,7 @@ import { ResearchPage } from "../features/research/ResearchPage";
 import { JournalPage, PortfolioPage } from "../features/portfolio/PortfolioPage";
 import { DiscoveryPage } from "../features/discovery/DiscoveryPage";
 import { WatchlistPage } from "../features/watchlist/WatchlistPage";
+import { MonitorPage } from "../features/monitoring/MonitorPage";
 
 const RoutePlaceholder = ({ title }: { title: string }) => <h1>{title}</h1>;
 
@@ -17,6 +18,7 @@ export function App() {
           <Route path="discover" element={<DiscoveryPage />} />
           <Route path="watchlist" element={<WatchlistPage />} />
           <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="monitor" element={<MonitorPage />} />
           <Route path="journal" element={<JournalPage />} />
           <Route path="stocks/:symbol" element={<ResearchPage />} />
         </Route>

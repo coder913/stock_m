@@ -5,6 +5,7 @@ const navigationItems = [
   ["/discover", "发现"],
   ["/watchlist", "自选"],
   ["/portfolio", "组合"],
+  ["/monitor", "监控"],
   ["/journal", "日志"]
 ] as const;
 

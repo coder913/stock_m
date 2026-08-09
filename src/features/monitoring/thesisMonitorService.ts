@@ -26,7 +26,12 @@ export class ThesisMonitorService {
 
   async evaluate(input: { symbols?: string[]; now?: string } = {}): Promise<MonitorRunResult> {
     const now = input.now ?? new Date().toISOString();
-    const conditions = this.dependencies.conditionRepository.listActive(input.symbols);
+    const activeConditions = this.dependencies.conditionRepository.listActive(input.symbols);
+    const latestBySymbol = new Map(activeConditions.map((condition) => [condition.symbol, this.dependencies.thesisRepository.getLatest(condition.symbol)]));
+    const conditions = activeConditions.filter((condition) => {
+      const latest = latestBySymbol.get(condition.symbol);
+      return latest?.id === condition.thesisVersionId && this.dependencies.reviewRepository.latest(condition.thesisVersionId)?.decision !== "archived";
+    });
     if (!conditions.length) return { conditions: [], alertsCreated: 0, warnings: this.dependencies.conditionRepository.getWarnings() };
     const snapshots = await this.dependencies.snapshotLoader.load(conditions, now);
     const evaluations: ConditionEvaluation[] = [];
@@ -79,9 +84,13 @@ export class ThesisMonitorService {
     if (!views.length) return "unmonitored";
     if (review?.decision === "invalidated") return "invalidated";
     if (review?.decision === "archived") return "archived";
-    const currentConcerns = views.filter(({ evaluation }) => evaluation?.status === "breached" || evaluation?.status === "expired").map(({ condition, evaluation }) => concernKey({ conditionId: condition.id, conditionVersion: condition.conditionVersion!, status: evaluation!.status }));
+    const currentConcerns = views.filter(({ evaluation }) => evaluation?.status === "breached" || evaluation?.status === "expired");
     const reviewedConcerns = new Set((review?.conditionSnapshot ?? []).filter((item) => item.status === "breached" || item.status === "expired").map(concernKey));
-    const unreviewed = currentConcerns.filter((key) => !reviewedConcerns.has(key));
+    const unreviewed = currentConcerns.filter(({ condition, evaluation }) => {
+      const key = concernKey({ conditionId: condition.id, conditionVersion: condition.conditionVersion!, status: evaluation!.status });
+      if (!review || !reviewedConcerns.has(key)) return true;
+      return this.dependencies.evaluationRepository.list(condition.id).some((item) => item.evaluatedAt > review.createdAt && item.changed && (item.status === "breached" || item.status === "expired"));
+    });
     if (review?.decision === "reaffirmed" && unreviewed.length === 0) return "normal";
     const highBreaches = views.filter(({ condition, evaluation }) => condition.severity === "high" && evaluation?.status === "breached").length;
     const expired = views.filter(({ evaluation }) => evaluation?.status === "expired").length;

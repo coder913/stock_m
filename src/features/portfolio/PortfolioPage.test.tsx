@@ -65,3 +65,13 @@ test("keeps valuation visible when thesis monitoring fails", async () => {
   expect(screen.getByText("10134.64")).toBeVisible();
   expect(ledger.list()).toHaveLength(1);
 });
+
+test("shows monitoring recovery warnings beside portfolio health", async () => {
+  const ledger = new PortfolioLedger(localStorage);
+  ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
+  const service = { evaluate: vi.fn().mockResolvedValue({ conditions: [], alertsCreated: 0, warnings: ["skipped corrupt monitoring data"] }), getHealth: vi.fn().mockReturnValue({ breachedCount: 0, expiringCount: 0, unreadAlertCount: 0, items: [{ symbol: "NVDA", thesisVersionId: "thesis-1", status: "normal", breachedCount: 0, expiringCount: 0, unreadAlertCount: 0 }] }) };
+  render(<MemoryRouter><PortfolioPage monitorService={service as never} /></MemoryRouter>);
+
+  expect(await screen.findByText("skipped corrupt monitoring data")).toBeVisible();
+  expect(screen.getByText("正常", { exact: true })).toBeVisible();
+});

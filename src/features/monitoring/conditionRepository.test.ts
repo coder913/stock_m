@@ -19,11 +19,11 @@ describe("ConditionRepository", () => {
   });
 
   test("isolates a corrupt stored record without dropping valid records", () => {
-    localStorage.setItem("stock_m:thesis-conditions:v1", JSON.stringify([storedCondition(), { id: 42 }]));
+    localStorage.setItem("stock_m:thesis-conditions:v1", JSON.stringify([storedCondition(), { ...storedCondition(), id: "invalid-severity", severity: "urgent" }, { ...storedCondition(), id: "invalid-target", operator: "between", target: [1] }, { id: 42 }]));
     const repo = new ConditionRepository(localStorage);
 
     expect(repo.listActive()).toEqual([expect.objectContaining({ id: "condition-1" })]);
-    expect(repo.getWarnings()).toContain("已跳过 1 条损坏的监控条件");
+    expect(repo.getWarnings()[0]).toContain("3");
   });
 
   test("soft deletes without removing history", () => {
@@ -40,5 +40,6 @@ describe("ConditionRepository", () => {
     const repo = new ConditionRepository(localStorage);
     expect(() => repo.saveForThesis({ symbol: "NVDA", thesisVersionId: "thesis-1", conditions: [riskPriceDraft(), riskPriceDraft()], now: "2026-08-09T10:00:00Z" })).toThrow("条件 ID 不能重复");
     expect(() => repo.saveForThesis({ symbol: "NVDA", thesisVersionId: "thesis-1", conditions: [{ ...riskPriceDraft(), operator: "between", target: [200, 100] }], now: "2026-08-09T10:00:00Z" })).toThrow("区间下限不能大于上限");
+    expect(() => repo.saveForThesis({ symbol: "NVDA", thesisVersionId: "thesis-1", conditions: [{ ...riskPriceDraft(), target: Number.NaN }], now: "2026-08-09T10:00:00Z" })).toThrow();
   });
 });

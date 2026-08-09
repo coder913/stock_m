@@ -40,4 +40,12 @@ describe("MonitorAlertRepository", () => {
     repo.archive(alert.id, "2026-08-11T01:00:00Z");
     expect(repo.list({ view: "archived", now: "2026-08-11T01:00:00Z" })).toHaveLength(1);
   });
+
+  test("isolates malformed persisted alerts", () => {
+    const repo = new MonitorAlertRepository(localStorage);
+    const valid = repo.createTransition(transition())!;
+    localStorage.setItem("stock_m:monitor-alerts:v1", JSON.stringify([valid, { ...valid, id: "bad-alert", severity: "urgent" }]));
+
+    expect(repo.list({ view: "pending", now: "2026-08-09T10:02:00Z" })).toEqual([expect.objectContaining({ id: valid.id })]);
+  });
 });

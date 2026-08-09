@@ -20,10 +20,14 @@ export class MonitorSnapshotLoader {
     const symbols = [...new Set(conditions.map((condition) => condition.symbol.toUpperCase()))].sort();
     const eventConditions = conditions.filter((condition) => condition.kind === "event");
     const eventTo = eventConditions.length ? eventConditions.map((condition) => condition.to).sort().at(-1)! : undefined;
+    const eventFrom = eventConditions.length ? eventConditions.map((condition) => {
+      const lowerBound = condition.occurrence === "within-range" && condition.from ? condition.from : condition.createdAt.slice(0, 10);
+      return lowerBound > condition.to ? condition.to : lowerBound;
+    }).sort()[0] : undefined;
     const [quotesResult, universeResult, eventsResult] = await Promise.allSettled([
       this.client.getQuotes(symbols),
       this.client.getUniverse(symbols),
-      eventTo ? this.client.getEvents({ from: now.slice(0, 10), to: eventTo, symbols }) : Promise.resolve(undefined),
+      eventTo && eventFrom ? this.client.getEvents({ from: eventFrom, to: eventTo, symbols }) : Promise.resolve(undefined),
     ]);
     const snapshots = new Map(symbols.map((symbol) => [symbol, { symbol, metrics: {}, events: [], eventsState: eventTo ? "unavailable" as const : "fresh" as const, eventsAsOf: undefined, generatedAt: now }]));
 

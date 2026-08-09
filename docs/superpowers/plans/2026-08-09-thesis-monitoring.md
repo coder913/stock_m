@@ -379,6 +379,8 @@ await Promise.allSettled([
 
 Quotes own `price` and `dailyChangePercent`. Universe data owns all other monitor metrics. If an envelope has `stale` or `fallback`, set the corresponding values to `stale`. A missing field in a successful fresh envelope is `missing`; a rejected resource is `unavailable`. Do not fall back to mock repositories.
 
+For events, use the explicit `from` for `within-range`; otherwise use the condition creation date. Batch the earliest clamped lower bound through the latest `to`, and clamp a lower bound to its own `to` when necessary so the API never receives an inverted range. This preserves historical occurrences when the page is opened after an event.
+
 - [x] **Step 5: Implement service orchestration and derived health**
 
 For each active condition:
@@ -403,7 +405,9 @@ if (hasUnreviewedConcern && (highBreaches > 0 || expired > 0 || mediumBreaches >
 return "normal";
 ```
 
-`concernKeys` returns `${conditionId}:${conditionVersion}:${status}` for breached and expired entries. A `reaffirmed` review acknowledges exactly the concerns captured in its immutable snapshot. Re-evaluating the same condition in the same state does not reopen the thesis; a new concern, a version change, or a state change does.
+`concernKeys` returns `${conditionId}:${conditionVersion}:${status}` for breached and expired entries. A `reaffirmed` review acknowledges exactly the concerns captured in its immutable snapshot. Re-evaluating the same condition in the same state does not reopen the thesis; a new concern, a version change, or a changed breached/expired transition after the review does. Therefore recovery followed by a re-breach requires another review.
+
+Before loading snapshots, keep only conditions bound to each symbol's latest thesis version and exclude archived theses. Superseded conditions remain queryable as history but never participate in current evaluation.
 
 The service constructor must receive all repositories, loader, evaluator, and clock dependencies; do not instantiate localStorage internally.
 
@@ -890,6 +894,16 @@ git commit -m "test: validate thesis monitoring workflow"
 ```
 
 ## Completion Criteria
+
+### Code-review follow-up
+
+- [x] Evaluate only latest-thesis conditions and stop archived-thesis evaluation.
+- [x] Load historical event windows without inverted API ranges.
+- [x] Strictly validate persisted conditions, alerts, and review snapshots record by record.
+- [x] Evaluate an existing thesis on first research-page load and surface recovery warnings across Research, Today, and Portfolio.
+- [x] Copy saved conditions into a new immutable thesis version with new condition IDs.
+- [x] Reopen health review after a post-review recovery and re-breach transition.
+- [x] Repeat browser refresh and assert alert idempotency.
 
 - A user can create metric and event conditions on a new immutable thesis version.
 - Each condition displays status, actual value, target, source, data time, data quality, and explanation.

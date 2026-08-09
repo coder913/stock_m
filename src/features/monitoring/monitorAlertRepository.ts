@@ -2,6 +2,10 @@ import type { ConditionSeverity, ConditionStatus, MonitorAlert } from "./domain"
 
 const alertKey = "stock_m:monitor-alerts:v1";
 const clone = <T,>(value: T): T => structuredClone(value);
+const statuses = new Set(["pending", "confirmed", "breached", "expired"]);
+const severities = new Set(["low", "medium", "high"]);
+const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value) && !Number.isNaN(Date.parse(value));
+const isOptionalDate = (value: unknown) => value === undefined || (typeof value === "string" && isIsoDate(value));
 
 export interface AlertTransitionInput {
   symbol: string;
@@ -30,7 +34,7 @@ export interface AlertListQuery {
 function isAlert(value: unknown): value is MonitorAlert {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<MonitorAlert>;
-  return typeof item.id === "string" && typeof item.dedupeKey === "string" && typeof item.symbol === "string" && typeof item.thesisVersionId === "string" && typeof item.conditionId === "string" && typeof item.conditionVersion === "string" && typeof item.title === "string" && typeof item.createdAt === "string";
+  return typeof item.id === "string" && Boolean(item.id.trim()) && typeof item.dedupeKey === "string" && Boolean(item.dedupeKey.trim()) && typeof item.symbol === "string" && Boolean(item.symbol.trim()) && typeof item.thesisVersionId === "string" && Boolean(item.thesisVersionId.trim()) && typeof item.conditionId === "string" && Boolean(item.conditionId.trim()) && typeof item.conditionVersion === "string" && /^[0-9a-f]{8}$/.test(item.conditionVersion) && statuses.has(item.toStatus ?? "") && (item.fromStatus === undefined || statuses.has(item.fromStatus)) && severities.has(item.severity ?? "") && typeof item.title === "string" && Boolean(item.title.trim()) && typeof item.explanation === "string" && isOptionalDate(item.asOf) && typeof item.createdAt === "string" && isIsoDate(item.createdAt) && isOptionalDate(item.readAt) && isOptionalDate(item.snoozedUntil) && isOptionalDate(item.archivedAt);
 }
 
 export class MonitorAlertRepository {

@@ -3,15 +3,29 @@ import type { ConditionDraft, MonitorMetric, ThesisCondition } from "./domain";
 
 const conditionKey = "stock_m:thesis-conditions:v1";
 const metrics = new Set<MonitorMetric>(["price", "dailyChangePercent", "revenueGrowthYoY", "operatingMargin", "freeCashFlow", "freeCashFlowYield", "netDebtToEbitda", "earningsSurprise", "grossMarginYoYChange", "priceVs20DayHigh", "relativeVolume", "averageDollarVolume20d"]);
+const directions = new Set(["support", "risk"]);
+const severities = new Set(["low", "medium", "high"]);
+const operators = new Set([">", ">=", "<", "<=", "between"]);
+const periods = new Set(["CURRENT", "MRQ", "TTM"]);
+const eventTypes = new Set(["earnings", "dividend", "split", "corporate-action", "macro"]);
+const occurrences = new Set(["before-date", "within-range", "not-occurred-by-date"]);
 const clone = <T,>(value: T): T => structuredClone(value);
 const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value) && !Number.isNaN(Date.parse(value));
+const isOptionalString = (value: unknown) => value === undefined || typeof value === "string";
+const isOptionalDate = (value: unknown) => value === undefined || (typeof value === "string" && isIsoDate(value));
+const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const isTarget = (operator: unknown, target: unknown) => operator === "between"
+  ? Array.isArray(target) && target.length === 2 && isFiniteNumber(target[0]) && isFiniteNumber(target[1]) && target[0] <= target[1]
+  : isFiniteNumber(target);
 
 function isCondition(value: unknown): value is ThesisCondition {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<ThesisCondition>;
-  if (typeof item.id !== "string" || typeof item.symbol !== "string" || typeof item.thesisVersionId !== "string" || typeof item.name !== "string" || typeof item.createdAt !== "string" || typeof item.updatedAt !== "string") return false;
-  if (item.kind === "metric") return metrics.has(item.metric as MonitorMetric) && [">", ">=", "<", "<=", "between"].includes(item.operator ?? "") && (typeof item.target === "number" || Array.isArray(item.target));
-  return item.kind === "event" && ["earnings", "dividend", "split", "corporate-action", "macro"].includes(item.eventType ?? "") && ["before-date", "within-range", "not-occurred-by-date"].includes(item.occurrence ?? "") && typeof item.to === "string";
+  if (typeof item.id !== "string" || !item.id.trim() || typeof item.symbol !== "string" || !item.symbol.trim() || typeof item.thesisVersionId !== "string" || !item.thesisVersionId.trim() || typeof item.name !== "string" || !item.name.trim()) return false;
+  if (!directions.has(item.direction ?? "") || !severities.has(item.severity ?? "") || !isOptionalDate(item.deadline) || !isOptionalString(item.note) || typeof item.createdAt !== "string" || !isIsoDate(item.createdAt) || typeof item.updatedAt !== "string" || !isIsoDate(item.updatedAt) || !isOptionalDate(item.deletedAt) || typeof item.conditionVersion !== "string" || !/^[0-9a-f]{8}$/.test(item.conditionVersion)) return false;
+  if (item.kind === "metric") return metrics.has(item.metric as MonitorMetric) && operators.has(item.operator ?? "") && periods.has(item.period ?? "") && isTarget(item.operator, item.target);
+  if (item.kind !== "event" || !eventTypes.has(item.eventType ?? "") || !occurrences.has(item.occurrence ?? "") || typeof item.to !== "string" || !isIsoDate(item.to) || !isOptionalDate(item.from)) return false;
+  return item.occurrence !== "within-range" || (typeof item.from === "string" && item.from <= item.to);
 }
 
 function validateDraft(draft: ConditionDraft): void {
@@ -19,8 +33,8 @@ function validateDraft(draft: ConditionDraft): void {
   if (draft.deadline && !isIsoDate(draft.deadline)) throw new Error("截止日期无效");
   if (draft.kind === "metric") {
     if (!metrics.has(draft.metric)) throw new Error("不支持的监控指标");
-    if (draft.operator === "between" && (!Array.isArray(draft.target) || draft.target.length !== 2 || draft.target[0] > draft.target[1])) throw new Error("区间下限不能大于上限");
-    if (draft.operator !== "between" && typeof draft.target !== "number") throw new Error("比较目标必须是数值");
+    if (draft.operator === "between" && (!Array.isArray(draft.target) || draft.target.length !== 2 || !draft.target.every(Number.isFinite) || draft.target[0] > draft.target[1])) throw new Error("区间下限不能大于上限");
+    if (draft.operator !== "between" && (typeof draft.target !== "number" || !Number.isFinite(draft.target))) throw new Error("比较目标必须是数值");
     return;
   }
   if (!isIsoDate(draft.to) || (draft.from && !isIsoDate(draft.from))) throw new Error("事件日期无效");

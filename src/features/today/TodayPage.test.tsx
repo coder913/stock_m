@@ -48,3 +48,12 @@ test("keeps market content visible when monitoring fails", async () => {
   expect(await screen.findByRole("heading", { name: "今天值得关注" })).toBeVisible();
   expect(await screen.findByText("投资逻辑监控暂时不可用")).toBeVisible();
 });
+
+test("shows non-blocking monitoring recovery warnings", async () => {
+  const service = { evaluate: vi.fn().mockResolvedValue({ conditions: [], alertsCreated: 0, warnings: ["skipped corrupt monitoring data"] }) };
+  const alerts = { restoreDue: vi.fn(), list: vi.fn().mockReturnValue([]), markRead: vi.fn(), snooze: vi.fn(), archive: vi.fn() };
+  render(<MemoryRouter><TodayPage monitorService={service as never} monitorAlertRepository={alerts as never} /></MemoryRouter>);
+
+  expect(await screen.findByText("skipped corrupt monitoring data")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "今天值得关注" })).toBeVisible();
+});

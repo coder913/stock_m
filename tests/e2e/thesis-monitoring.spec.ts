@@ -27,6 +27,9 @@ test("monitors a thesis from condition creation through human review", async ({ 
   await page.request.post("/api/testing/market-state", { data: { symbol: "NVDA", price: 190, previousClose: 167.32 } });
   await page.getByRole("button", { name: "刷新监控" }).click();
   await expect(page.getByText("受损", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "刷新监控" }).click();
+  await expect(page.getByText("受损", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("stock_m:monitor-alerts:v1") || "[]").length)).toBe(1);
 
   await page.getByRole("link", { name: "今日" }).click();
   await expect(page.getByRole("heading", { name: "需要复核" })).toBeVisible();

@@ -55,4 +55,22 @@ describe("MonitorSnapshotLoader", () => {
     expect(snapshot.metrics.revenueGrowthYoY?.dataState).toBe("stale");
     expect(snapshot.metrics.revenueGrowthYoY?.value).toBeUndefined();
   });
+
+  test("loads historical events from the condition lifetime without creating an inverted range", async () => {
+    const client = completeMarketClient();
+    const historical = { ...earningsCondition("NVDA"), createdAt: "2026-08-01T09:00:00Z", updatedAt: "2026-08-01T09:00:00Z", to: "2026-08-05" };
+
+    await new MonitorSnapshotLoader(client).load([historical], "2026-08-09T10:00:00Z");
+
+    expect(client.getEvents).toHaveBeenCalledWith({ from: "2026-08-01", to: "2026-08-05", symbols: ["NVDA"] });
+  });
+
+  test("uses an explicit within-range start for event batching", async () => {
+    const client = completeMarketClient();
+    const ranged = { ...earningsCondition("NVDA"), occurrence: "within-range" as const, from: "2026-07-15", to: "2026-08-31" };
+
+    await new MonitorSnapshotLoader(client).load([ranged], "2026-08-09T10:00:00Z");
+
+    expect(client.getEvents).toHaveBeenCalledWith({ from: "2026-07-15", to: "2026-08-31", symbols: ["NVDA"] });
+  });
 });

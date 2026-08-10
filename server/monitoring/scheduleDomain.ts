@@ -36,9 +36,61 @@ function localMinuteKey(value: Temporal.ZonedDateTime): string {
   return `${value.toPlainDate().toString()}T${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}${value.offset}`;
 }
 
+function observedFixedHoliday(year: number, month: number, day: number): Temporal.PlainDate {
+  const date = Temporal.PlainDate.from({ year, month, day });
+  if (date.dayOfWeek === 6) return date.subtract({ days: 1 });
+  if (date.dayOfWeek === 7) return date.add({ days: 1 });
+  return date;
+}
+
+function nthWeekday(year: number, month: number, weekday: number, occurrence: number): Temporal.PlainDate {
+  const first = Temporal.PlainDate.from({ year, month, day: 1 });
+  return first.add({ days: (weekday - first.dayOfWeek + 7) % 7 + (occurrence - 1) * 7 });
+}
+
+function lastWeekday(year: number, month: number, weekday: number): Temporal.PlainDate {
+  const last = Temporal.PlainDate.from({ year, month, day: 1 }).add({ months: 1 }).subtract({ days: 1 });
+  return last.subtract({ days: (last.dayOfWeek - weekday + 7) % 7 });
+}
+
+function easterSunday(year: number): Temporal.PlainDate {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = (h + l - 7 * m + 114) % 31 + 1;
+  return Temporal.PlainDate.from({ year, month, day });
+}
+
+function isUsEquityHoliday(date: Temporal.PlainDate): boolean {
+  const holidays = [
+    observedFixedHoliday(date.year, 1, 1),
+    nthWeekday(date.year, 1, 1, 3),
+    nthWeekday(date.year, 2, 1, 3),
+    easterSunday(date.year).subtract({ days: 2 }),
+    lastWeekday(date.year, 5, 1),
+    ...(date.year >= 2022 ? [observedFixedHoliday(date.year, 6, 19)] : []),
+    observedFixedHoliday(date.year, 7, 4),
+    nthWeekday(date.year, 9, 1, 1),
+    nthWeekday(date.year, 11, 4, 4),
+    observedFixedHoliday(date.year, 12, 25),
+    observedFixedHoliday(date.year + 1, 1, 1),
+  ];
+  return holidays.some((holiday) => Temporal.PlainDate.compare(holiday, date) === 0);
+}
+
 export function createUsEquityMarketCalendar(options: { closedDates?: readonly string[] } = {}): MarketScheduleCalendar {
   const closedDates = new Set(options.closedDates ?? []);
-  const isTradingDay = (value: Temporal.ZonedDateTime): boolean => value.dayOfWeek <= 5 && !closedDates.has(value.toPlainDate().toString());
+  const isTradingDay = (value: Temporal.ZonedDateTime): boolean => value.dayOfWeek <= 5 && !isUsEquityHoliday(value.toPlainDate()) && !closedDates.has(value.toPlainDate().toString());
 
   return {
     toMarketTime(iso) {

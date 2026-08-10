@@ -5,7 +5,7 @@ export type RefreshRequest = { resource: "quotes"; symbols: string[] } | { resou
 export class MarketApiClient {
   private readonly fetcher: typeof fetch;
   constructor(fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init), private readonly baseUrl = "") { this.fetcher = fetcher; }
-  private async request<T>(path: string, init?: RequestInit): Promise<DataEnvelope<T>> { const response = await this.fetcher(`${this.baseUrl}${path}`, init); const body = await response.json(); if (!response.ok) throw new MarketApiError(body.code ?? "REQUEST_FAILED", body.message ?? "请求失败", Boolean(body.retryable)); return body as DataEnvelope<T>; }
+  private async request<T>(path: string, init?: RequestInit): Promise<DataEnvelope<T>> { const response = await this.fetcher(`${this.baseUrl}${path}`, init); const body = await response.json() as DataEnvelope<T> | { code?: string; message?: string; retryable?: boolean }; if (!response.ok) { const error = body as { code?: string; message?: string; retryable?: boolean }; throw new MarketApiError(error.code ?? "REQUEST_FAILED", error.message ?? "请求失败", Boolean(error.retryable)); } return body as DataEnvelope<T>; }
   getMarketStatus() { return this.request<MarketStatus>("/api/market/status"); }
   getQuotes(symbols: string[]) { return this.request<MarketQuote[]>(`/api/market/quotes?symbols=${encodeURIComponent(symbols.join(","))}`); }
   async getQuote(symbol: string) { return (await this.getQuotes([symbol])).data[0]; }

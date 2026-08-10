@@ -20,6 +20,7 @@ import { registerMonitorStateRoutes, type MonitorStateRouteDependencies } from "
 import { registerManualPortfolioRoutes, type ManualPortfolioRouteDependencies } from "./routes/manualPortfolioRoutes";
 import { registerBrowserMigrationRoutes, type BrowserMigrationRouteDependencies } from "./routes/browserMigrationRoutes";
 import type { HealthService } from "./platform/healthService";
+import { registerInternalSnapshotRoutes, type InternalSnapshotRouteDependencies } from "./routes/internalSnapshotRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
@@ -36,6 +37,7 @@ export interface AppDependencies {
   manualPortfolio?: ManualPortfolioRouteDependencies;
   browserMigration?: BrowserMigrationRouteDependencies;
   health?: Pick<HealthService, "liveness" | "readiness">;
+  internalSnapshots?: InternalSnapshotRouteDependencies;
   staticDir?: string;
 }
 
@@ -62,6 +64,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   app.get("/api/health/live", () => dependencies.health?.liveness() ?? { live: true });
   app.get("/api/health/ready", async (_request, reply) => { const status = await readiness(); return reply.status(status.ready ? 200 : 503).send(status); });
   app.get("/api/health", async () => ({ providers: dependencies.config.providers, ...(await readiness()) }));
+  if (dependencies.internalSnapshots) registerInternalSnapshotRoutes(app, dependencies.internalSnapshots);
   if (dependencies.market) registerMarketRoutes(app, { ...dependencies.market, refreshRegistry });
   if (dependencies.company) registerCompanyRoutes(app, { ...dependencies.company, refreshRegistry });
   if (dependencies.discovery) registerDiscoveryRoutes(app, dependencies.discovery);

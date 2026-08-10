@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely, Selectable } from "kysely";
+import type { Kysely, Selectable, Transaction } from "kysely";
 import type { Database, MonitorRunTable } from "../db/types";
 import type { MonitorRunType, RequiredRun } from "./scheduleDomain";
 
@@ -8,6 +8,7 @@ export interface ClaimedMonitorRun extends RequiredRun {
   status: "claimed" | "running" | "succeeded" | "failed";
   dataState?: "fresh" | "stale" | "unavailable";
 }
+type Executor = Transaction<Database>;
 
 function mapRun(row: Selectable<MonitorRunTable>): ClaimedMonitorRun {
   return {
@@ -50,9 +51,9 @@ export class MonitorScheduleRepository {
     await this.database.updateTable("monitor.run").set({ status: "running", startedAt: at }).where("id", "=", id).execute();
   }
 
-  async complete(id: string, input: { dataState: "fresh" | "stale" | "unavailable"; diagnostics: unknown; at?: Date }): Promise<void> {
+  async complete(id: string, input: { dataState: "fresh" | "stale" | "unavailable"; diagnostics: unknown; at?: Date }, executor?: Executor): Promise<void> {
     const at = input.at ?? this.now();
-    await this.database.transaction().execute(async (transaction) => {
+    await this.inTransaction(executor, async (transaction) => {
       const run = await transaction.selectFrom("monitor.run").select(["runType", "naturalPeriod"]).where("id", "=", id).executeTakeFirstOrThrow();
       await transaction.updateTable("monitor.run").set({ status: "succeeded", dataState: input.dataState, diagnosticsJson: input.diagnostics, finishedAt: at }).where("id", "=", id).execute();
       await transaction.insertInto("monitor.schedule_state").values({ runType: run.runType, lastSuccessNaturalPeriod: run.naturalPeriod, lastSuccessAt: at, updatedAt: at })
@@ -72,5 +73,9 @@ export class MonitorScheduleRepository {
 
   async listRuns(): Promise<ClaimedMonitorRun[]> {
     return (await this.database.selectFrom("monitor.run").selectAll().orderBy("scheduledFor").execute()).map(mapRun);
+  }
+
+  private inTransaction<T>(executor: Executor | undefined, action: (transaction: Executor) => Promise<T>): Promise<T> {
+    return executor ? action(executor) : this.database.transaction().execute(action);
   }
 }

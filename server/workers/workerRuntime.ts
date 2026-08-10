@@ -1,7 +1,10 @@
 import { Queue, Worker, type Job } from "bullmq";
 import type IORedis from "ioredis";
+import type { Kysely } from "kysely";
 import { loadServerConfig } from "../config";
+import type { ServerConfig } from "../config";
 import { createDatabase } from "../db/database";
+import type { Database } from "../db/types";
 import { migrateToLatest } from "../db/migrate";
 import { createRedisConnection } from "../queue/redisConnection";
 import { WorkerHeartbeatRepository, type WorkerName, type WorkerState } from "../queue/workerHeartbeatRepository";
@@ -10,7 +13,8 @@ interface WorkerRuntimeOptions {
   worker: WorkerName;
   queueName: string;
   concurrency: number;
-  process(job: Job): Promise<unknown>;
+  process?: (job: Job) => Promise<unknown>;
+  initialize?: (context: { config: ServerConfig; database: Kysely<Database>; queue: Queue }) => Promise<(job: Job) => Promise<unknown>>;
   heartbeatIntervalMs?: number;
 }
 
@@ -41,7 +45,10 @@ export async function runWorker(options: WorkerRuntimeOptions): Promise<void> {
   await heartbeats.record({ worker: options.worker, state, queueLag: 0, at: new Date() });
   await Promise.all([queueConnection.ping(), workerConnection.ping()]);
 
-  const worker = new Worker(options.queueName, options.process, {
+  const processor = options.initialize ? await options.initialize({ config, database, queue }) : options.process;
+  if (!processor) throw new Error(`Worker ${options.worker} has no processor`);
+
+  const worker = new Worker(options.queueName, processor, {
     connection: workerConnection,
     concurrency: options.concurrency,
   });

@@ -28,6 +28,14 @@ test("does not schedule price runs before, after, or outside a regular trading d
   expect(postMarket).not.toContainEqual(expect.objectContaining({ type: "price" }));
 });
 
+test("default U.S. equity calendar observes exchange holidays", () => {
+  const defaultCalendar = createUsEquityMarketCalendar();
+  const observedIndependenceDay = requiredRunPeriods({ now: "2026-07-03T16:00:00Z", calendar: defaultCalendar, lastSuccess: {} });
+  const goodFriday = requiredRunPeriods({ now: "2026-04-03T16:00:00Z", calendar: defaultCalendar, lastSuccess: {} });
+  expect(observedIndependenceDay).not.toContainEqual(expect.objectContaining({ type: "price" }));
+  expect(goodFriday).not.toContainEqual(expect.objectContaining({ type: "price" }));
+});
+
 test("schedules daily financial and event groups at 18:00 and 18:15 New York time", () => {
   const afterFinancial = requiredRunPeriods({ now: "2026-08-10T22:10:00Z", calendar, lastSuccess: {} });
   expect(afterFinancial).toContainEqual({ type: "financial", naturalPeriod: "2026-08-10", scheduledFor: "2026-08-10T22:00:00.000Z", catchUp: true });

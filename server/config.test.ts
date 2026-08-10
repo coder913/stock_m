@@ -55,3 +55,10 @@ test("rejects non-positive worker concurrency", () => {
     MONITOR_WORKER_CONCURRENCY: "0",
   })).toThrow();
 });
+
+test("uses a loopback internal API URL by default and supports the Compose service URL", () => {
+  const defaults = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", PORT: "9000" });
+  expect(defaults.internalApiBaseUrl).toBe("http://127.0.0.1:9000");
+  const compose = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", INTERNAL_API_BASE_URL: "http://web-api:8787" });
+  expect(compose.internalApiBaseUrl).toBe("http://web-api:8787");
+});

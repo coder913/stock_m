@@ -40,7 +40,7 @@ export class MonitorScheduler {
     for (const run of required) {
       const claim = await this.options.repository.claim(run);
       if (!claim) continue;
-      await this.options.queue.add("monitor-run", claim, { jobId: monitorJobId(run), removeOnComplete: true });
+      await this.options.queue.add("monitor-run", claim, { jobId: monitorJobId(run), attempts: 4, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: true });
       claimed.push(claim);
     }
     return claimed;

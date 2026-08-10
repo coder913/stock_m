@@ -8,6 +8,7 @@ export interface ServerConfig {
   databaseUrl: string;
   redisUrl: string;
   internalServiceToken: string;
+  internalApiBaseUrl: string;
   workers: {
     monitorConcurrency: number;
     notificationConcurrency: number;
@@ -39,6 +40,7 @@ const environmentSchema = z.object({
     message: "REDIS_URL must be a Redis URL",
   }),
   INTERNAL_SERVICE_TOKEN: z.string().min(16),
+  INTERNAL_API_BASE_URL: z.string().url().optional(),
   MONITOR_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
   NOTIFICATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
 });
@@ -54,12 +56,14 @@ export function loadServerConfig(environment: Record<string, string | undefined>
     finnhub: { configured: Boolean(parsed.FINNHUB_API_KEY) },
     fred: { configured: Boolean(parsed.FRED_API_KEY) },
   };
+  const port = parsed.PORT ?? 8787;
   return {
     host: parsed.HOST ?? "127.0.0.1",
-    port: parsed.PORT ?? 8787,
+    port,
     databaseUrl: parsed.DATABASE_URL,
     redisUrl: parsed.REDIS_URL,
     internalServiceToken: parsed.INTERNAL_SERVICE_TOKEN,
+    internalApiBaseUrl: parsed.INTERNAL_API_BASE_URL ?? `http://127.0.0.1:${port}`,
     workers: {
       monitorConcurrency: parsed.MONITOR_WORKER_CONCURRENCY ?? 1,
       notificationConcurrency: parsed.NOTIFICATION_WORKER_CONCURRENCY ?? 1,

@@ -2,6 +2,7 @@ x-worker-environment: &worker-environment
   DATABASE_URL: postgresql://stock_m:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/stock_m
   REDIS_URL: redis://redis:6379
   INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+  INTERNAL_API_BASE_URL: http://web-api:8787
   SEC_USER_AGENT: ${SEC_USER_AGENT:?SEC_USER_AGENT is required}
   ALPACA_API_KEY_ID: ${ALPACA_API_KEY_ID:-}
   ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY:-}

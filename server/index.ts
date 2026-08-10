@@ -8,7 +8,6 @@ import { SecProvider } from "./providers/secProvider";
 import { FinnhubProvider } from "./providers/finnhubProvider";
 import { UniverseService } from "./universe/universeService";
 import { FredProvider } from "./providers/fredProvider";
-import IORedis from "ioredis";
 import { Queue } from "bullmq";
 import { createDatabase } from "./db/database";
 import { migrateToLatest } from "./db/migrate";
@@ -24,11 +23,14 @@ import { PostgresPortfolioReviewRepository } from "./portfolio/portfolioReviewRe
 import { BrowserMigrationService } from "./migration/browserMigrationService";
 import { createHealthService } from "./platform/healthService";
 import { createGracefulShutdown } from "./platform/gracefulShutdown";
+import { MonitorSnapshotLoader } from "../src/features/monitoring/monitorSnapshotLoader";
+import { MarketApiClient } from "../src/features/market/marketApiClient";
+import { createRedisConnection } from "./queue/redisConnection";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
 await migrateToLatest(database);
-const redis = new IORedis(config.redisUrl, { maxRetriesPerRequest: null });
+const redis = createRedisConnection(config.redisUrl);
 const eventQueue = new Queue("platform-events", { connection: redis });
 const outbox = new OutboxRepository();
 const idempotency = new IdempotencyRepository();
@@ -63,6 +65,10 @@ const app = buildApp({
   manualPortfolio: { database, idempotency, outbox, repository: new PostgresManualPortfolioRepository(database), reviews: new PostgresPortfolioReviewRepository(database) },
   browserMigration: { service: new BrowserMigrationService(database) },
   health: createHealthService(database, redis, cache),
+  internalSnapshots: {
+    token: config.internalServiceToken,
+    loader: new MonitorSnapshotLoader(new MarketApiClient(undefined, config.internalApiBaseUrl)),
+  },
 });
 
 await app.listen({ host: config.host, port: config.port });

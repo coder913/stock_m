@@ -36,7 +36,9 @@ test("startup creates repeatable ticks and enqueues one latest catch-up per grou
   expect(second).toEqual([]);
 
   const jobs = await queue.getJobs(["waiting", "delayed"]);
-  expect(jobs.filter(({ name }) => name === "monitor-run")).toHaveLength(2);
+  const runJobs = jobs.filter(({ name }) => name === "monitor-run");
+  expect(runJobs).toHaveLength(2);
+  expect(runJobs.every(({ opts }) => typeof opts.backoff === "object" && opts.attempts === 4 && opts.backoff.type === "exponential" && opts.backoff.delay === 60_000)).toBe(true);
   expect(jobs.find(({ data }) => data.type === "event")?.id).toBe("monitor:event:2026-08-10");
   expect(await queue.getJobSchedulers()).toHaveLength(3);
 });

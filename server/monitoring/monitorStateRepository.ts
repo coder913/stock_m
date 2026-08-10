@@ -24,11 +24,21 @@ export class PostgresMonitorStateRepository {
     const row = await this.database.selectFrom("monitor.condition_evaluation").selectAll().where("conditionId", "=", conditionId).orderBy("evaluatedAt", "desc").executeTakeFirst();
     return row ? this.mapEvaluation(row) : undefined;
   }
+  async latestEffective(conditionId: string, conditionVersion: string, executor: Kysely<Database> | Executor = this.database): Promise<ConditionEvaluation | undefined> {
+    const row = await executor.selectFrom("monitor.condition_evaluation").selectAll()
+      .where("conditionId", "=", conditionId).where("conditionVersion", "=", conditionVersion).where("dataState", "=", "fresh")
+      .orderBy("evaluatedAt", "desc").executeTakeFirst();
+    return row ? this.mapEvaluation(row) : undefined;
+  }
 
   async recordAlert(alert: MonitorAlert, executor: Kysely<Database> | Executor = this.database): Promise<MonitorAlert> {
-    await executor.insertInto("monitor.alert").values({ id: alert.id, dedupeKey: alert.dedupeKey, symbol: alert.symbol.toUpperCase(), thesisVersionId: alert.thesisVersionId, conditionId: alert.conditionId, conditionVersion: alert.conditionVersion, fromStatus: alert.fromStatus ?? null, toStatus: alert.toStatus, severity: alert.severity, title: alert.title, explanation: alert.explanation, asOf: alert.asOf ?? null, createdAt: alert.createdAt }).onConflict((conflict) => conflict.column("dedupeKey").doNothing()).execute();
+    return (await this.recordAlertWithResult(alert, executor)).alert;
+  }
+  async recordAlertWithResult(alert: MonitorAlert, executor: Kysely<Database> | Executor = this.database): Promise<{ alert: MonitorAlert; inserted: boolean }> {
+    const inserted = await executor.insertInto("monitor.alert").values({ id: alert.id, dedupeKey: alert.dedupeKey, symbol: alert.symbol.toUpperCase(), thesisVersionId: alert.thesisVersionId, conditionId: alert.conditionId, conditionVersion: alert.conditionVersion, fromStatus: alert.fromStatus ?? null, toStatus: alert.toStatus, severity: alert.severity, title: alert.title, explanation: alert.explanation, asOf: alert.asOf ?? null, createdAt: alert.createdAt }).onConflict((conflict) => conflict.column("dedupeKey").doNothing()).returningAll().executeTakeFirst();
+    if (inserted) return { alert: this.mapAlert(inserted), inserted: true };
     const row = await executor.selectFrom("monitor.alert").selectAll().where("dedupeKey", "=", alert.dedupeKey).executeTakeFirstOrThrow();
-    return this.withActionState(this.mapAlert(row), await this.listAlertActions(row.id, executor));
+    return { alert: this.withActionState(this.mapAlert(row), await this.listAlertActions(row.id, executor)), inserted: false };
   }
   async getAlert(id: string): Promise<MonitorAlert> {
     const row = await this.database.selectFrom("monitor.alert").selectAll().where("id", "=", id).executeTakeFirst();

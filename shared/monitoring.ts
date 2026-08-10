@@ -22,6 +22,11 @@ export type ConditionDraft = MetricConditionDraft | EventConditionDraft;
 export interface MetricValue { value?: number; source?: DataSource; asOf?: string; dataState: EvaluationDataState; notices: string[]; }
 export interface MonitorEvent { id: string; type: MonitorEventType; symbol?: string; title: string; scheduledAt: string; timing: "before-market" | "during-market" | "after-market" | "all-day" | "unknown"; source: Exclude<DataSource, "composite">; sourceUrl?: string; split?: { oldRate: number; newRate: number; quantityMultiplier: number; effectiveDate: string }; }
 export interface MonitorSnapshot { symbol: string; metrics: Partial<Record<MonitorMetric, MetricValue>>; events: MonitorEvent[]; eventsState: EvaluationDataState; eventsAsOf?: string; generatedAt: string; }
+export interface MonitorEventWindow { eventType: MonitorEventType; from?: string; to: string; }
+export interface MonitorSnapshotRequirement { symbol: string; metrics: MonitorMetric[]; eventWindows: MonitorEventWindow[]; }
+export interface MonitorSnapshotRequest { requirements: MonitorSnapshotRequirement[]; evaluatedAt: string; }
+export interface MonitorSnapshotProvenance { dataState: EvaluationDataState; sources: DataSource[]; generatedAt: string; }
+export interface MonitorSnapshotResponse { snapshots: Record<string, MonitorSnapshot>; provenance: MonitorSnapshotProvenance; }
 export interface ConditionEvaluation { id: string; conditionId: string; conditionVersion: string; status: ConditionStatus; dataState: EvaluationDataState; actualValue?: number | string; targetValue?: number | readonly [number, number] | string; source?: DataSource; asOf?: string; explanation: string; evaluatedAt: string; changed: boolean; previousStatus?: ConditionStatus; }
 export interface MonitorAlert { id: string; dedupeKey: string; symbol: string; thesisVersionId: string; conditionId: string; conditionVersion: string; fromStatus?: ConditionStatus; toStatus: ConditionStatus; severity: ConditionSeverity; title: string; explanation: string; asOf?: string; createdAt: string; readAt?: string; snoozedUntil?: string; archivedAt?: string; }
 export type MonitorAlertAction = { id: string; alertId: string; type: "read" | "snooze" | "archive" | "restore"; until?: string; createdAt: string };

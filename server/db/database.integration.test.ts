@@ -2,7 +2,7 @@
 import { afterAll, expect, test } from "vitest";
 import { sql } from "kysely";
 import { createDatabase } from "./database";
-import { migrateToLatest } from "./migrate";
+import { checkMigrations, migrateToLatest } from "./migrate";
 
 const database = createDatabase(
   process.env.TEST_DATABASE_URL ?? "postgresql://stock_m:stock_m@127.0.0.1:55432/stock_m_test",
@@ -22,4 +22,5 @@ test("migrates the platform schema against postgres", async () => {
   expect(schemas.rows.map((row) => row.schemaName)).toEqual(
     expect.arrayContaining(["platform", "core", "monitor", "market"]),
   );
+  expect(await checkMigrations(database)).toEqual({ current: "006_market_cache", latest: "006_market_cache", upToDate: true });
 });

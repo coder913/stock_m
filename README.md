@@ -7,8 +7,10 @@
 ```powershell
 Copy-Item .env.example .env
 npm install
-npm run dev
+docker compose up -d --build
 ```
+
+应用只发布到 `http://127.0.0.1:8787`。PostgreSQL 和 Redis 仅位于 Compose 内部网络，不向宿主机暴露端口。开发模式可在已启动 `docker-compose.test.yml` 基础服务后运行 `npm run dev`。
 
 在 `.env` 中配置需要启用的数据源：
 
@@ -18,6 +20,8 @@ npm run dev
 - [FRED](https://fred.stlouisfed.org/docs/api/api_key.html)：宏观序列和发布事件；页面保留 FRED 归属说明。
 
 供应商凭据只在服务端读取。不要把 `.env`、密钥或账户资料提交到 Git。
+
+`.env` 还必须设置 `POSTGRES_PASSWORD` 和至少 32 位的 `INTERNAL_SERVICE_TOKEN`。`DATABASE_URL`、`REDIS_URL` 供非 Compose 开发或运维命令使用；Compose 会为 `web-api` 生成内部连接地址。
 
 ## 验证
 
@@ -59,7 +63,7 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 
 ## 缓存与失败降级
 
-本地缓存位于 `.data/stock-m-cache.sqlite`。仅校验成功的数据可以覆盖最后成功值。
+行情缓存位于 PostgreSQL 的 `market` schema。仅校验成功的数据可以覆盖最后成功值；并发刷新使用 `fetched_at` 比较更新，较旧响应不会覆盖较新缓存。供应商冷却与刷新审计也由 PostgreSQL 共享。
 
 | 数据 | TTL |
 | --- | ---: |
@@ -69,7 +73,7 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 | 财报和公司行为事件 | 6 小时 |
 | 公司资料、财务、文件、宏观序列和 FRED 发布日历 | 24 小时 |
 
-手动刷新通过 `POST /api/cache/refresh` 完成。供应商返回 429 时会进入冷却；已有缓存时继续显示最后成功数据，并明确标记刷新失败或数据陈旧。备份或删除 `.data` 前请先停止服务。
+手动刷新通过 `POST /api/cache/refresh` 完成。供应商返回 429 时会进入冷却；已有缓存时继续显示最后成功数据，并明确标记刷新失败或数据陈旧。
 
 ## 数据边界
 
@@ -77,20 +81,20 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 - Alpaca IEX/延迟数据会展示实际来源和延迟，不描述为全市场实时行情。
 - 新闻仅保存并展示元数据、摘要和原文链接，不复制文章正文。
 - 缺失值保持缺失，不自动替换为零。
-- 投资逻辑、模拟账本、提醒和周度复盘保存在浏览器本地。
+- 投资逻辑、监控状态、模拟账本、提醒和周度复盘只写入本机 PostgreSQL；生产页面统一通过 `/api/v1` 仓储访问。
 
 ## 组合绩效分析
 
 组合页的“绩效分析”从不可变账本和历史日线重建每日净值，支持成立以来、YTD、1 年、6 个月、3 个月和自定义区间。默认基准是 SPY，也可选择 QQQ、DIA、IWM 或有至少两个有效日线点的自定义股票/ETF。
 
-相关浏览器本地数据使用以下版本键：
+旧版本浏览器数据使用以下版本键，迁移完成后仅作为只读备份保留：
 
 - `stock_m:portfolio-ledger:v1`：买入、卖出、分红、费用、入金、出金和已确认拆股。
 - `stock_m:portfolio-settings:v1`：初始资金、成立日期、USD 基础货币和比较基准。
 - `stock_m:ignored-splits:v1`：用户明确忽略并填写备注的拆股候选。
 - `stock_m:portfolio-performance-cache:v1`：最多 10 条可重新生成的派生绩效结果。
 
-设置或派生缓存损坏时会隔离坏记录并恢复或重新计算，不改写账本。组合设置、账本和派生缓存都不会发送给 Fastify；服务端只接收股票代码和日期区间。
+迁移向导会先生成包含有效记录、隔离记录和 SHA-256 的本地备份，再将组合设置与不可变账本一次性导入 PostgreSQL。正常运行时不再向这些业务键写入；`stock_m:portfolio-performance-cache:v1` 仍是可重建的浏览器派生缓存。
 
 ### 计算口径
 
@@ -108,7 +112,7 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 
 ## 投资逻辑监控
 
-研究页可为每个不可变投资逻辑版本添加结构化指标或事件条件。条件、评估历史、提醒和人工复核分别保存在以下浏览器本地版本库：
+研究页可为每个不可变投资逻辑版本添加结构化指标或事件条件。条件、评估历史、提醒和人工复核保存在 PostgreSQL；以下旧浏览器键只供一次性迁移和下载备份使用：
 
 - `stock_m:thesis-conditions:v1`
 - `stock_m:condition-evaluations:v1`
@@ -117,10 +121,41 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 
 条件状态包括“待验证、成立、受损、已过期”。只有 fresh 且字段完整的数据可以改变成立/受损结论；stale、missing 或 unavailable 会显示“等待新数据”，并保留上一次 fresh 的有效结论，不产生错误的受损或恢复提醒。
 
-监控在 Today、研究页和组合页首次加载、用户点击“刷新监控”，或市场数据手动刷新成功后运行。当前版本没有服务端定时任务、后台监控、邮件或浏览器系统通知；应用关闭时不会继续评估。
+当前里程碑完成了监控数据的服务端持久化，但还没有服务端定时任务、后台监控、邮件或浏览器系统通知；这些属于下一阶段。
 
 自动评估只读取每只股票最新投资逻辑版本的条件；旧版本保留为历史，归档当前逻辑会停止继续评估。研究页可用“基于当前条件新建版本”复制条件并生成新的条件 ID，原版本不会被改写。若本地监控记录中存在损坏项，Research、Today 与 Portfolio 会保留有效记录并显示非阻断恢复提示。
 
 Today 展示需要复核的提醒，支持已读、稍后处理、归档和跳转研究页；`/monitor` 提供待处理、稍后处理、已归档视图、筛选和完整时间线。条件由系统确定性评估，但整条投资逻辑只能由用户标记为“仍成立、已失效、已归档”。“已失效”只更新健康展示，绝不会自动卖出持仓或创建订单。
 
 详细设计与实施记录见 `docs/superpowers/specs/2026-08-07-live-market-data-design.md`、`docs/superpowers/plans/2026-08-07-live-market-data.md`、`docs/superpowers/specs/2026-08-09-thesis-monitoring-design.md` 和 `docs/superpowers/plans/2026-08-09-thesis-monitoring.md`。
+
+## 服务健康与恢复
+
+健康端点不返回数据库连接串、令牌或供应商密钥：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8787/api/health/live
+Invoke-RestMethod http://127.0.0.1:8787/api/health/ready
+Invoke-RestMethod http://127.0.0.1:8787/api/health
+```
+
+`live` 只表示进程可响应；`ready` 要求 PostgreSQL 可用并包含当前迁移版本。Redis 故障单独报告为 `degraded`：同步业务写入仍可提交，Outbox 会在 Redis 恢复后继续发布。Compose 的持久卷是 `stock_m_postgres-data` 与 `stock_m_redis-data`（实际前缀随 Compose project name 变化）。SIGTERM 会先停止接收请求、停止 Outbox 发布并排空进行中的请求，再关闭队列、Redis 与数据库连接；20 秒超时会非零退出，Compose 提供 25 秒停止宽限期。
+
+创建和校验备份：
+
+```powershell
+.\scripts\backup.ps1
+.\scripts\verify-backup.ps1 -DumpPath .\backups\stock-m-YYYYMMDDTHHMMSSZ.dump
+```
+
+备份使用 PostgreSQL custom format，并生成同名 `.manifest.json`，其中包含应用版本、数据库迁移版本、UTC 创建时间与 SHA-256。恢复会先校验哈希，将备份恢复到临时数据库，执行应用迁移 check-only 和完整性查询，全部通过后才交换数据库名称；旧数据库保留为带时间戳的回滚副本。
+
+恢复前必须停止 API 和所有 worker，且必须显式重复目标数据库名：
+
+```powershell
+docker compose stop web-api
+.\scripts\restore.ps1 -DumpPath .\backups\stock-m-YYYYMMDDTHHMMSSZ.dump -ConfirmDatabaseName stock_m
+docker compose start web-api
+```
+
+未来加入 worker 服务后也要先停止 `monitor-worker`、`notification-worker` 和 `trading-worker`。恢复脚本会再次检查 API 与这些 worker 均未运行。浏览器迁移源键不会被清除或覆盖，始终作为只读恢复来源保留。

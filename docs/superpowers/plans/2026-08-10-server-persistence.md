@@ -682,28 +682,28 @@ git commit -m "feat: cut production state over to api"
 **Interfaces:**
 - Produces: readiness/liveness payloads and recoverable PostgreSQL backup workflow.
 
-- [ ] **Step 1: Write failing health aggregation tests**
+- [x] **Step 1: Write failing health aggregation tests**
 
 Assert `/api/health` returns `ready: false` when PostgreSQL is unavailable, reports Redis degradation separately, includes migration version, and never includes connection strings or tokens.
 
-- [ ] **Step 2: Implement liveness/readiness and graceful shutdown**
+- [x] **Step 2: Implement liveness/readiness and graceful shutdown**
 
 Add `/api/health/live` and `/api/health/ready`. On SIGTERM stop accepting requests, stop the Outbox publisher, drain in-flight operations, close Redis/database pools and exit nonzero if shutdown exceeds 20 seconds.
 
-- [ ] **Step 3: Implement backup manifest and verification scripts**
+- [x] **Step 3: Implement backup manifest and verification scripts**
 
 `backup.ps1` runs `pg_dump --format=custom`, computes SHA-256 and writes `{appVersion,migrationVersion,createdAt,sha256}`. `verify-backup.ps1` checks the hash. `restore.ps1` requires worker services stopped, restores to a temporary database, runs migrations in check-only mode and swaps only after integrity queries pass.
 
-- [ ] **Step 4: Test restart and backup recovery**
+- [x] **Step 4: Test restart and backup recovery**
 
 Run: `docker compose up -d --build`  
 Create a watchlist/thesis/ledger fixture through API, restart all containers, verify it remains, create a dump, restore into the test stack and verify category counts/hashes.
 
-- [ ] **Step 5: Document operations**
+- [x] **Step 5: Document operations**
 
 README must include Compose startup, `.env`, migration UX, backup/restore, health commands, exposed ports, volume names and the rule that browser source keys remain a read-only backup.
 
-- [ ] **Step 6: Commit Task 9**
+- [x] **Step 6: Commit Task 9**
 
 ```bash
 git add server/platform/healthService* server/app.ts server/index.ts scripts docker-compose.yml README.md

@@ -21,6 +21,12 @@ const migrations: ReadonlyArray<readonly [string, Migration]> = [
   ["005_browser_migration", browserMigration],
   ["006_market_cache", marketCacheMigration],
 ];
+export const latestMigrationName = migrations.at(-1)![0];
+
+export async function checkMigrations(database: Kysely<Database>): Promise<{ current: string; latest: string; upToDate: boolean }> {
+  const current = await database.selectFrom("platform.schema_migration").select("name").orderBy("name", "desc").executeTakeFirst();
+  return { current: current?.name ?? "none", latest: latestMigrationName, upToDate: current?.name === latestMigrationName };
+}
 
 export async function migrateToLatest(database: Kysely<Database>): Promise<void> {
   await database.transaction().execute(async (transaction) => {
@@ -56,7 +62,11 @@ async function main(): Promise<void> {
 
   const database = createDatabase(connectionString);
   try {
-    await migrateToLatest(database);
+    if (process.argv.includes("--check")) {
+      const status = await checkMigrations(database);
+      if (!status.upToDate) throw new Error(`Database migration mismatch: current=${status.current}, latest=${status.latest}`);
+      process.stdout.write(`${status.current}\n`);
+    } else await migrateToLatest(database);
   } finally {
     await database.destroy();
   }

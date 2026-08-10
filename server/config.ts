@@ -18,13 +18,15 @@ export interface ServerConfig {
   };
 }
 
+const optionalNonEmptyString = z.preprocess((value) => typeof value === "string" && value.trim() === "" ? undefined : value, z.string().min(1).optional());
+
 const environmentSchema = z.object({
   HOST: z.string().min(1).optional(),
   PORT: z.coerce.number().int().positive().optional(),
-  ALPACA_API_KEY_ID: z.string().min(1).optional(),
-  ALPACA_API_SECRET_KEY: z.string().min(1).optional(),
-  FINNHUB_API_KEY: z.string().min(1).optional(),
-  FRED_API_KEY: z.string().min(1).optional(),
+  ALPACA_API_KEY_ID: optionalNonEmptyString,
+  ALPACA_API_SECRET_KEY: optionalNonEmptyString,
+  FINNHUB_API_KEY: optionalNonEmptyString,
+  FRED_API_KEY: optionalNonEmptyString,
   SEC_USER_AGENT: z.string().min(1),
   DATABASE_URL: z.string().url().refine((value) => value.startsWith("postgresql://") || value.startsWith("postgres://"), {
     message: "DATABASE_URL must be a PostgreSQL URL",

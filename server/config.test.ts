@@ -29,3 +29,8 @@ test("rejects a SEC user agent without a contact email", () => {
 test("requires postgres, redis, and an internal service token", () => {
   expect(() => loadServerConfig({ SEC_USER_AGENT: "stock_m test@example.com" })).toThrow();
 });
+
+test("treats blank optional provider variables from Compose as unconfigured", () => {
+  const config = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", ALPACA_API_KEY_ID: "", ALPACA_API_SECRET_KEY: "", FINNHUB_API_KEY: "", FRED_API_KEY: "" });
+  expect(config.providers).toMatchObject({ alpaca: { configured: false }, finnhub: { configured: false }, fred: { configured: false } });
+});

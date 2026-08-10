@@ -19,6 +19,7 @@ import { registerThesisStateRoutes, type ThesisStateRouteDependencies } from "./
 import { registerMonitorStateRoutes, type MonitorStateRouteDependencies } from "./routes/monitorStateRoutes";
 import { registerManualPortfolioRoutes, type ManualPortfolioRouteDependencies } from "./routes/manualPortfolioRoutes";
 import { registerBrowserMigrationRoutes, type BrowserMigrationRouteDependencies } from "./routes/browserMigrationRoutes";
+import type { HealthService } from "./platform/healthService";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
@@ -34,6 +35,7 @@ export interface AppDependencies {
   monitorState?: MonitorStateRouteDependencies;
   manualPortfolio?: ManualPortfolioRouteDependencies;
   browserMigration?: BrowserMigrationRouteDependencies;
+  health?: Pick<HealthService, "liveness" | "readiness">;
   staticDir?: string;
 }
 
@@ -56,10 +58,10 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
     }
     return reply.status(500).send({ code: "INTERNAL_ERROR", message: "服务暂时不可用", retryable: true, requestId: request.id });
   });
-  app.get("/api/health", async () => ({
-    providers: dependencies.config.providers,
-    cache: await dependencies.cache.health(),
-  }));
+  const readiness = async () => dependencies.health ? dependencies.health.readiness() : ({ ready: true, services: { postgres: "ready" as const, redis: "ready" as const }, migrationVersion: "unknown", cache: await dependencies.cache.health() });
+  app.get("/api/health/live", () => dependencies.health?.liveness() ?? { live: true });
+  app.get("/api/health/ready", async (_request, reply) => { const status = await readiness(); return reply.status(status.ready ? 200 : 503).send(status); });
+  app.get("/api/health", async () => ({ providers: dependencies.config.providers, ...(await readiness()) }));
   if (dependencies.market) registerMarketRoutes(app, { ...dependencies.market, refreshRegistry });
   if (dependencies.company) registerCompanyRoutes(app, { ...dependencies.company, refreshRegistry });
   if (dependencies.discovery) registerDiscoveryRoutes(app, dependencies.discovery);

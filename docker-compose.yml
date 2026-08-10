@@ -21,7 +21,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health/ready"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -29,6 +29,7 @@ services:
     networks:
       - edge
       - backend
+    stop_grace_period: 25s
 
   postgres:
     image: postgres:17-alpine
@@ -50,7 +51,9 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    command: ["redis-server", "--appendonly", "yes", "--save", ""]
+    volumes:
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -66,3 +69,4 @@ networks:
 
 volumes:
   postgres-data:
+  redis-data:

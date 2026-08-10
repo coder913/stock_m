@@ -22,6 +22,8 @@ import { PostgresMonitorStateRepository } from "./monitoring/monitorStateReposit
 import { PostgresManualPortfolioRepository } from "./portfolio/manualPortfolioRepository";
 import { PostgresPortfolioReviewRepository } from "./portfolio/portfolioReviewRepository";
 import { BrowserMigrationService } from "./migration/browserMigrationService";
+import { createHealthService } from "./platform/healthService";
+import { createGracefulShutdown } from "./platform/gracefulShutdown";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
@@ -60,21 +62,19 @@ const app = buildApp({
   monitorState: { database, idempotency, outbox, repository: new PostgresMonitorStateRepository(database) },
   manualPortfolio: { database, idempotency, outbox, repository: new PostgresManualPortfolioRepository(database), reviews: new PostgresPortfolioReviewRepository(database) },
   browserMigration: { service: new BrowserMigrationService(database) },
+  health: createHealthService(database, redis, cache),
 });
 
 await app.listen({ host: config.host, port: config.port });
 outboxPublisher.start();
 
-let shuttingDown = false;
-async function shutdown(): Promise<void> {
-  if (shuttingDown) return;
-  shuttingDown = true;
-  await app.close();
-  await outboxPublisher.stop();
-  await eventQueue.close();
-  await redis.quit();
-  await database.destroy();
-}
+const shutdown = createGracefulShutdown({
+  closeServer: () => app.close(),
+  stopPublisher: () => outboxPublisher.stop(),
+  closeQueue: () => eventQueue.close(),
+  closeRedis: async () => { await redis.quit(); },
+  closeDatabase: () => database.destroy(),
+});
 
 process.once("SIGINT", () => { void shutdown(); });
 process.once("SIGTERM", () => { void shutdown(); });

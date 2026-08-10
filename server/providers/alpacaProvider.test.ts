@@ -54,3 +54,51 @@ test("loads every batch-bars page and forwards adjustment", async () => {
   expect(result.data.symbols.MSFT[0]).toMatchObject({ close: 505, adjusted: true });
   expect(result.data.missingSymbols).toEqual([]);
 });
+
+test("normalizes forward and reverse split ratios", async () => {
+  const provider = new AlpacaProvider(
+    { keyId: "id", secretKey: "secret" },
+    fixtureFetch("alpaca-corporate-actions-splits.json"),
+  );
+
+  const result = await provider.getCorporateActions(
+    ["NVDA", "XYZ"],
+    "2026-08-01",
+    "2026-08-10",
+  );
+
+  expect(result.data[0]).toMatchObject({
+    type: "split",
+    split: {
+      oldRate: 1,
+      newRate: 10,
+      quantityMultiplier: 10,
+      effectiveDate: "2026-08-08",
+    },
+  });
+  expect(result.data[1]).toMatchObject({
+    type: "split",
+    split: {
+      oldRate: 10,
+      newRate: 1,
+      quantityMultiplier: 0.1,
+      effectiveDate: "2026-08-09",
+    },
+  });
+});
+
+test("keeps a base split event when its ratio is invalid", async () => {
+  const provider = new AlpacaProvider(
+    { keyId: "id", secretKey: "secret" },
+    fixtureFetch("alpaca-corporate-actions-splits.json"),
+  );
+
+  const result = await provider.getCorporateActions(
+    ["BAD"],
+    "2026-08-01",
+    "2026-08-10",
+  );
+
+  expect(result.data[2]).toMatchObject({ type: "split", symbol: "BAD" });
+  expect(result.data[2].split).toBeUndefined();
+});

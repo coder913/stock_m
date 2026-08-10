@@ -29,13 +29,71 @@ export function createFixtureProviders() {
   };
 
   const quoteState: Record<string, { price: number; previousClose: number }> = Object.fromEntries(Object.entries({ SPY: 620, QQQ: 550, DIA: 440, IWM: 220, NVDA: 167.32, AAPL: 220, AMD: 158.11, MSFT: 505.41 }).map(([symbol, price]) => [symbol, { price, previousClose: price - 2 }]));
+  const historyDates = ["2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07"];
+  const historyCloses: Record<string, number[]> = {
+    NVDA: [100, 105, 52.5, 55],
+    SPY: [620, 624, 628, 632],
+    QQQ: [550, 555, 558, 563],
+    DIA: [440, 442, 441, 445],
+    IWM: [220, 221, 223, 224],
+    MSFT: [495, 500, 502, 505],
+    AAPL: [214, 216, 218, 220],
+    AMD: [150, 153, 156, 158],
+  };
+  const barsFor = (symbol: string, adjustment: BarsAdjustment, start?: string, end?: string): PriceBar[] => {
+    const closes = historyCloses[symbol];
+    if (!closes) return [];
+    return historyDates.flatMap((marketDate, index) => {
+      if ((start && marketDate < start.slice(0, 10)) || (end && marketDate > end.slice(0, 10))) return [];
+      const close = closes[index];
+      return [{
+        symbol,
+        startedAt: `${marketDate}T20:00:00Z`,
+        open: close - 1,
+        high: close + 1,
+        low: close - 2,
+        close,
+        volume: 50_000_000,
+        adjusted: adjustment !== "raw",
+      }];
+    });
+  };
   const alpaca = {
     async getMarketStatus(): Promise<ProviderResult<MarketStatus>> { maybeFail("alpaca"); return value("alpaca", { isOpen: true, session: "regular", nextClose: "2026-08-07T20:00:00Z" }); },
     async getQuotes(symbols: string[]): Promise<ProviderResult<MarketQuote[]>> { maybeFail("alpaca"); return { ...value("alpaca", symbols.map((symbol) => ({ symbol, price: quoteState[symbol]?.price, previousClose: quoteState[symbol]?.previousClose, currency: "USD", marketSession: "regular" as const }))), delayMinutes: 15 }; },
     async getBars(symbol: string): Promise<ProviderResult<PriceBar[]>> { maybeFail("alpaca"); return value("alpaca", [{ symbol, startedAt: "2026-08-06T00:00:00Z", open: 160, high: 168, low: 159, close: quoteState[symbol]?.price ?? 167.32, volume: 50_000_000, adjusted: false }]); },
-    async getBatchBars(symbols: string[], query: { adjustment: BarsAdjustment }): Promise<ProviderResult<BatchPriceBars>> { maybeFail("alpaca"); return value("alpaca", { symbols: Object.fromEntries(symbols.map((symbol) => [symbol, [{ symbol, startedAt: "2026-08-06T00:00:00Z", open: 160, high: 168, low: 159, close: quoteState[symbol]?.price ?? 167.32, volume: 50_000_000, adjusted: query.adjustment !== "raw" }]])), missingSymbols: [] }); },
+    async getBatchBars(symbols: string[], query: { timeframe: "1Day"; adjustment: BarsAdjustment; start?: string; end?: string; feed?: "delayed_sip" | "iex" }): Promise<ProviderResult<BatchPriceBars>> { maybeFail("alpaca"); const normalized = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))]; const data = Object.fromEntries(normalized.map((symbol) => [symbol, barsFor(symbol, query.adjustment, query.start, query.end)])); return value("alpaca", { symbols: data, missingSymbols: normalized.filter((symbol) => data[symbol].length === 0) }); },
     async getNews(symbols: string[]): Promise<ProviderResult<CompanyNewsItem[]>> { maybeFail("alpaca"); return value("alpaca", [{ id: "alpaca:news:nvda-1", symbols, headline: "NVIDIA 发布新产品", summary: "测试新闻摘要", sourceName: "Benzinga", publishedAt: asOf, url: "https://example.test/news/nvda" }]); },
-    async getCorporateActions(symbols: string[], _from?: string, _to?: string): Promise<ProviderResult<MarketEvent[]>> { maybeFail("alpaca"); const symbol = symbols[0] ?? "NVDA"; return value("alpaca", [{ id: `alpaca:action:${symbol}:dividend`, type: "dividend", symbol, title: `${symbol} 分红`, scheduledAt: "2026-08-20", timing: "all-day", source: "alpaca" }]); },
+    async getCorporateActions(symbols: string[], from = "0000-01-01", to = "9999-12-31"): Promise<ProviderResult<MarketEvent[]>> {
+      maybeFail("alpaca");
+      const selected = symbols.length ? new Set(symbols.map((symbol) => symbol.toUpperCase())) : new Set(["NVDA"]);
+      const events: MarketEvent[] = [
+        {
+          id: "alpaca:action:nvda-split",
+          type: "split",
+          symbol: "NVDA",
+          title: "NVDA 2:1 拆股",
+          scheduledAt: "2026-08-06",
+          timing: "all-day",
+          source: "alpaca",
+          split: { oldRate: 1, newRate: 2, quantityMultiplier: 2, effectiveDate: "2026-08-06" },
+        },
+        {
+          id: "alpaca:action:NVDA:dividend",
+          type: "dividend",
+          symbol: "NVDA",
+          title: "NVDA 分红",
+          scheduledAt: "2026-08-20",
+          timing: "all-day",
+          source: "alpaca",
+        },
+      ];
+      return value("alpaca", events.filter((event) => (
+        (!event.symbol || selected.has(event.symbol))
+        && event.scheduledAt.slice(0, 10) >= from.slice(0, 10)
+        && event.scheduledAt.slice(0, 10) <= to.slice(0, 10)
+      )));
+    },
   };
   const finnhub = {
     async getCompanyProfile(symbol: string): Promise<ProviderResult<CompanyProfile>> { maybeFail("finnhub"); return value("finnhub", { symbol, name: symbol === "NVDA" ? "NVIDIA Corp" : symbol, exchange: "NASDAQ", sector: "Technology", industry: "Semiconductors", marketCapitalization: 4_000_000, currency: "USD" }); },

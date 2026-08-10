@@ -40,3 +40,55 @@ test("changes the next fixture quote without changing other symbols", async () =
   expect(quotes.data[0]).toMatchObject({ symbol: "NVDA", price: 190, previousClose: 167.32 });
   expect(quotes.data[1]).toMatchObject({ symbol: "MSFT", price: 505.41 });
 });
+
+test("serves raw and adjusted performance history for every requested symbol", async () => {
+  const fixtures = createFixtureProviders();
+
+  const raw = await fixtures.alpaca.getBatchBars(["NVDA", "SPY"], {
+    timeframe: "1Day",
+    start: "2026-08-04",
+    end: "2026-08-07",
+    adjustment: "raw",
+  });
+  const adjusted = await fixtures.alpaca.getBatchBars(["NVDA", "SPY"], {
+    timeframe: "1Day",
+    start: "2026-08-04",
+    end: "2026-08-07",
+    adjustment: "all",
+  });
+
+  expect(raw.data.symbols.NVDA.map((bar) => bar.close)).toEqual([100, 105, 52.5, 55]);
+  expect(raw.data.symbols.NVDA.every((bar) => !bar.adjusted)).toBe(true);
+  expect(adjusted.data.symbols.SPY).toHaveLength(4);
+  expect(adjusted.data.symbols.SPY.every((bar) => bar.adjusted)).toBe(true);
+});
+
+test("serves a deterministic split candidate and fails only one batch request", async () => {
+  const fixtures = createFixtureProviders();
+  const actions = await fixtures.alpaca.getCorporateActions(
+    ["NVDA"],
+    "2026-08-04",
+    "2026-08-07",
+  );
+  expect(actions.data).toEqual([
+    expect.objectContaining({
+      id: "alpaca:action:nvda-split",
+      type: "split",
+      split: expect.objectContaining({ quantityMultiplier: 2 }),
+    }),
+  ]);
+
+  fixtures.failNext("alpaca", 429);
+  await expect(fixtures.alpaca.getBatchBars(["NVDA"], {
+    timeframe: "1Day",
+    start: "2026-08-04",
+    end: "2026-08-07",
+    adjustment: "raw",
+  })).rejects.toBeInstanceOf(ProviderRateLimitError);
+  await expect(fixtures.alpaca.getBatchBars(["NVDA"], {
+    timeframe: "1Day",
+    start: "2026-08-04",
+    end: "2026-08-07",
+    adjustment: "raw",
+  })).resolves.toMatchObject({ data: { symbols: { NVDA: expect.any(Array) } } });
+});

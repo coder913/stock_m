@@ -100,6 +100,14 @@ export interface MarketEvent {
   timing: "before-market" | "during-market" | "after-market" | "all-day" | "unknown";
   source: ProviderSource;
   sourceUrl?: string;
+  split?: SplitEventDetails;
+}
+
+export interface SplitEventDetails {
+  oldRate: number;
+  newRate: number;
+  quantityMultiplier: number;
+  effectiveDate: string;
 }
 
 export interface CompanyNewsItem {

@@ -1,0 +1,28 @@
+{
+  "corporate_actions": [
+    {
+      "id": "forward-1",
+      "symbol": "NVDA",
+      "type": "forward_split",
+      "date": "2026-08-08",
+      "old_rate": "1",
+      "new_rate": "10"
+    },
+    {
+      "id": "reverse-1",
+      "symbol": "XYZ",
+      "type": "reverse_split",
+      "date": "2026-08-09",
+      "old_rate": "10",
+      "new_rate": "1"
+    },
+    {
+      "id": "invalid-1",
+      "symbol": "BAD",
+      "type": "forward_split",
+      "date": "2026-08-10",
+      "old_rate": "0",
+      "new_rate": "2"
+    }
+  ]
+}

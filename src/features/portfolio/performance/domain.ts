@@ -104,3 +104,23 @@ export interface PerformanceResult {
 }
 
 export type CacheablePerformanceResult = PerformanceResult | ({ points: unknown[] } & Record<string, unknown>);
+
+export interface ContributionItem {
+  key: string;
+  symbol?: string;
+  label: string;
+  moneyContribution: number;
+  returnContribution?: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  dividends: number;
+  fees: number;
+}
+
+export interface AttributionResult {
+  items: ContributionItem[];
+  totalMoneyPnl: number;
+  totalReturnContribution?: number;
+  reconciled: boolean;
+  diagnostic?: "DAILY_RECONCILIATION_FAILED" | "RETURN_RECONCILIATION_FAILED" | "MONEY_RECONCILIATION_FAILED";
+}

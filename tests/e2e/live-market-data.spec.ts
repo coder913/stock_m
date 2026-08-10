@@ -5,7 +5,7 @@ test("serves the complete fixture-backed API surface", async ({ request }) => {
     "/api/health",
     "/api/market/status",
     "/api/market/quotes?symbols=NVDA",
-    "/api/market/bars?symbol=NVDA&timeframe=1Day&start=2026-08-01&end=2026-08-07",
+    "/api/market/bars?symbols=NVDA&timeframe=1Day&start=2026-08-01&end=2026-08-07&adjustment=raw",
     "/api/companies/NVDA",
     "/api/companies/NVDA/financials",
     "/api/companies/NVDA/filings",

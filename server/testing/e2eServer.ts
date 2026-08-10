@@ -21,7 +21,7 @@ const app = buildApp({
 app.post("/api/testing/fail-next", (request, reply) => {
   const body = request.body as { source?: "alpaca" | "sec" | "finnhub" | "fred"; code?: 429 | 503 };
   if (!body.source || (body.code !== 429 && body.code !== 503)) return reply.status(400).send({ code: "INVALID_TEST_FAILURE", message: "测试故障参数无效", retryable: false });
-  now = new Date(new Date(now).getTime() + 2 * 60_000).toISOString();
+  now = new Date(new Date(now).getTime() + 16 * 60_000).toISOString();
   fixtures.failNext(body.source, body.code);
   return { ok: true };
 });

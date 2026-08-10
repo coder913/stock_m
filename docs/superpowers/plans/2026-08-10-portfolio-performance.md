@@ -76,7 +76,7 @@
 - Produces `BarsAdjustment`, `BatchPriceBars`, `AlpacaProvider.getBatchBars`, `MarketProvider.getBatchBars`, and `MarketApiClient.getBatchBars`.
 - Preserves `AlpacaProvider.getBars(symbol, query)` and `/api/market/bars/:symbol`.
 
-- [ ] **Step 1: Add failing provider pagination tests and fixtures**
+- [x] **Step 1: Add failing provider pagination tests and fixtures**
 
 Create page fixtures:
 
@@ -108,13 +108,13 @@ test("loads every batch-bars page and forwards adjustment", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the provider test and verify RED**
+- [x] **Step 2: Run the provider test and verify RED**
 
 Run `npm test -- --run server/providers/alpacaProvider.test.ts`.
 
 Expected: FAIL because `getBatchBars` does not exist.
 
-- [ ] **Step 3: Add contracts and provider implementation**
+- [x] **Step 3: Add contracts and provider implementation**
 
 ```ts
 export type BarsAdjustment = "raw" | "split" | "dividend" | "all";
@@ -125,7 +125,7 @@ Implement a `do/while` pagination loop over Alpaca `/v2/stocks/bars`, passing `s
 
 Add `getBatchBars` to `createFixtureProviders().alpaca` in this task so `server/testing/e2eServer.ts` continues to satisfy `MarketProvider` and Task 1 can build independently. Return one deterministic bar per requested symbol; Task 2 expands this fixture to the full performance timeline.
 
-- [ ] **Step 4: Add failing route and browser-client tests**
+- [x] **Step 4: Add failing route and browser-client tests**
 
 ```ts
 test("serves cached batch daily bars", async () => {
@@ -142,7 +142,7 @@ Add table tests for zero symbols, 101 symbols, invalid characters, `1Min`, rever
 
 Modify the existing route-test `createApp` helper to accept `marketOverrides: Partial<MarketProvider>`, provide a default `getBatchBars`, and spread the override last. This makes the snippet above fully local to `marketRoutes.test.ts`.
 
-- [ ] **Step 5: Run route/client tests and verify RED**
+- [x] **Step 5: Run route/client tests and verify RED**
 
 Run:
 
@@ -152,7 +152,7 @@ npm test -- --run server/routes/marketRoutes.test.ts src/features/market/marketA
 
 Expected: FAIL because the route and client method are absent.
 
-- [ ] **Step 6: Implement route and client**
+- [x] **Step 6: Implement route and client**
 
 Extend `MarketProvider` with:
 
@@ -175,7 +175,7 @@ getBatchBars(symbols: string[], query: { start: string; end: string; adjustment:
 }
 ```
 
-- [ ] **Step 7: Verify Task 1 and commit**
+- [x] **Step 7: Verify Task 1 and commit**
 
 Run the three focused test files, `npm run build`, and `git diff --check`. Commit:
 
@@ -200,7 +200,7 @@ git commit -m "feat: add batch historical bars"
 - Produces optional `MarketEvent.split: SplitEventDetails`.
 - `quantityMultiplier` is exactly `newRate / oldRate`.
 
-- [ ] **Step 1: Write failing split-normalization tests**
+- [x] **Step 1: Write failing split-normalization tests**
 
 Fixture:
 
@@ -221,13 +221,13 @@ test("normalizes forward and reverse split ratios", async () => {
 
 Add an invalid zero-rate case that keeps the base split event but expects `split` to be undefined.
 
-- [ ] **Step 2: Run provider tests and verify RED**
+- [x] **Step 2: Run provider tests and verify RED**
 
 Run `npm test -- --run server/providers/alpacaProvider.test.ts`.
 
 Expected: FAIL because split detail is absent.
 
-- [ ] **Step 3: Implement split details**
+- [x] **Step 3: Implement split details**
 
 ```ts
 export interface SplitEventDetails { oldRate: number; newRate: number; quantityMultiplier: number; effectiveDate: string; }
@@ -235,11 +235,11 @@ export interface SplitEventDetails { oldRate: number; newRate: number; quantityM
 
 Add `split?: SplitEventDetails` to `MarketEvent`. Extend Zod parsing with optional string/number rates. Attach details only when both parsed values are finite and positive; never discard the base event because details are invalid.
 
-- [ ] **Step 4: Add deterministic bar and split fixtures**
+- [x] **Step 4: Add deterministic bar and split fixtures**
 
 Add fixture batch closes for NVDA, SPY, QQQ, DIA, and IWM on `2026-08-04` through `2026-08-07`. Return an NVDA 2-for-1 split on `2026-08-06` with ID `alpaca:action:nvda-split`. Test `raw` versus `all`, split details, and `fail-next` 429.
 
-- [ ] **Step 5: Verify Task 2 and commit**
+- [x] **Step 5: Verify Task 2 and commit**
 
 Run provider, fixture, and event-route tests plus build and diff check. Commit:
 
@@ -279,7 +279,7 @@ migrate(events: LedgerEvent[], now?: string): PortfolioSettings
 getRecoveryNotice(): string | undefined
 ```
 
-- [ ] **Step 1: Write failing settings tests**
+- [x] **Step 1: Write failing settings tests**
 
 ```ts
 test("migrates existing ledger settings once", () => {
@@ -292,17 +292,17 @@ test("migrates existing ledger settings once", () => {
 
 Add invalid tests for negative/NaN initial cash, invalid/future inception date, inception later than earliest event, and invalid benchmark characters. Seed malformed JSON and a structurally invalid saved value; assert `get()` quarantines the bad value, returns version-1 defaults, and exposes a recoverable warning instead of crashing Portfolio.
 
-- [ ] **Step 2: Run settings tests and verify RED**
+- [x] **Step 2: Run settings tests and verify RED**
 
 Run `npm test -- --run src/features/portfolio/portfolioSettingsRepository.test.ts`.
 
 Expected: FAIL because the repository is missing.
 
-- [ ] **Step 3: Implement settings repository**
+- [x] **Step 3: Implement settings repository**
 
 Use `stock_m:portfolio-settings:v1`. Validate persisted fields, normalize benchmark to uppercase, clone all returned values, and make migration idempotent. Quarantine malformed persisted data under `stock_m:portfolio-settings:corrupt:<timestamp>`, restore migration defaults, and expose one recoverable notice through `getRecoveryNotice()`. `save` calls the injected `earliestEventDate` function so it can enforce the approved inception constraint without changing its public signature.
 
-- [ ] **Step 4: Write failing cash-flow and split ledger tests**
+- [x] **Step 4: Write failing cash-flow and split ledger tests**
 
 ```ts
 test("records deposits and prevents an over-withdrawal", () => {
@@ -343,11 +343,11 @@ test("isolates corrupt ignored split decisions", () => {
 });
 ```
 
-- [ ] **Step 5: Run ledger/analytics tests and verify RED**
+- [x] **Step 5: Run ledger/analytics tests and verify RED**
 
 Run the ledger and analytics test files. Expected: FAIL on the new event types.
 
-- [ ] **Step 6: Implement replay invariants**
+- [x] **Step 6: Implement replay invariants**
 
 Extend ledger fields for split data. Make `availableQuantity` public. Replay cash exactly as follows:
 
@@ -365,7 +365,7 @@ Replay split quantity as `round8(quantity * quantityMultiplier)`. In current ana
 
 Use `stock_m:ignored-splits:v1` for ignored decisions. Validate nonempty source ID/symbol/note and ISO timestamp on read and write. Repeated `sourceEventId` returns the existing immutable decision.
 
-- [ ] **Step 7: Verify Task 3 and commit**
+- [x] **Step 7: Verify Task 3 and commit**
 
 Run `npm test -- --run src/features/portfolio`, build, and diff check. Commit:
 
@@ -389,7 +389,7 @@ git commit -m "feat: extend portfolio cash flow ledger"
 - Consumes `MarketApiClient.getBatchBars/getEvents`, settings, events, and ignored split IDs.
 - Produces `PerformanceHistoryLoad` and content-addressed cache entries.
 
-- [ ] **Step 1: Define contracts and failing loader tests**
+- [x] **Step 1: Define contracts and failing loader tests**
 
 ```ts
 export interface PerformanceHistoryLoad {
@@ -418,15 +418,15 @@ test("loads ever-held symbols raw, benchmark all, and split candidates", async (
 
 Add partial failures for holdings, benchmark, and events independently.
 
-- [ ] **Step 2: Run loader tests and verify RED**
+- [x] **Step 2: Run loader tests and verify RED**
 
 Run the loader test. Expected: FAIL because the performance module is missing.
 
-- [ ] **Step 3: Implement loader with independent degradation**
+- [x] **Step 3: Implement loader with independent degradation**
 
 Use `Promise.allSettled`. The query start is the earlier of settings inception and earliest event market date. Holdings failure yields `{}`; benchmark failure yields `[]` but still permits portfolio-only metrics; event failure yields no candidates, sets `resourceStates.events = "unavailable"`, and blocks raw-price reconstruction with “无法验证拆股事件”. Mark each resource stale when its successful envelope has `stale` or `fallback`. Filter split candidates to held intervals and exclude confirmed/ignored source IDs. Never import mock repositories.
 
-- [ ] **Step 4: Write failing cache tests**
+- [x] **Step 4: Write failing cache tests**
 
 ```ts
 test("invalidates cache when ledger or as-of changes", () => {
@@ -442,11 +442,11 @@ test("isolates a corrupt cached result", () => {
 });
 ```
 
-- [ ] **Step 5: Implement stable cache hashing**
+- [x] **Step 5: Implement stable cache hashing**
 
 Canonicalize keys and events, use deterministic FNV-1a, and include ledger, settings, holdings/benchmark `asOf`, range, benchmark, and algorithm version. Retain only the 10 newest entries by `createdAt`.
 
-- [ ] **Step 6: Verify Task 4 and commit**
+- [x] **Step 6: Verify Task 4 and commit**
 
 Run both focused tests, build, and diff check. Commit:
 
@@ -483,7 +483,7 @@ interface PerformanceResult {
 }
 ```
 
-- [ ] **Step 1: Write failing XIRR tests**
+- [x] **Step 1: Write failing XIRR tests**
 
 ```ts
 test("solves annual money-weighted return", () => {
@@ -498,17 +498,17 @@ test("returns undefined without both cash-flow signs", () => {
 });
 ```
 
-- [ ] **Step 2: Run XIRR tests and verify RED**
+- [x] **Step 2: Run XIRR tests and verify RED**
 
 Run `npm test -- --run src/features/portfolio/performance/xirr.test.ts`.
 
 Expected: FAIL because `solveXirr` is missing.
 
-- [ ] **Step 3: Implement bounded XIRR**
+- [x] **Step 3: Implement bounded XIRR**
 
 Use actual-day year fractions (`milliseconds / 365.2425 days`). Try Newton-Raphson from `0.1`; reject rates `<= -0.999999`; stop when absolute NPV is `< 1e-8`. If Newton leaves `[-0.999999, 1000]`, use bisection over that interval. Return `undefined` after 100 total iterations or when the interval does not bracket a root.
 
-- [ ] **Step 4: Write failing performance-engine tests**
+- [x] **Step 4: Write failing performance-engine tests**
 
 ```ts
 test("separates deposits from investment return", () => {
@@ -538,13 +538,13 @@ test("does not link TWR across an unavailable gap", () => {
 
 Also cover buy, sell, dividend, fee, withdrawal, weekend flow, reverse split with 8-decimal quantity, benchmark normalization, custom range, 30-day annualization threshold, drawdown, and positive-day rate.
 
-- [ ] **Step 5: Run engine tests and verify RED**
+- [x] **Step 5: Run engine tests and verify RED**
 
 Run `npm test -- --run src/features/portfolio/performance/portfolioPerformanceEngine.test.ts`.
 
 Expected: FAIL because reconstruction and metrics are absent.
 
-- [ ] **Step 6: Implement deterministic daily reconstruction**
+- [x] **Step 6: Implement deterministic daily reconstruction**
 
 Use working positions `{ quantity, cost, realizedPnl }`. Build valuation dates from the union of valid holding and benchmark US-market dates; ledger events on non-trading days flow into the next valuation subperiod and retain their original timestamp for XIRR. For each market date:
 
@@ -561,7 +561,7 @@ Use working positions `{ quantity, cost, realizedPnl }`. Build valuation dates f
 
 Calculate each cash-flow weight from prior/current `valuedAt`. On a position's purchase date, use the last same-day buy price only when no close exists and mark the point stale. Thereafter carry the most recent close for no more than five valuation dates. Reset continuous TWR and peak after unavailable points. Normalize all-adjusted benchmark closes to 100 at the selected continuous segment start. Build XIRR flows from interval-opening value, deposits, withdrawals, and interval-ending value.
 
-- [ ] **Step 7: Verify Task 5 and commit**
+- [x] **Step 7: Verify Task 5 and commit**
 
 Run XIRR and engine tests, build, and diff check. Commit:
 
@@ -583,7 +583,7 @@ git commit -m "feat: calculate portfolio performance"
 - Consumes one continuous valid interval from `PerformanceResult.dailyInternals`.
 - Produces `AttributionResult`; reads no storage or market data.
 
-- [ ] **Step 1: Write failing reconciliation tests**
+- [x] **Step 1: Write failing reconciliation tests**
 
 ```ts
 test("reconciles symbols, dividends, and fees to ending assets", () => {
@@ -608,13 +608,13 @@ test("returns a diagnostic instead of rows when reconciliation fails", () => {
 });
 ```
 
-- [ ] **Step 2: Run attribution tests and verify RED**
+- [x] **Step 2: Run attribution tests and verify RED**
 
 Run `npm test -- --run src/features/portfolio/performance/performanceAttribution.test.ts`.
 
 Expected: FAIL because attribution is missing.
 
-- [ ] **Step 3: Implement money and geometrically linked contribution**
+- [x] **Step 3: Implement money and geometrically linked contribution**
 
 For each symbol/day:
 
@@ -631,7 +631,7 @@ linked_i = sum(daily_i[t] * product(1 + dailyReturn[u]) for u > t)
 
 Calculate realized/unrealized changes relative to the selected interval opening baseline. Enforce all three Global Constraint tolerances before returning rows; otherwise return an empty diagnostic result.
 
-- [ ] **Step 4: Verify Task 6 and commit**
+- [x] **Step 4: Verify Task 6 and commit**
 
 Run all performance tests, build, and diff check. Commit:
 
@@ -677,7 +677,7 @@ export interface PerformanceViewModel {
 }
 ```
 
-- [ ] **Step 1: Write failing performance-tab tests**
+- [x] **Step 1: Write failing performance-tab tests**
 
 ```tsx
 test("switches ranges and saves a valid custom benchmark", async () => {
@@ -729,11 +729,11 @@ test("confirms an edited split ratio", async () => {
 
 Add PortfolioPage coverage for the fourth tab and deposit/withdrawal fields.
 
-- [ ] **Step 2: Run UI tests and verify RED**
+- [x] **Step 2: Run UI tests and verify RED**
 
 Run the new tab test and PortfolioPage test. Expected: FAIL at missing UI.
 
-- [ ] **Step 3: Implement loading/cache orchestration**
+- [x] **Step 3: Implement loading/cache orchestration**
 
 ```ts
 type PerformanceViewState =
@@ -744,21 +744,21 @@ type PerformanceViewState =
 
 On settings, ledger revision, range, or benchmark change: compute cache key, show cache, load history, block at the first pending split, calculate performance/attribution, cache only a successful model, and ignore obsolete async results after dependency change/unmount.
 
-- [ ] **Step 4: Implement focused presentation components**
+- [x] **Step 4: Implement focused presentation components**
 
 Use buttons for inception/YTD/1Y/6M/3M and date inputs for custom range. Undefined metrics render `—` plus reason. Charts use `connectNulls={false}` and separate normalized portfolio/benchmark lines. Attribution renders no ranked rows when `reconciled` is false.
 
-- [ ] **Step 5: Implement settings and split workflows**
+- [x] **Step 5: Implement settings and split workflows**
 
 Settings validate all repository constraints. Changing initial cash or inception with events requires a second confirmation saying “将重新计算全部历史绩效”. Split review previews quantity before/after, validates positive rates, appends immutable split on confirm, requires a note on ignore, stores ignored IDs at `stock_m:ignored-splits:v1`, and creates manual IDs as `manual:<uuid>`.
 
-- [ ] **Step 6: Extend cash-flow form and wire the fourth tab**
+- [x] **Step 6: Extend cash-flow form and wire the fourth tab**
 
 Add `performance` to the tab union. Deposit/withdrawal show amount and reason; split remains exclusive to SplitReviewPanel. Replace hard-coded initial cash in current analytics with migrated settings. Every successful ledger/settings change increments revision and invalidates analysis cache. Preserve overview, holdings, thesis health, alerts, and review behavior.
 
 Replace the fixed `[10_000, 10_500, 10_200]` history with valid `PerformanceResult.points[].totalValue`. Feed the resulting real current drawdown into portfolio alert evaluation and weekly-review snapshots. While performance is loading or unavailable, omit drawdown-dependent alerts and display drawdown as unavailable rather than reverting to demo values.
 
-- [ ] **Step 7: Verify Task 7 and commit**
+- [x] **Step 7: Verify Task 7 and commit**
 
 Run all portfolio tests, build, and diff check. Commit:
 
@@ -782,7 +782,7 @@ git commit -m "feat: add portfolio performance workspace"
 - Adds deterministic performance fixtures only to the test server.
 - Completes user documentation and verification tracking.
 
-- [ ] **Step 1: Add a failing browser flow**
+- [x] **Step 1: Add a failing browser flow**
 
 ```ts
 test.beforeEach(async ({ page }) => { await page.goto("/"); await page.evaluate(() => localStorage.clear()); });
@@ -848,21 +848,21 @@ async function seedReadyPerformance(page: Page) {
 }
 ```
 
-- [ ] **Step 2: Run E2E and verify RED**
+- [x] **Step 2: Run E2E and verify RED**
 
 Run `npm run test:e2e -- tests/e2e/portfolio-performance.spec.ts`.
 
 Expected: FAIL at the missing performance tab or fixture history.
 
-- [ ] **Step 3: Complete fixture behavior and make E2E GREEN**
+- [x] **Step 3: Complete fixture behavior and make E2E GREEN**
 
 Ensure fixtures contain every required date/symbol and that the first successful batch request populates SQLite cache before `fail-next`. Register no `/api/testing/*` route in production `server/app.ts`. Re-run the E2E file and expect both tests to pass.
 
-- [ ] **Step 4: Update README**
+- [x] **Step 4: Update README**
 
 Document localStorage keys; cash-flow/split semantics; raw holdings versus all-adjusted benchmark bars; Modified Dietz and XIRR signs; 5-day carry; unavailable gaps; 30-day annualization threshold; reconciliation tolerances; excluded cloud/broker/tax/background features; and the focused E2E command.
 
-- [ ] **Step 5: Run complete validation**
+- [x] **Step 5: Run complete validation**
 
 ```powershell
 npm test
@@ -874,7 +874,7 @@ git diff --check
 
 Expected: unit/integration/interaction tests, client/server TypeScript, Vite build, all stable-Chrome flows, smoke, and whitespace checks pass.
 
-- [ ] **Step 6: Run safety scans**
+- [x] **Step 6: Run safety scans**
 
 ```powershell
 $secretMatches = @(rg -n "ALPACA_API_SECRET_KEY|FINNHUB_API_KEY|FRED_API_KEY" dist 2>$null)
@@ -885,7 +885,7 @@ if ($mockMatches.Count) { $mockMatches; throw "production mock imports found" }
 
 Expected: both scans produce zero matches.
 
-- [ ] **Step 7: Mark plan complete and commit**
+- [x] **Step 7: Mark plan complete and commit**
 
 Change completed checkboxes to `[x]`, then require zero real incomplete steps:
 

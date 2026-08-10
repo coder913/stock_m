@@ -5,6 +5,9 @@ export interface ProviderConfiguration { configured: boolean; }
 export interface ServerConfig {
   host: string;
   port: number;
+  databaseUrl: string;
+  redisUrl: string;
+  internalServiceToken: string;
   providers: Record<"alpaca" | "sec" | "finnhub" | "fred", ProviderConfiguration>;
   publicStatus: { providers: Record<string, ProviderConfiguration> };
   secrets: {
@@ -23,6 +26,13 @@ const environmentSchema = z.object({
   FINNHUB_API_KEY: z.string().min(1).optional(),
   FRED_API_KEY: z.string().min(1).optional(),
   SEC_USER_AGENT: z.string().min(1),
+  DATABASE_URL: z.string().url().refine((value) => value.startsWith("postgresql://") || value.startsWith("postgres://"), {
+    message: "DATABASE_URL must be a PostgreSQL URL",
+  }),
+  REDIS_URL: z.string().url().refine((value) => value.startsWith("redis://") || value.startsWith("rediss://"), {
+    message: "REDIS_URL must be a Redis URL",
+  }),
+  INTERNAL_SERVICE_TOKEN: z.string().min(16),
 });
 
 export function loadServerConfig(environment: Record<string, string | undefined>): ServerConfig {
@@ -39,6 +49,9 @@ export function loadServerConfig(environment: Record<string, string | undefined>
   return {
     host: parsed.HOST ?? "127.0.0.1",
     port: parsed.PORT ?? 8787,
+    databaseUrl: parsed.DATABASE_URL,
+    redisUrl: parsed.REDIS_URL,
+    internalServiceToken: parsed.INTERNAL_SERVICE_TOKEN,
     providers,
     publicStatus: { providers },
     secrets: {

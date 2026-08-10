@@ -5,5 +5,5 @@
     "types": ["node", "vitest/globals"],
     "noEmit": true
   },
-  "include": ["server", "src/features/market/apiDomain.ts"]
+  "include": ["server", "shared", "src/features/market/apiDomain.ts"]
 }

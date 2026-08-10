@@ -1,0 +1,29 @@
+name: stock-m-test
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: stock_m_test
+      POSTGRES_USER: stock_m
+      POSTGRES_PASSWORD: stock_m
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock_m -d stock_m_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

@@ -2,8 +2,15 @@
 import { expect, test } from "vitest";
 import { loadServerConfig } from "./config";
 
+const serviceEnvironment = {
+  DATABASE_URL: "postgresql://stock_m:stock_m@postgres:5432/stock_m",
+  REDIS_URL: "redis://redis:6379",
+  INTERNAL_SERVICE_TOKEN: "test-internal-service-token",
+};
+
 test("exposes provider configuration without exposing provider secrets", () => {
   const config = loadServerConfig({
+    ...serviceEnvironment,
     ALPACA_API_KEY_ID: "alpaca-id",
     ALPACA_API_SECRET_KEY: "alpaca-secret",
     SEC_USER_AGENT: "stock_m owner@example.com",
@@ -15,6 +22,10 @@ test("exposes provider configuration without exposing provider secrets", () => {
 });
 
 test("rejects a SEC user agent without a contact email", () => {
-  expect(() => loadServerConfig({ SEC_USER_AGENT: "stock_m" }))
+  expect(() => loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m" }))
     .toThrow("SEC_USER_AGENT 必须包含联系邮箱");
+});
+
+test("requires postgres, redis, and an internal service token", () => {
+  expect(() => loadServerConfig({ SEC_USER_AGENT: "stock_m test@example.com" })).toThrow();
 });

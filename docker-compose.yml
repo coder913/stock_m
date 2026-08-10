@@ -1,0 +1,68 @@
+services:
+  web-api:
+    build: .
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      DATABASE_URL: postgresql://stock_m:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/stock_m
+      REDIS_URL: redis://redis:6379
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:?SEC_USER_AGENT is required}
+      ALPACA_API_KEY_ID: ${ALPACA_API_KEY_ID:-}
+      ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+    ports:
+      - "127.0.0.1:${PORT:-8787}:8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - edge
+      - backend
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: stock_m
+      POSTGRES_USER: stock_m
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock_m -d stock_m"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+networks:
+  edge: {}
+  backend:
+    internal: true
+
+volumes:
+  postgres-data:

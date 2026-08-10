@@ -29,7 +29,78 @@ export interface PerformanceCacheKeyInput {
   algorithmVersion: string;
 }
 
-export interface CacheablePerformanceResult {
-  points: unknown[];
+export interface PerformanceInput {
+  history: PerformanceHistoryLoad;
+  from: string;
+  to: string;
+}
+
+export interface DailyPortfolioPoint {
+  marketDate: string;
+  valuedAt: string;
+  cash: number;
+  holdingsValue?: number;
+  totalValue?: number;
+  externalFlow: number;
+  dailyReturn?: number;
+  cumulativeTwr?: number;
+  normalizedPortfolio?: number;
+  benchmarkValue?: number;
+  benchmarkReturn?: number;
+  excessReturn?: number;
+  drawdown?: number;
+  dataState: PerformanceResourceState;
+  missingSymbols: string[];
+}
+
+export interface DailyPositionInternal {
+  quantity: number;
+  cost: number;
+  realizedPnl: number;
+  beginningMarketValue: number;
+  endingMarketValue?: number;
+  buyCashPaid: number;
+  sellCashReceived: number;
+  realizedPnlChange: number;
+  dividends: number;
+}
+
+export interface DailyPerformanceInternal {
+  marketDate: string;
+  valuedAt: string;
+  beginningValue?: number;
+  endingValue?: number;
+  deposits: number;
+  withdrawals: number;
+  externalFlow: number;
+  fees: number;
+  modifiedDietzDenominator?: number;
+  dailyReturn?: number;
+  positions: Record<string, DailyPositionInternal>;
+  dataState: PerformanceResourceState;
+}
+
+export interface PerformanceSummary {
+  from: string;
+  to: string;
+  availableFrom?: string;
+  twr?: number;
+  mwr?: number;
+  annualizedReturn?: number;
+  benchmarkReturn?: number;
+  excessReturn?: number;
+  currentDrawdown?: number;
+  maximumDrawdown?: number;
+  positiveDayRate?: number;
+}
+
+export interface PerformanceResult {
+  points: DailyPortfolioPoint[];
+  summary: PerformanceSummary;
+  dailyInternals: DailyPerformanceInternal[];
+  interval: { beginningValue: number; endingValue: number; deposits: number; withdrawals: number };
+  warnings: string[];
   [key: string]: unknown;
 }
+
+export type CacheablePerformanceResult = PerformanceResult | ({ points: unknown[] } & Record<string, unknown>);

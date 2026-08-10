@@ -34,3 +34,24 @@ test("treats blank optional provider variables from Compose as unconfigured", ()
   const config = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", ALPACA_API_KEY_ID: "", ALPACA_API_SECRET_KEY: "", FINNHUB_API_KEY: "", FRED_API_KEY: "" });
   expect(config.providers).toMatchObject({ alpaca: { configured: false }, finnhub: { configured: false }, fred: { configured: false } });
 });
+
+test("uses independent worker concurrency defaults and overrides", () => {
+  const defaults = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com" });
+  expect(defaults.workers).toEqual({ monitorConcurrency: 1, notificationConcurrency: 1 });
+
+  const configured = loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+    MONITOR_WORKER_CONCURRENCY: "3",
+    NOTIFICATION_WORKER_CONCURRENCY: "5",
+  });
+  expect(configured.workers).toEqual({ monitorConcurrency: 3, notificationConcurrency: 5 });
+});
+
+test("rejects non-positive worker concurrency", () => {
+  expect(() => loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+    MONITOR_WORKER_CONCURRENCY: "0",
+  })).toThrow();
+});

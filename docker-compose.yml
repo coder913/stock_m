@@ -1,3 +1,15 @@
+x-worker-environment: &worker-environment
+  DATABASE_URL: postgresql://stock_m:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/stock_m
+  REDIS_URL: redis://redis:6379
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+  SEC_USER_AGENT: ${SEC_USER_AGENT:?SEC_USER_AGENT is required}
+  ALPACA_API_KEY_ID: ${ALPACA_API_KEY_ID:-}
+  ALPACA_API_SECRET_KEY: ${ALPACA_API_SECRET_KEY:-}
+  FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+  FRED_API_KEY: ${FRED_API_KEY:-}
+  MONITOR_WORKER_CONCURRENCY: ${MONITOR_WORKER_CONCURRENCY:-1}
+  NOTIFICATION_WORKER_CONCURRENCY: ${NOTIFICATION_WORKER_CONCURRENCY:-1}
+
 services:
   web-api:
     build: .
@@ -28,6 +40,50 @@ services:
       start_period: 20s
     networks:
       - edge
+      - backend
+    stop_grace_period: 25s
+
+  monitor-worker:
+    build: .
+    restart: unless-stopped
+    command: ["npm", "run", "worker:monitor"]
+    environment: *worker-environment
+    depends_on:
+      web-api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "npm", "run", "worker:health", "--", "monitor"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    networks:
+      - backend
+    stop_grace_period: 25s
+
+  notification-worker:
+    build: .
+    restart: unless-stopped
+    command: ["npm", "run", "worker:notifications"]
+    environment: *worker-environment
+    depends_on:
+      web-api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "npm", "run", "worker:health", "--", "notifications"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    networks:
       - backend
     stop_grace_period: 25s
 

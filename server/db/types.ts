@@ -104,6 +104,7 @@ export interface BrowserMigrationRecordTable{category:string;ordinal:number;payl
 export interface MarketCacheEntryTable { cacheKey:string; source:string; payloadJson:unknown; asOf:Timestamp; fetchedAt:Timestamp; expiresAt:Timestamp; delayMinutes:number|null; noticesJson:unknown; }
 export interface MarketProviderStateTable { source:string; cooldownUntil:NullableTimestamp; lastSuccessAt:NullableTimestamp; lastErrorCode:string|null; }
 export interface MarketRefreshAttemptTable { id:Generated<number>; cacheKey:string; source:string; status:"success"|"error"; errorCode:string|null; attemptedAt:Timestamp; }
+export interface WorkerHeartbeatTable { worker:"monitor"|"notifications"; state:"starting"|"ready"|"degraded"|"stopping"; queueLag:number; heartbeatAt:Timestamp; }
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -136,4 +137,5 @@ export interface Database {
   "market.cache_entry":MarketCacheEntryTable;
   "market.provider_state":MarketProviderStateTable;
   "market.refresh_attempt":MarketRefreshAttemptTable;
+  "platform.worker_heartbeat":WorkerHeartbeatTable;
 }

@@ -8,6 +8,10 @@ export interface ServerConfig {
   databaseUrl: string;
   redisUrl: string;
   internalServiceToken: string;
+  workers: {
+    monitorConcurrency: number;
+    notificationConcurrency: number;
+  };
   providers: Record<"alpaca" | "sec" | "finnhub" | "fred", ProviderConfiguration>;
   publicStatus: { providers: Record<string, ProviderConfiguration> };
   secrets: {
@@ -35,6 +39,8 @@ const environmentSchema = z.object({
     message: "REDIS_URL must be a Redis URL",
   }),
   INTERNAL_SERVICE_TOKEN: z.string().min(16),
+  MONITOR_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
+  NOTIFICATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
 });
 
 export function loadServerConfig(environment: Record<string, string | undefined>): ServerConfig {
@@ -54,6 +60,10 @@ export function loadServerConfig(environment: Record<string, string | undefined>
     databaseUrl: parsed.DATABASE_URL,
     redisUrl: parsed.REDIS_URL,
     internalServiceToken: parsed.INTERNAL_SERVICE_TOKEN,
+    workers: {
+      monitorConcurrency: parsed.MONITOR_WORKER_CONCURRENCY ?? 1,
+      notificationConcurrency: parsed.NOTIFICATION_WORKER_CONCURRENCY ?? 1,
+    },
     providers,
     publicStatus: { providers },
     secrets: {

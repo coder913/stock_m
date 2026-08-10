@@ -39,6 +39,11 @@ test("shows live quote and company action", async () => {
   expect(await screen.findByText(/NVDA 分红/)).toBeVisible();
 });
 
+test("visibly focuses the alert context from a notification deep link", async () => {
+  render(<MemoryRouter initialEntries={["/stocks/NVDA?alert=alert-1"]}><Routes><Route path="/stocks/:symbol" element={<ResearchPage marketClient={baseClient as never} />} /></Routes></MemoryRouter>);
+  expect(await screen.findByText("已定位提醒 alert-1")).toBeVisible();
+});
+
 test("renders price history while financial facts fail independently", async () => {
   renderResearch({
     ...baseClient,

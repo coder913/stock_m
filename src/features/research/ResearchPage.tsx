@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import type { CompanyProfile, MarketQuote } from "../market/apiDomain";
 import { MarketApiClient } from "../market/marketApiClient";
 import { ResearchMonitorPanel } from "../monitoring/ResearchMonitorPanel";
@@ -23,6 +23,8 @@ export function ResearchPage({ marketClient = defaultMarketClient, thesisService
   const activeThesisService = thesisService ?? repositories.theses;
   const activeMonitorState = monitorState ?? repositories.monitoring;
   const { symbol = "" } = useParams();
+  const [searchParams] = useSearchParams();
+  const alertId = searchParams.get("alert");
   const [core, setCore] = useState<{ profile: CompanyProfile; quote?: MarketQuote }>();
   const [coreError, setCoreError] = useState<string>();
   const [thesisId, setThesisId] = useState<string>();
@@ -75,6 +77,7 @@ export function ResearchPage({ marketClient = defaultMarketClient, thesisService
         <ResearchDataSection title="公司行为" request={events} errorMessage="公司行为暂时不可用" emptyMessage="暂无公司行为">
           {(items) => <CompanyActions items={items.filter((event) => event.type !== "earnings")} showHeading={false} />}
         </ResearchDataSection>
+        {alertId && <p className="research-alert-focus" role="status">已定位提醒 {alertId}</p>}
         <ResearchMonitorPanel symbol={symbol} marketClient={marketClient} onThesisSaved={setThesisId} thesisService={activeThesisService} monitorState={activeMonitorState} />
         <div>
           <button type="button" disabled={!thesisId || core.quote?.price === undefined} onClick={() => { void buy(); }}>确认模拟买入</button>

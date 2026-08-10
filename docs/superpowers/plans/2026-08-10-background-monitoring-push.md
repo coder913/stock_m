@@ -496,23 +496,23 @@ git commit -m "feat: add opt-in browser push"
 **Interfaces:**
 - Produces: deterministic proof of page-closed evaluation, Push delivery/deep link, dedupe and Redis rebuild.
 
-- [ ] **Step 1: Write the failing Chrome flow**
+- [x] **Step 1: Write the failing Chrome flow**
 
 The test enables notifications, registers a fixture subscription, closes the app page, advances the worker clock into a five-minute run, changes the fixture quote to breach a condition, and observes a captured Push payload.
 
-- [ ] **Step 2: Add deep-link and duplicate-delivery assertions**
+- [x] **Step 2: Add deep-link and duplicate-delivery assertions**
 
 Dispatch the captured payload through the Service Worker test hook, click the notification, and assert the browser opens `/stocks/NVDA?alert=<id>` with the condition highlighted. Redeliver the same Outbox/BullMQ event and assert one alert and one successful delivery.
 
-- [ ] **Step 3: Add stale/provider and Redis-reset scenarios**
+- [x] **Step 3: Add stale/provider and Redis-reset scenarios**
 
 Inject Alpaca `429`, assert latest evaluation waits and the last fresh status remains; flush test Redis, restart workers, assert schedules are rebuilt and no duplicate alert appears.
 
-- [ ] **Step 4: Keep testing controls out of production**
+- [x] **Step 4: Keep testing controls out of production**
 
 Clock advance, fake Push capture and Redis flush routes/providers are registered only in `server/testing/e2eServer.ts` or Compose test services.
 
-- [ ] **Step 5: Run full validation and scans**
+- [x] **Step 5: Run full validation and scans**
 
 Run: `npm test`  
 Run: `npm run test:integration`  
@@ -522,11 +522,11 @@ Run: `npm run test:data:smoke`
 Run scans for VAPID secrets in `dist`, production fixture imports, production testing routes and browser evaluator calls.  
 Expected: all exit 0 and all scan counts are zero.
 
-- [ ] **Step 6: Document and mark completion**
+- [x] **Step 6: Document and mark completion**
 
 README documents VAPID generation, Compose worker health, permission/revoke/test flow, schedules, catch-up, stale behavior and dead-letter diagnostics. Mark plan checkboxes only after fresh validation.
 
-- [ ] **Step 7: Commit Task 8**
+- [x] **Step 7: Commit Task 8**
 
 ```bash
 git add server/testing tests/e2e/background-monitoring-push.spec.ts docker-compose.test.yml README.md docs/superpowers/plans/2026-08-10-background-monitoring-push.md

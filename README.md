@@ -62,6 +62,8 @@ Invoke-RestMethod -Method Post `
 
 E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某只 fixture 股票的价格和前收盘价。该接口会推进测试时钟使一分钟报价缓存过期，只用于验证监控状态迁移，不会注册到生产服务。
 
+后台通知 E2E 还使用测试专属的时钟推进、监控运行、Push 捕获、Outbox 重放和 Redis 清空入口，验证页面关闭后的投递、同源深链、去重、陈旧数据保留与队列重建。这些入口和 `FakePushProvider` 仅由 `server/testing/e2eServer.ts` 组合，不会进入生产 `server/index.ts`。
+
 每个 Playwright 用例开始前会调用 `POST /api/testing/reset`，清空应用自有表、保留 `platform.schema_migration`，并重新创建 installation、股票池版本和默认组合基准行。`POST /api/testing/restart` 会关闭并重建 Fastify 与数据库连接池，用于验证 PostgreSQL 持久化；`GET /api/testing/database-state` 只返回测试断言所需的服务实例 ID 与分类计数。所有 `/api/testing/*` 路由都只在 `server/testing/e2eServer.ts` 注册，生产 `buildApp` 不包含这些入口。
 
 `npm run test:data:smoke` 仅检查已配置真实供应商的认证、响应结构、来源和时间戳，不断言固定价格或事件数量。Playwright 使用本机安装的稳定版 Chrome。
@@ -126,13 +128,48 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 
 条件状态包括“待验证、成立、受损、已过期”。只有 fresh 且字段完整的数据可以改变成立/受损结论；stale、missing 或 unavailable 会显示“等待新数据”，并保留上一次 fresh 的有效结论，不产生错误的受损或恢复提醒。
 
-当前里程碑完成了监控数据的服务端持久化，但还没有服务端定时任务、后台监控、邮件或浏览器系统通知；这些属于下一阶段。
+当前版本已经包含服务端定时监控与可选浏览器 Web Push；邮件、短信和自动交易仍不在范围内。
 
 自动评估只读取每只股票最新投资逻辑版本的条件；旧版本保留为历史，归档当前逻辑会停止继续评估。研究页可用“基于当前条件新建版本”复制条件并生成新的条件 ID，原版本不会被改写。若本地监控记录中存在损坏项，Research、Today 与 Portfolio 会保留有效记录并显示非阻断恢复提示。
 
 Today 展示需要复核的提醒，支持已读、稍后处理、归档和跳转研究页；`/monitor` 提供待处理、稍后处理、已归档视图、筛选和完整时间线。条件由系统确定性评估，但整条投资逻辑只能由用户标记为“仍成立、已失效、已归档”。“已失效”只更新健康展示，绝不会自动卖出持仓或创建订单。
 
 详细设计与实施记录见 `docs/superpowers/specs/2026-08-07-live-market-data-design.md`、`docs/superpowers/plans/2026-08-07-live-market-data.md`、`docs/superpowers/specs/2026-08-09-thesis-monitoring-design.md` 和 `docs/superpowers/plans/2026-08-09-thesis-monitoring.md`。
+
+## 后台监控与浏览器通知
+
+Web Push 默认关闭。生成 VAPID 密钥和 32 字节订阅加密密钥，然后把结果写入本机 `.env`：
+
+```powershell
+npx web-push generate-vapid-keys
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+```dotenv
+VAPID_PUBLIC_KEY=生成的公钥
+VAPID_PRIVATE_KEY=生成的私钥
+VAPID_SUBJECT=mailto:owner@example.com
+PUSH_SUBSCRIPTION_ENCRYPTION_KEY=生成的32字节Base64密钥
+```
+
+`VAPID_SUBJECT` 必须使用 `mailto:` 或 HTTPS。订阅端点与浏览器密钥使用 AES-256-GCM 加密后存入 PostgreSQL；状态 API 只返回端点哈希和非敏感元数据。修改配置后运行 `docker compose up -d --build`，并用以下命令检查三个进程：
+
+```powershell
+docker compose ps web-api monitor-worker notification-worker
+docker compose exec monitor-worker npm run worker:health -- monitor
+docker compose exec notification-worker npm run worker:health -- notifications
+```
+
+在应用的“通知设置”页面中点击“启用系统通知”才会申请浏览器权限。允许后可发送测试通知或关闭订阅；拒绝权限不会停止应用内告警。关闭页面后的投递要求 PostgreSQL、Redis、API 和两个 Worker 持续运行，并且站点通过 localhost 或 HTTPS 打开。
+
+后台计划使用 `America/New_York`：正常交易时段每 5 分钟评估价格条件，工作日 18:00 评估财务条件，18:15 评估事件条件。服务恢复时会依据 PostgreSQL 中的自然周期补跑缺失任务；Redis 丢失后由持久化计划和 Outbox 重建队列。旧缓存、429、缺失或不可用数据只会生成等待状态并保留最后一次 fresh 结论，不会误报状态反转。
+
+Push 返回 404/410 时订阅会失效；超时、429 和 5xx 按 1、5、15、60 分钟重试，耗尽后写入 `platform.dead_letter`。可使用只读 SQL 检查投递与死信：
+
+```powershell
+docker compose exec postgres psql -U stock_m -d stock_m -c "select status,count(*) from notification.delivery group by status;"
+docker compose exec postgres psql -U stock_m -d stock_m -c "select consumer,event_id,reason,created_at from platform.dead_letter order by created_at desc limit 20;"
+```
 
 ## 服务健康与恢复
 

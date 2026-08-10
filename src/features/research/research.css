@@ -3,6 +3,8 @@
   gap: 1rem;
 }
 
+.research-alert-focus { margin: 0; padding: 12px 14px; border-left: 4px solid var(--brand); border-radius: 6px; color: var(--brand); background: #eff4ff; font-weight: 700; }
+
 .research-data-section {
   min-width: 0;
 }

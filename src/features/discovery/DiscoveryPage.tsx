@@ -7,8 +7,7 @@ import { ScreenerPanel } from "./ScreenerPanel";
 import { ScreenerResults } from "./ScreenerResults";
 import { ThemeView } from "./ThemeView";
 import { EventCalendar } from "./EventCalendar";
-import { WatchlistApiRepository } from "../watchlist/watchlistApiRepository";
-import { DiscoveryStateApiRepository } from "./discoveryStateApiRepository";
+import { useRepositories } from "../../app/repositories";
 import { systemTemplates } from "./templates";
 import { MarketApiClient } from "../market/marketApiClient";
 import type { MarketEvent } from "../market/apiDomain";
@@ -23,10 +22,11 @@ interface DiscoveryPageProps {
   watchlistRepository?: AsyncWatchlistRepository;
 }
 const defaultMarketClient = new MarketApiClient();
-const defaultStateRepository = new DiscoveryStateApiRepository();
-const defaultWatchlistRepository = new WatchlistApiRepository();
 
-export function DiscoveryPage({ onAddToWatchlist = () => undefined, marketClient = defaultMarketClient, stateRepository = defaultStateRepository, watchlistRepository = defaultWatchlistRepository }: DiscoveryPageProps) {
+export function DiscoveryPage({ onAddToWatchlist = () => undefined, marketClient = defaultMarketClient, stateRepository: injectedStateRepository, watchlistRepository: injectedWatchlistRepository }: DiscoveryPageProps) {
+  const repositories = useRepositories();
+  const stateRepository = injectedStateRepository ?? repositories.discovery;
+  const watchlistRepository = injectedWatchlistRepository ?? repositories.watchlists;
   const [stocks, setStocks] = useState<StockSnapshot[]>([]);
   const [conditions, setConditions] = useState<ScreenerCondition[]>(() => copyConditions(systemTemplates[0].conditions));
   const [selectedTemplate, setSelectedTemplate] = useState<ScreenerTemplate>(systemTemplates[0]);

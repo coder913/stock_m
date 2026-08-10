@@ -615,7 +615,7 @@ git commit -m "feat: move market cache to postgres"
 - Produces: `RepositoryProvider` and `useRepositories()` with the complete HTTP bundle.
 - Consumes: Tasks 3–6 client repositories and migration receipt.
 
-- [ ] **Step 1: Write failing context and readiness tests**
+- [x] **Step 1: Write failing context and readiness tests**
 
 ```tsx
 render(<RepositoryProvider value={fakeRepositories}><WatchlistPage /></RepositoryProvider>);
@@ -625,12 +625,12 @@ render(<ServerStateGate health={rejectedHealth}><AppRoutes /></ServerStateGate>)
 expect(screen.getByRole("alert")).toHaveTextContent("服务端数据暂不可用");
 ```
 
-- [ ] **Step 2: Run app tests and verify RED**
+- [x] **Step 2: Run app tests and verify RED**
 
 Run: `npm test -- src/app`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement repository composition**
+- [x] **Step 3: Implement repository composition**
 
 ```ts
 export interface ApplicationRepositories {
@@ -645,21 +645,21 @@ export interface ApplicationRepositories {
 
 Create one default bundle backed by `/api/v1`; tests inject fakes. `ServerStateGate` checks API/database readiness, then migration receipt, then renders routes.
 
-- [ ] **Step 4: Remove production-page local repository construction**
+- [x] **Step 4: Remove production-page local repository construction**
 
 Each page obtains repositories through `useRepositories` or explicit props. Local repository imports remain permitted only in `src/features/migration/browserStateExport.ts` and `*.test.*` files.
 
-- [ ] **Step 5: Add a production import scan test**
+- [x] **Step 5: Add a production import scan test**
 
 Create a test/script that fails if a non-test, non-migration source imports `LocalThesisRepository`, `PortfolioLedger`, `WatchlistRepository`, `SavedScreenRepository`, monitoring local repositories, review repositories or `localStorage` business keys.
 
-- [ ] **Step 6: Run all frontend tests and build**
+- [x] **Step 6: Run all frontend tests and build**
 
 Run: `npm test`  
 Run: `npm run build`  
 Expected: PASS and production repository scan count is zero.
 
-- [ ] **Step 7: Commit Task 8**
+- [x] **Step 7: Commit Task 8**
 
 ```bash
 git add src/app src/main.tsx src/features

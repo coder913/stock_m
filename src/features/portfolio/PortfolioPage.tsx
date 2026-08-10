@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { MarketApiClient } from "../market/marketApiClient";
 import { PortfolioHealth } from "../monitoring/PortfolioHealth";
-import { ConditionRepository } from "../monitoring/conditionRepository";
 import type { ThesisHealthSummary } from "../monitoring/domain";
-import { EvaluationRepository } from "../monitoring/evaluationRepository";
-import { MonitorAlertRepository } from "../monitoring/monitorAlertRepository";
-import { MonitorSnapshotLoader } from "../monitoring/monitorSnapshotLoader";
-import { ThesisMonitorService } from "../monitoring/thesisMonitorService";
-import { ThesisReviewRepository } from "../monitoring/thesisReviewRepository";
-import { LocalThesisRepository } from "../thesis/localThesisRepository";
+import type { MonitorStateService } from "../monitoring/monitorApiRepository";
 import { evaluatePortfolioAlerts } from "./alertEngine";
 import type { LedgerEventType, PortfolioAlert, PortfolioSettings } from "./domain";
 import { calculatePortfolio } from "./portfolioAnalytics";
@@ -17,19 +11,22 @@ import { PortfolioSettingsDialog } from "./PortfolioSettingsDialog";
 import type { PerformanceRange, PerformanceViewModel } from "./performance/domain";
 import { usePortfolioPerformance } from "./performance/usePortfolioPerformance";
 import type { ConfirmedSplitInput } from "./SplitReviewPanel";
-import { PortfolioApiRepository, type PortfolioStateService } from "./portfolioApiRepository";
+import type { PortfolioStateService } from "./portfolioApiRepository";
 import type { WeeklyReview } from "./domain";
 import "./portfolio.css";
+import { useRepositories } from "../../app/repositories";
 
 const fallbackQuotes = { NVDA: { price: 167.32, previousClose: 162.58 }, AMD: { price: 158.11, previousClose: 153.2 }, MSFT: { price: 505.41, previousClose: 500 } };
 const sectors = { NVDA: "半导体", AMD: "半导体", MSFT: "软件" };
 const defaultMarketClient = new MarketApiClient();
 type PortfolioMarketClient = Pick<MarketApiClient, "getQuotes" | "getUniverse" | "getEvents" | "getBatchBars">;
-type PortfolioMonitorService = Pick<ThesisMonitorService, "evaluate" | "getHealth">;
+type PortfolioMonitorService = { evaluate(input: { symbols: string[]; now: string }): Promise<{ warnings: string[] }>; getHealth(symbols: string[], now: string): ThesisHealthSummary };
 type PortfolioTab = "overview" | "ledger" | "performance" | "review";
 
-export function PortfolioPage({ marketClient = defaultMarketClient, monitorService, portfolioState: injectedPortfolioState }: { marketClient?: PortfolioMarketClient; monitorService?: PortfolioMonitorService; portfolioState?: PortfolioStateService }) {
-  const portfolioState = useMemo(() => injectedPortfolioState ?? new PortfolioApiRepository(), [injectedPortfolioState]);
+export function PortfolioPage({ marketClient = defaultMarketClient, monitorService, portfolioState: injectedPortfolioState, monitorState: injectedMonitorState }: { marketClient?: PortfolioMarketClient; monitorService?: PortfolioMonitorService; portfolioState?: PortfolioStateService; monitorState?: MonitorStateService }) {
+  const repositories = useRepositories();
+  const portfolioState = useMemo(() => injectedPortfolioState ?? repositories.portfolio, [injectedPortfolioState, repositories.portfolio]);
+  const monitorState = useMemo(() => injectedMonitorState ?? repositories.monitoring, [injectedMonitorState, repositories.monitoring]);
   const [settings, setSettings] = useState<PortfolioSettings>({ version: 1, initialCash: 10_000, inceptionDate: new Date().toISOString().slice(0,10), benchmarkSymbol: "SPY", baseCurrency: "USD", updatedAt: new Date(0).toISOString() });
   const [events, setEvents] = useState<import("./domain").LedgerEvent[]>([]);
   const [ignoredSplitIds, setIgnoredSplitIds] = useState<string[]>([]);
@@ -74,7 +71,6 @@ export function PortfolioPage({ marketClient = defaultMarketClient, monitorServi
   const result = useMemo(() => calculatePortfolio({ events, initialCash: settings.initialCash, quotes, sectors, history: historyValues }), [events, historyValues, quotes, settings.initialCash]);
   const performanceDrawdown = performanceModel.result?.summary.currentDrawdown;
 
-  const service = useMemo(() => monitorService ?? (() => { const conditionRepository = new ConditionRepository(localStorage); const reviewRepository = new ThesisReviewRepository(localStorage); return new ThesisMonitorService({ conditionRepository, evaluationRepository: new EvaluationRepository(localStorage), alertRepository: new MonitorAlertRepository(localStorage), reviewRepository, thesisRepository: new LocalThesisRepository(localStorage), snapshotLoader: new MonitorSnapshotLoader(marketClient) }); })(), [monitorService, marketClient]);
   const heldSymbolKey = result.positions.filter((position) => position.quantity > 0).map((position) => position.symbol).sort().join(",");
   const [health, setHealth] = useState<ThesisHealthSummary>();
   const [healthError, setHealthError] = useState("");
@@ -84,9 +80,19 @@ export function PortfolioPage({ marketClient = defaultMarketClient, monitorServi
     const heldSymbols = heldSymbolKey ? heldSymbolKey.split(",") : [];
     if (!heldSymbols.length) { setHealth({ items: [], breachedCount: 0, expiringCount: 0, unreadAlertCount: 0 }); setHealthError(""); setHealthWarnings([]); return () => { active = false; }; }
     const now = new Date().toISOString();
-    void service.evaluate({ symbols: heldSymbols, now }).then((monitorResult) => { if (active) { setHealth(service.getHealth(heldSymbols, now)); setHealthError(""); setHealthWarnings(monitorResult.warnings); } }).catch(() => { if (active) setHealthError("逻辑健康暂时不可用"); });
+    const loadHealth = async () => {
+      if (monitorService) {
+        const monitorResult = await monitorService.evaluate({ symbols: heldSymbols, now });
+        return { summary: monitorService.getHealth(heldSymbols, now), warnings: monitorResult.warnings };
+      }
+      const alerts = await monitorState.listAlerts({ view: "pending", now });
+      const relevant = alerts.filter((alert) => heldSymbols.includes(alert.symbol));
+      const items = heldSymbols.map((heldSymbol) => { const matching = relevant.filter((alert) => alert.symbol === heldSymbol); return { symbol: heldSymbol, thesisVersionId: matching[0]?.thesisVersionId, status: matching.length ? "review-needed" as const : "normal" as const, breachedCount: matching.filter((alert) => alert.toStatus === "breached").length, expiringCount: matching.filter((alert) => alert.toStatus === "expired").length, unreadAlertCount: matching.filter((alert) => !alert.readAt).length }; });
+      return { summary: { items, breachedCount: items.reduce((sum, item) => sum + item.breachedCount, 0), expiringCount: items.reduce((sum, item) => sum + item.expiringCount, 0), unreadAlertCount: items.reduce((sum, item) => sum + item.unreadAlertCount, 0) }, warnings: [] };
+    };
+    void loadHealth().then(({ summary, warnings }) => { if (active) { setHealth(summary); setHealthError(""); setHealthWarnings(warnings); } }).catch(() => { if (active) setHealthError("逻辑健康暂时不可用"); });
     return () => { active = false; };
-  }, [service, heldSymbolKey]);
+  }, [heldSymbolKey, monitorService, monitorState]);
 
   const alerts = useMemo(() => evaluatePortfolioAlerts({ naturalPeriod: "2026-W32", positions: result.positions.map((position) => ({ symbol: position.symbol, weight: position.weight })), sectorExposure: result.sectorExposure, drawdownPercent: performanceDrawdown === undefined ? undefined : performanceDrawdown * 100 }), [performanceDrawdown, result.positions, result.sectorExposure]);
   useEffect(()=>{void portfolioState.reconcileAlerts(alerts).then(items=>setStoredAlerts(items.filter(item=>item.status!=="resolved"))).catch(()=>undefined);},[alerts,portfolioState]);
@@ -121,5 +127,5 @@ export function PortfolioPage({ marketClient = defaultMarketClient, monitorServi
   </section>;
 }
 
-export function JournalPage() { const [reviews,setReviews]=useState<WeeklyReview[]>([]);useEffect(()=>{void new PortfolioApiRepository().getBootstrap().then(data=>setReviews(data.reviews)).catch(()=>undefined);},[]);return <section className="portfolio-page"><h1>日志</h1><ReviewHistory reviews={reviews}/></section>; }
+export function JournalPage({ portfolioState: injectedPortfolioState }: { portfolioState?: PortfolioStateService } = {}) { const repositories=useRepositories();const portfolioState=injectedPortfolioState??repositories.portfolio;const [reviews,setReviews]=useState<WeeklyReview[]>([]);useEffect(()=>{void portfolioState.getBootstrap().then(data=>setReviews(data.reviews)).catch(()=>undefined);},[portfolioState]);return <section className="portfolio-page"><h1>日志</h1><ReviewHistory reviews={reviews}/></section>; }
 function ReviewHistory({reviews}:{reviews:WeeklyReview[]}) { return <section><h2>历史周报</h2>{reviews.length ? reviews.map((review) => <p key={review.id}>{review.week} · 版本 {review.version}</p>) : <p>尚无周报</p>}</section>; }

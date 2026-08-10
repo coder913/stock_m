@@ -8,7 +8,8 @@ import { todayEditorial } from "./todayEditorial";
 import { ReviewQueue } from "../monitoring/ReviewQueue";
 import type { ThesisMonitorService } from "../monitoring/thesisMonitorService";
 import type { MonitorAlert } from "../monitoring/domain";
-import { MonitorApiRepository, type MonitorStateService } from "../monitoring/monitorApiRepository";
+import type { MonitorStateService } from "../monitoring/monitorApiRepository";
+import { useRepositories } from "../../app/repositories";
 
 const freshnessLabel = (minutes: number) => `延迟 ${minutes} 分钟`;
 const defaultMarketClient = new MarketApiClient();
@@ -19,7 +20,8 @@ type LegacyAlertRepository = { restoreDue(now: string): void; list(query: { view
 
 export function TodayPage({ marketClient = defaultMarketClient, monitorService, monitorState: injectedMonitorState, monitorAlertRepository, now = currentTime }: { marketClient?: TodayMarketClient; monitorService?: MonitorRunner; monitorState?: MonitorStateService; monitorAlertRepository?: LegacyAlertRepository; now?: () => string }) {
   const [data] = useState<TodayDashboard>(todayEditorial); const [selectedSymbol, setSelectedSymbol] = useState("NVDA"); const [liveQuotes, setLiveQuotes] = useState<DataEnvelope<MarketQuote[]> | null>(null); const [events, setEvents] = useState<MarketEvent[]>([]); const [monitorAlerts, setMonitorAlerts] = useState<MonitorAlert[]>([]); const [monitorError, setMonitorError] = useState(""); const [monitorWarnings, setMonitorWarnings] = useState<string[]>([]);
-  const monitorState = useMemo(() => injectedMonitorState ?? new MonitorApiRepository(), [injectedMonitorState]);
+  const repositories = useRepositories();
+  const monitorState = useMemo(() => injectedMonitorState ?? repositories.monitoring, [injectedMonitorState, repositories.monitoring]);
   const loadQuotes = useCallback(() => marketClient.getQuotes(["SPY", "QQQ", "DIA", "IWM"]).then(setLiveQuotes).catch(() => undefined), [marketClient]);
   const reloadAlerts = useCallback(async () => { const time = now(); if (monitorAlertRepository) { monitorAlertRepository.restoreDue(time); setMonitorAlerts(monitorAlertRepository.list({ view: "pending", now: time })); return; } setMonitorAlerts(await monitorState.listAlerts({ view: "pending", now: time })); }, [monitorAlertRepository, monitorState, now]);
   useEffect(() => { void loadQuotes(); }, [loadQuotes]);

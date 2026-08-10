@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { CompanyProfile, MarketQuote } from "../market/apiDomain";
 import { MarketApiClient } from "../market/marketApiClient";
-import { LocalPortfolioRepository } from "../portfolio/localPortfolioRepository";
 import { ResearchMonitorPanel } from "../monitoring/ResearchMonitorPanel";
 import type { ThesisStateService } from "../thesis/thesisApiRepository";
 import type { MonitorStateService } from "../monitoring/monitorApiRepository";
@@ -14,11 +13,15 @@ import { ResearchPeerComparison } from "./PeerComparison";
 import { PriceHistory } from "./PriceHistory";
 import { ResearchDataSection, useResearchRequest } from "./ResearchDataSection";
 import "./research.css";
+import { useRepositories } from "../../app/repositories";
 
 const defaultMarketClient = new MarketApiClient();
 type ResearchClient = Pick<MarketApiClient, "getCompany" | "getQuotes" | "getBars" | "getFinancials" | "getFilings" | "getNews" | "getEvents" | "getUniverse">;
 
 export function ResearchPage({ marketClient = defaultMarketClient, thesisService, monitorState }: { marketClient?: ResearchClient; thesisService?: ThesisStateService; monitorState?: MonitorStateService }) {
+  const repositories = useRepositories();
+  const activeThesisService = thesisService ?? repositories.theses;
+  const activeMonitorState = monitorState ?? repositories.monitoring;
   const { symbol = "" } = useParams();
   const [core, setCore] = useState<{ profile: CompanyProfile; quote?: MarketQuote }>();
   const [coreError, setCoreError] = useState<string>();
@@ -46,10 +49,12 @@ export function ResearchPage({ marketClient = defaultMarketClient, thesisService
   if (coreError) return <section><p role="alert">{coreError}</p><Link to="/">返回今日</Link></section>;
   if (!core) return <p role="status">正在加载研究数据</p>;
 
-  const buy = () => {
+  const buy = async () => {
     if (core.quote?.price === undefined || !thesisId) return;
-    new LocalPortfolioRepository(localStorage).add({ symbol, quantity: 10, price: core.quote.price, thesisVersionId: thesisId });
-    setMessage("已加入模拟组合");
+    try {
+      await repositories.portfolio.append({ type: "buy", symbol, quantity: 10, price: core.quote.price, thesisVersionId: thesisId, occurredAt: new Date().toISOString() });
+      setMessage("已加入模拟组合");
+    } catch { setMessage("模拟买入保存失败"); }
   };
 
   return (
@@ -70,9 +75,9 @@ export function ResearchPage({ marketClient = defaultMarketClient, thesisService
         <ResearchDataSection title="公司行为" request={events} errorMessage="公司行为暂时不可用" emptyMessage="暂无公司行为">
           {(items) => <CompanyActions items={items.filter((event) => event.type !== "earnings")} showHeading={false} />}
         </ResearchDataSection>
-        <ResearchMonitorPanel symbol={symbol} marketClient={marketClient} onThesisSaved={setThesisId} thesisService={thesisService} monitorState={monitorState} />
+        <ResearchMonitorPanel symbol={symbol} marketClient={marketClient} onThesisSaved={setThesisId} thesisService={activeThesisService} monitorState={activeMonitorState} />
         <div>
-          <button type="button" disabled={!thesisId || core.quote?.price === undefined} onClick={buy}>确认模拟买入</button>
+          <button type="button" disabled={!thesisId || core.quote?.price === undefined} onClick={() => { void buy(); }}>确认模拟买入</button>
           <p role="status">{message}</p>
         </div>
       </article>

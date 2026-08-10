@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MarketApiClient } from "../market/marketApiClient";
-import { ThesisApiRepository, type ThesisStateService } from "../thesis/thesisApiRepository";
+import type { ThesisStateService } from "../thesis/thesisApiRepository";
 import { ConditionEditor, validateConditionDraft } from "./ConditionEditor";
 import { ConditionStatusList } from "./ConditionStatusList";
 import type { ConditionDraft, ConditionView, ThesisReview } from "./domain";
-import { MonitorApiRepository, type MonitorStateService } from "./monitorApiRepository";
+import type { MonitorStateService } from "./monitorApiRepository";
+import { useRepositories } from "../../app/repositories";
 import "./monitoring.css";
 
 type MonitorClient = Pick<MarketApiClient, "getQuotes" | "getUniverse" | "getEvents">;
 export interface ResearchMonitorPanelProps { symbol: string; marketClient: MonitorClient; onThesisSaved: (thesisId: string) => void; thesisService?: ThesisStateService; monitorState?: MonitorStateService; }
 
 export function ResearchMonitorPanel(props: ResearchMonitorPanelProps) {
-  const thesisService = useMemo(() => props.thesisService ?? new ThesisApiRepository(), [props.thesisService]);
-  const monitorState = useMemo(() => props.monitorState ?? new MonitorApiRepository(), [props.monitorState]);
+  const repositories = useRepositories();
+  const thesisService = useMemo(() => props.thesisService ?? repositories.theses, [props.thesisService, repositories.theses]);
+  const monitorState = useMemo(() => props.monitorState ?? repositories.monitoring, [props.monitorState, repositories.monitoring]);
   const [coreJudgment, setCoreJudgment] = useState("数据中心需求支持增长");
   const [evidence, setEvidence] = useState("收入趋势");
   const [risks, setRisks] = useState("估值压缩");

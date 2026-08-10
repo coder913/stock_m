@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
+import { defaultRepositories, RepositoryProvider } from "./app/repositories";
 import "./styles/tokens.css";
 import "./app/app.css";
 
@@ -12,6 +13,6 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <RepositoryProvider value={defaultRepositories}><App /></RepositoryProvider>
   </StrictMode>
 );

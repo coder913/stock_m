@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ConditionTimeline } from "./ConditionTimeline";
 import type { ConditionEvaluation, ConditionSeverity, ConditionStatus, MonitorAlert, ThesisReview } from "./domain";
-import { MonitorApiRepository, type MonitorStateService } from "./monitorApiRepository";
+import type { MonitorStateService } from "./monitorApiRepository";
+import { useRepositories } from "../../app/repositories";
 
 const currentTime = () => new Date().toISOString();
 type InboxView = "pending" | "snoozed" | "archived";
 
 export function MonitorPage({ monitorState: injectedState, now = currentTime }: { monitorState?: MonitorStateService; now?: () => string }) {
-  const monitorState = useMemo(() => injectedState ?? new MonitorApiRepository(), [injectedState]);
+  const repositories = useRepositories();
+  const monitorState = useMemo(() => injectedState ?? repositories.monitoring, [injectedState, repositories.monitoring]);
   const [view, setView] = useState<InboxView>("pending");
   const [symbol, setSymbol] = useState(""); const [severity, setSeverity] = useState<"" | ConditionSeverity>(""); const [toStatus, setToStatus] = useState<"" | ConditionStatus>(""); const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [alerts, setAlerts] = useState<MonitorAlert[]>([]); const [symbols, setSymbols] = useState<string[]>([]); const [selectedId, setSelectedId] = useState<string>();

@@ -2,10 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AsyncWatchlistRepository, WatchlistGroup } from "../../../shared/watchlist";
 import { MarketApiClient } from "../market/marketApiClient";
 import type { MarketQuote } from "../market/apiDomain";
-import { WatchlistApiRepository } from "./watchlistApiRepository";
+import { useRepositories } from "../../app/repositories";
 import "./watchlist.css";
 
-const defaultRepository = new WatchlistApiRepository();
 const defaultMarketClient = new MarketApiClient();
 
 interface WatchlistPageProps {
@@ -13,7 +12,8 @@ interface WatchlistPageProps {
   marketClient?: Pick<MarketApiClient, "getQuotes">;
 }
 
-export function WatchlistPage({ repository = defaultRepository, marketClient = defaultMarketClient }: WatchlistPageProps) {
+export function WatchlistPage({ repository: injectedRepository, marketClient = defaultMarketClient }: WatchlistPageProps) {
+  const repository = injectedRepository ?? useRepositories().watchlists;
   const [groups, setGroups] = useState<WatchlistGroup[]>([]);
   const [deleted, setDeleted] = useState<WatchlistGroup[]>([]);
   const [loading, setLoading] = useState(true);

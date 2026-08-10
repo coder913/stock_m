@@ -31,6 +31,10 @@ export function ResearchMonitorPanel(props: ResearchMonitorPanelProps) {
   const loadViews = useCallback(async (id: string): Promise<ConditionView[]> => {
     const conditions = await thesisService.listConditions(id);
     return Promise.all(conditions.map(async (condition) => {
+      if (monitorState.getConditionState) {
+        const state = await monitorState.getConditionState(condition.id);
+        return { condition, evaluation: state.effective ?? state.latest, latestEvaluation: state.latest };
+      }
       const evaluations = await monitorState.listEvaluations(condition.id);
       return { condition, evaluation: evaluations.at(-1) };
     }));
@@ -57,7 +61,7 @@ export function ResearchMonitorPanel(props: ResearchMonitorPanelProps) {
       setThesisId(thesis.id); props.onThesisSaved(thesis.id); setViews(await loadViews(thesis.id)); setDrafts([]); setMessage("投资逻辑已保存");
     } catch (error) { setMessage(error instanceof Error ? error.message : "投资逻辑保存失败"); }
   };
-  const refresh = async () => { try { if (thesisId) setViews(await loadViews(thesisId)); setMessage("监控已刷新"); } catch { setMessage("监控刷新失败，已保留上次有效结论"); } };
+  const refresh = async () => { try { await monitorState.requestRun(); if (thesisId) setViews(await loadViews(thesisId)); setMessage("后台监控任务已提交"); } catch { setMessage("监控刷新失败，已保留上次有效结论"); } };
   const removeSaved = async (conditionId: string) => { try { await thesisService.softDeleteCondition(conditionId); if (thesisId) setViews(await loadViews(thesisId)); } catch { setMessage("条件删除失败，当前显示未变更"); } };
   const createVersionDraft = () => { setDrafts(views.map(({ condition }) => condition.kind === "metric" ? { id: crypto.randomUUID(), kind: "metric", name: condition.name, direction: condition.direction, severity: condition.severity, deadline: condition.deadline, note: condition.note, metric: condition.metric, operator: condition.operator, target: structuredClone(condition.target), period: condition.period } : { id: crypto.randomUUID(), kind: "event", name: condition.name, direction: condition.direction, severity: condition.severity, deadline: condition.deadline, note: condition.note, eventType: condition.eventType, occurrence: condition.occurrence, from: condition.from, to: condition.to })); setMessage("已复制当前条件；保存后将创建新的投资逻辑版本"); };
   const saveReview = async () => { if (!thesisId) return; if ((reviewDecision === "invalidated" || reviewDecision === "archived") && !reviewNote.trim()) { setMessage("失效或归档必须填写复核备注"); return; } try { await monitorState.recordReview({ thesisVersionId: thesisId, symbol: props.symbol, decision: reviewDecision, note: reviewNote.trim() || undefined, conditionSnapshot: views.map(({ condition, evaluation }) => ({ conditionId: condition.id, conditionVersion: condition.conditionVersion!, name: condition.name, severity: condition.severity, status: evaluation?.status ?? "pending" })) }); setMessage(reviewDecision === "reaffirmed" ? "已确认逻辑仍成立" : reviewDecision === "invalidated" ? "已标记逻辑失效" : "已归档投资逻辑"); } catch { setMessage("复核保存失败，当前显示未变更"); } };

@@ -267,33 +267,33 @@ git commit -m "feat: evaluate monitors in background"
 **Interfaces:**
 - Produces: common server views for current effective conditions, alert facts/actions, monitor timeline and task health.
 
-- [ ] **Step 1: Add failing route/component tests**
+- [x] **Step 1: Add failing route/component tests**
 
 Assert read/snooze/archive actions append once under idempotent retry, Today/Research/Monitor see the same derived state, and task health renders last success, next run and queue delay.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- server/routes/monitorStateRoutes.test.ts src/features/monitoring src/features/today`  
 Expected: FAIL for missing task health/actions.
 
-- [ ] **Step 3: Extend monitor API views and action commands**
+- [x] **Step 3: Extend monitor API views and action commands**
 
 Expose `/api/v1/monitor/task-health`, effective condition views, alert timeline, and `POST /alerts/:id/actions` with `{type:"read"|"snooze"|"archive", until?:string}`. Effective UI state folds immutable actions over alert facts.
 
-- [ ] **Step 4: Remove page-triggered evaluation**
+- [x] **Step 4: Remove page-triggered evaluation**
 
 Today, Research, Portfolio and Monitor no longer call `ThesisMonitorService.evaluate` during render. “Refresh monitoring” enqueues one manual grouped run and polls its run ID; it cannot execute the evaluator in the browser.
 
-- [ ] **Step 5: Render task/data waiting states**
+- [x] **Step 5: Render task/data waiting states**
 
 Show last fresh conclusion separately from latest waiting evaluation. Display worker degraded/queue lag without hiding existing alerts.
 
-- [ ] **Step 6: Run UI, route and E2E regression tests**
+- [x] **Step 6: Run UI, route and E2E regression tests**
 
 Run: `npm test -- src/features/monitoring src/features/today src/features/research src/features/portfolio server/routes/monitorStateRoutes.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 4**
+- [x] **Step 7: Commit Task 4**
 
 ```bash
 git add server/routes/monitorStateRoutes* src/features/monitoring src/features/today src/features/research src/features/portfolio

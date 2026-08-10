@@ -15,7 +15,7 @@ function state(seed?: { thesis?: Thesis; conditions?: ThesisCondition[]; evaluat
     createConditions: vi.fn(async (input: { symbol: string; thesisVersionId: string; conditions: ConditionDraft[] }) => { const saved = input.conditions.map((draft) => ({ ...draft, symbol: input.symbol, thesisVersionId: input.thesisVersionId, conditionVersion: "deadbeef", createdAt: "2026-08-10T10:00:00.000Z", updatedAt: "2026-08-10T10:00:00.000Z" } as ThesisCondition)); conditions.push(...saved); return saved; }),
     softDeleteCondition: vi.fn(async (id: string) => conditions.find((item) => item.id === id)!), copyConditions: vi.fn(async () => []),
   };
-  const monitorState = { listEvaluations: async (id: string) => seed?.evaluations?.[id] ?? [], recordEvaluation: vi.fn(), listAlerts: vi.fn(async () => []), getAlert: vi.fn(), recordAlert: vi.fn(), act: vi.fn(), listAlertActions: vi.fn(async () => []), listReviews: vi.fn(async () => []), recordReview: vi.fn() };
+  const monitorState = { listEvaluations: async (id: string) => seed?.evaluations?.[id] ?? [], requestRun: vi.fn(async () => ({ runs: [{ id: "run-1", status: "succeeded" }] })), recordEvaluation: vi.fn(), listAlerts: vi.fn(async () => []), getAlert: vi.fn(), recordAlert: vi.fn(), act: vi.fn(), listAlertActions: vi.fn(async () => []), listReviews: vi.fn(async () => []), recordReview: vi.fn() };
   return { thesisService, monitorState, theses, conditions };
 }
 afterEach(cleanup);
@@ -26,6 +26,14 @@ test("saves conditions against the new server thesis id", async () => {
   await user.click(screen.getByRole("button", { name: "添加风险条件" })); await user.clear(screen.getByLabelText("目标值")); await user.type(screen.getByLabelText("目标值"), "180"); await user.click(screen.getByRole("button", { name: "保存投资逻辑" }));
   await waitFor(() => expect(fixture.thesisService.createConditions).toHaveBeenCalledWith(expect.objectContaining({ thesisVersionId: "thesis-1", conditions: [expect.objectContaining({ target: 180 })] })));
   expect(onThesisSaved).toHaveBeenCalledWith("thesis-1");
+});
+
+test("refresh monitoring requests a server run before reloading durable evaluations", async () => {
+  const thesis: Thesis = { id: "thesis-1", symbol: "NVDA", version: 1, coreJudgment: "增长", evidence: ["收入"], risks: ["估值"], validationConditions: ["财报"], createdAt: "2026-08-10T09:00:00.000Z" };
+  const fixture = state({ thesis }); const user = userEvent.setup();
+  render(<ResearchMonitorPanel symbol="NVDA" marketClient={client as never} onThesisSaved={() => undefined} thesisService={fixture.thesisService} monitorState={fixture.monitorState as never} />);
+  await user.click(await screen.findByRole("button", { name: "刷新监控" }));
+  expect(fixture.monitorState.requestRun).toHaveBeenCalledTimes(1);
 });
 test("loads the latest persisted evaluation asynchronously", async () => {
   const thesis: Thesis = { id: "thesis-1", symbol: "NVDA", version: 1, coreJudgment: "增长", evidence: ["收入"], risks: ["估值"], validationConditions: ["财报"], createdAt: "2026-08-10T09:00:00.000Z" };

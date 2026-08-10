@@ -20,10 +20,9 @@ const fallbackQuotes = { NVDA: { price: 167.32, previousClose: 162.58 }, AMD: { 
 const sectors = { NVDA: "半导体", AMD: "半导体", MSFT: "软件" };
 const defaultMarketClient = new MarketApiClient();
 type PortfolioMarketClient = Pick<MarketApiClient, "getQuotes" | "getUniverse" | "getEvents" | "getBatchBars">;
-type PortfolioMonitorService = { evaluate(input: { symbols: string[]; now: string }): Promise<{ warnings: string[] }>; getHealth(symbols: string[], now: string): ThesisHealthSummary };
 type PortfolioTab = "overview" | "ledger" | "performance" | "review";
 
-export function PortfolioPage({ marketClient = defaultMarketClient, monitorService, portfolioState: injectedPortfolioState, monitorState: injectedMonitorState }: { marketClient?: PortfolioMarketClient; monitorService?: PortfolioMonitorService; portfolioState?: PortfolioStateService; monitorState?: MonitorStateService }) {
+export function PortfolioPage({ marketClient = defaultMarketClient, portfolioState: injectedPortfolioState, monitorState: injectedMonitorState }: { marketClient?: PortfolioMarketClient; portfolioState?: PortfolioStateService; monitorState?: MonitorStateService }) {
   const repositories = useRepositories();
   const portfolioState = useMemo(() => injectedPortfolioState ?? repositories.portfolio, [injectedPortfolioState, repositories.portfolio]);
   const monitorState = useMemo(() => injectedMonitorState ?? repositories.monitoring, [injectedMonitorState, repositories.monitoring]);
@@ -81,10 +80,6 @@ export function PortfolioPage({ marketClient = defaultMarketClient, monitorServi
     if (!heldSymbols.length) { setHealth({ items: [], breachedCount: 0, expiringCount: 0, unreadAlertCount: 0 }); setHealthError(""); setHealthWarnings([]); return () => { active = false; }; }
     const now = new Date().toISOString();
     const loadHealth = async () => {
-      if (monitorService) {
-        const monitorResult = await monitorService.evaluate({ symbols: heldSymbols, now });
-        return { summary: monitorService.getHealth(heldSymbols, now), warnings: monitorResult.warnings };
-      }
       const alerts = await monitorState.listAlerts({ view: "pending", now });
       const relevant = alerts.filter((alert) => heldSymbols.includes(alert.symbol));
       const thesisVersionIds = [...new Set(relevant.map((alert) => alert.thesisVersionId))];
@@ -103,7 +98,7 @@ export function PortfolioPage({ marketClient = defaultMarketClient, monitorServi
     };
     void loadHealth().then(({ summary, warnings }) => { if (active) { setHealth(summary); setHealthError(""); setHealthWarnings(warnings); } }).catch(() => { if (active) setHealthError("逻辑健康暂时不可用"); });
     return () => { active = false; };
-  }, [heldSymbolKey, monitorService, monitorState]);
+  }, [heldSymbolKey, monitorState]);
 
   const alerts = useMemo(() => evaluatePortfolioAlerts({ naturalPeriod: "2026-W32", positions: result.positions.map((position) => ({ symbol: position.symbol, weight: position.weight })), sectorExposure: result.sectorExposure, drawdownPercent: performanceDrawdown === undefined ? undefined : performanceDrawdown * 100 }), [performanceDrawdown, result.positions, result.sectorExposure]);
   useEffect(()=>{void portfolioState.reconcileAlerts(alerts).then(items=>setStoredAlerts(items.filter(item=>item.status!=="resolved"))).catch(()=>undefined);},[alerts,portfolioState]);

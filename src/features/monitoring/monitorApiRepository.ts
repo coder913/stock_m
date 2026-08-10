@@ -1,4 +1,4 @@
-import type { AlertActionInput, AlertListQuery, ConditionEvaluation, MonitorAlert, MonitorAlertAction, ReviewInput, ThesisReview } from "../../../shared/monitoring";
+import type { AlertActionInput, AlertListQuery, ConditionEvaluation, ConditionStateView, MonitorAlert, MonitorAlertAction, MonitorRunView, MonitorTaskHealthView, ReviewInput, ThesisReview } from "../../../shared/monitoring";
 import { ApiClient } from "../../app/apiClient";
 
 const key = (provided?: string) => provided ?? globalThis.crypto.randomUUID();
@@ -12,6 +12,10 @@ export interface MonitorStateService {
   listAlertActions(id: string): Promise<MonitorAlertAction[]>;
   listReviews(thesisVersionId: string): Promise<ThesisReview[]>;
   recordReview(review: ReviewInput, idempotencyKey?: string): Promise<ThesisReview>;
+  getTaskHealth(): Promise<MonitorTaskHealthView>;
+  getConditionState(id: string): Promise<ConditionStateView>;
+  requestRun(idempotencyKey?: string): Promise<{ runs: MonitorRunView[] }>;
+  getRun(id: string): Promise<MonitorRunView>;
 }
 export class MonitorApiRepository implements MonitorStateService {
   constructor(private readonly client = new ApiClient("/api/v1")) {}
@@ -24,4 +28,8 @@ export class MonitorApiRepository implements MonitorStateService {
   listAlertActions(id: string): Promise<MonitorAlertAction[]> { return this.client.requestJson({ path: `/monitor/alerts/${encodeURIComponent(id)}/actions` }); }
   listReviews(thesisVersionId: string): Promise<ThesisReview[]> { return this.client.requestJson({ path: `/monitor/reviews?thesisVersionId=${encodeURIComponent(thesisVersionId)}` }); }
   recordReview(review: ReviewInput, idempotencyKey?: string): Promise<ThesisReview> { return this.client.requestJson({ method: "POST", path: "/monitor/reviews", body: review, idempotencyKey: key(idempotencyKey) }); }
+  getTaskHealth(): Promise<MonitorTaskHealthView> { return this.client.requestJson({ path: "/monitor/task-health" }); }
+  getConditionState(id: string): Promise<ConditionStateView> { return this.client.requestJson({ path: `/monitor/conditions/${encodeURIComponent(id)}` }); }
+  requestRun(idempotencyKey?: string): Promise<{ runs: MonitorRunView[] }> { return this.client.requestJson({ method: "POST", path: "/monitor/runs", body: {}, idempotencyKey: key(idempotencyKey) }); }
+  getRun(id: string): Promise<MonitorRunView> { return this.client.requestJson({ path: `/monitor/runs/${encodeURIComponent(id)}` }); }
 }

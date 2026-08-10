@@ -26,15 +26,23 @@ import { createGracefulShutdown } from "./platform/gracefulShutdown";
 import { MonitorSnapshotLoader } from "../src/features/monitoring/monitorSnapshotLoader";
 import { MarketApiClient } from "../src/features/market/marketApiClient";
 import { createRedisConnection } from "./queue/redisConnection";
+import { queueNames } from "./queue/queueNames";
+import { MonitorScheduleRepository } from "./monitoring/monitorScheduleRepository";
+import { MonitorScheduler } from "./monitoring/monitorScheduler";
+import { createUsEquityMarketCalendar } from "./monitoring/scheduleDomain";
+import { MonitorTaskHealthService } from "./monitoring/monitorTaskHealthService";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
 await migrateToLatest(database);
 const redis = createRedisConnection(config.redisUrl);
 const eventQueue = new Queue("platform-events", { connection: redis });
+const monitorQueue = new Queue(queueNames.monitorRuns, { connection: redis });
 const outbox = new OutboxRepository();
 const idempotency = new IdempotencyRepository();
 const outboxPublisher = new OutboxPublisher(database, outbox, eventQueue);
+const monitorSchedules = new MonitorScheduleRepository(database);
+const monitorScheduler = new MonitorScheduler({ repository: monitorSchedules, queue: monitorQueue, calendar: createUsEquityMarketCalendar() });
 const cache = new PostgresMarketDataCache(database);
 const gateway = new MarketDataGateway({ cache, now: () => new Date().toISOString() });
 const alpaca = new AlpacaProvider(config.secrets.alpaca);
@@ -61,7 +69,7 @@ const app = buildApp({
     watchlists: new PostgresWatchlistRepository(database),
   },
   thesisState: { database, idempotency, outbox, repository: new PostgresThesisRepository(database) },
-  monitorState: { database, idempotency, outbox, repository: new PostgresMonitorStateRepository(database) },
+  monitorState: { database, idempotency, outbox, repository: new PostgresMonitorStateRepository(database), taskHealth: new MonitorTaskHealthService(database), runs: { enqueue: () => monitorScheduler.reconcile(), get: (id) => monitorSchedules.getRun(id) } },
   manualPortfolio: { database, idempotency, outbox, repository: new PostgresManualPortfolioRepository(database), reviews: new PostgresPortfolioReviewRepository(database) },
   browserMigration: { service: new BrowserMigrationService(database) },
   health: createHealthService(database, redis, cache),
@@ -77,7 +85,7 @@ outboxPublisher.start();
 const shutdown = createGracefulShutdown({
   closeServer: () => app.close(),
   stopPublisher: () => outboxPublisher.stop(),
-  closeQueue: () => eventQueue.close(),
+  closeQueue: async () => { await Promise.all([eventQueue.close(), monitorQueue.close()]); },
   closeRedis: async () => { await redis.quit(); },
   closeDatabase: () => database.destroy(),
 });

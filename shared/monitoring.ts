@@ -34,8 +34,11 @@ export type AlertActionInput = { type: "read" | "archive" | "restore" } | { type
 export interface ReviewConditionSnapshot { conditionId: string; conditionVersion: string; name: string; severity: ConditionSeverity; status: ConditionStatus; }
 export interface ThesisReview { id: string; thesisVersionId: string; symbol: string; decision: Exclude<ThesisDecisionStatus, "active">; note?: string; conditionSnapshot: ReviewConditionSnapshot[]; createdAt: string; }
 export type ReviewInput = Omit<ThesisReview, "id" | "createdAt"> & { id?: string; createdAt?: string };
-export interface ConditionView { condition: ThesisCondition; evaluation?: ConditionEvaluation; }
+export interface ConditionView { condition: ThesisCondition; evaluation?: ConditionEvaluation; latestEvaluation?: ConditionEvaluation; }
 export interface ThesisSymbolHealth { symbol: string; thesisVersionId?: string; status: ThesisHealthStatus; breachedCount: number; expiringCount: number; unreadAlertCount: number; }
 export interface ThesisHealthSummary { items: ThesisSymbolHealth[]; breachedCount: number; expiringCount: number; unreadAlertCount: number; }
 export interface MonitorRunResult { conditions: ConditionEvaluation[]; alertsCreated: number; warnings: string[]; }
+export interface MonitorTaskHealthView { worker?: { state: "starting" | "ready" | "degraded" | "stopping"; queueLag: number; heartbeatAt: string }; groups: Array<{ type: "price" | "financial" | "event"; lastSuccess?: string; nextRun?: string; dataState?: "fresh" | "stale" | "unavailable"; status?: "claimed" | "running" | "succeeded" | "failed" }>; }
+export interface MonitorRunView { id: string; type: "price" | "financial" | "event"; naturalPeriod: string; scheduledFor: string; catchUp: boolean; status: "claimed" | "running" | "succeeded" | "failed"; dataState?: "fresh" | "stale" | "unavailable"; }
+export interface ConditionStateView { latest?: ConditionEvaluation; effective?: ConditionEvaluation; }
 export interface AlertListQuery { view: "pending" | "snoozed" | "archived"; now: string; symbol?: string; severity?: ConditionSeverity; toStatus?: ConditionStatus; from?: string; to?: string; }

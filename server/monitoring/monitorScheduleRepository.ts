@@ -75,6 +75,11 @@ export class MonitorScheduleRepository {
     return (await this.database.selectFrom("monitor.run").selectAll().orderBy("scheduledFor").execute()).map(mapRun);
   }
 
+  async getRun(id: string): Promise<ClaimedMonitorRun | undefined> {
+    const row = await this.database.selectFrom("monitor.run").selectAll().where("id", "=", id).executeTakeFirst();
+    return row ? mapRun(row) : undefined;
+  }
+
   private inTransaction<T>(executor: Executor | undefined, action: (transaction: Executor) => Promise<T>): Promise<T> {
     return executor ? action(executor) : this.database.transaction().execute(action);
   }

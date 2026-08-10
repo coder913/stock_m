@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Kysely, Transaction } from "kysely";
 import { z } from "zod";
-import type { AlertListQuery, ConditionEvaluation, MonitorAlert } from "../../shared/monitoring";
+import type { AlertListQuery, ConditionEvaluation, MonitorAlert, MonitorRunView, MonitorTaskHealthView } from "../../shared/monitoring";
 import { ApiError } from "../core/errors";
 import type { Database } from "../db/types";
 import type { PostgresMonitorStateRepository } from "../monitoring/monitorStateRepository";
@@ -10,7 +10,7 @@ import type { IdempotencyStore, StoredHttpResponse } from "../platform/idempoten
 import type { OutboxRepository } from "../platform/outboxRepository";
 import { withIdempotency } from "../platform/withIdempotency";
 
-export interface MonitorStateRouteDependencies { database: Kysely<Database>; idempotency: IdempotencyStore; outbox: Pick<OutboxRepository, "append">; repository: PostgresMonitorStateRepository; }
+export interface MonitorStateRouteDependencies { database: Kysely<Database>; idempotency: IdempotencyStore; outbox: Pick<OutboxRepository, "append">; repository: PostgresMonitorStateRepository; taskHealth?: { get(): Promise<MonitorTaskHealthView> }; runs?: { enqueue(): Promise<MonitorRunView[]>; get(id: string): Promise<Partial<MonitorRunView> | undefined> }; }
 const idSchema = z.object({ id: z.string().min(1) });
 const alertQuerySchema = z.object({ view: z.enum(["pending", "snoozed", "archived"]).default("pending"), now: z.string().datetime(), symbol: z.string().optional(), severity: z.enum(["low", "medium", "high"]).optional(), toStatus: z.enum(["pending", "confirmed", "breached", "expired"]).optional(), from: z.string().optional(), to: z.string().optional() });
 const conditionQuerySchema = z.object({ conditionId: z.string().min(1) });
@@ -25,7 +25,13 @@ async function mutation<T>(dependencies: MonitorStateRouteDependencies, request:
   return reply.status(response.statusCode).send(response.body);
 }
 export function registerMonitorStateRoutes(app: FastifyInstance, dependencies: MonitorStateRouteDependencies): void {
+  if (dependencies.taskHealth) app.get("/api/v1/monitor/task-health", () => dependencies.taskHealth!.get());
+  if (dependencies.runs) {
+    app.post("/api/v1/monitor/runs", async (request, reply) => mutation(dependencies, request, reply, { route: "POST /api/v1/monitor/runs", body: request.body ?? {}, topic: "monitor.run.requested", aggregateId: "manual", statusCode: 202 }, async () => ({ runs: await dependencies.runs!.enqueue() })));
+    app.get("/api/v1/monitor/runs/:id", async (request) => { const run = await dependencies.runs!.get(parse(idSchema, request.params).id); if (!run) throw new ApiError("MONITOR_RUN_NOT_FOUND", "未找到监控任务", 404, false); return run; });
+  }
   app.get("/api/v1/monitor/evaluations", (request) => dependencies.repository.listEvaluations(parse(conditionQuerySchema, request.query).conditionId));
+  app.get("/api/v1/monitor/conditions/:id", async (request) => { const id = parse(idSchema, request.params).id; const latest = await dependencies.repository.latestEvaluation(id); const effective = latest ? await dependencies.repository.latestEffective(id, latest.conditionVersion) : undefined; return { latest, effective }; });
   app.post("/api/v1/monitor/evaluations", async (request, reply) => { const body = parse(evaluationSchema, request.body) as ConditionEvaluation; return mutation(dependencies, request, reply, { route: "POST /api/v1/monitor/evaluations", body, topic: "monitor.evaluation.created", aggregateId: body.conditionId, statusCode: 201 }, (transaction) => dependencies.repository.recordEvaluation(body, transaction)); });
   app.get("/api/v1/monitor/alerts", (request) => { const query = parse(alertQuerySchema, request.query); return dependencies.repository.listAlerts({ ...query, ...(query.symbol ? { symbol: query.symbol.toUpperCase() } : {}) } as AlertListQuery); });
   app.post("/api/v1/monitor/alerts", async (request, reply) => { const body = parse(alertSchema, request.body) as MonitorAlert; return mutation(dependencies, request, reply, { route: "POST /api/v1/monitor/alerts", body, topic: "monitor.alert.created", aggregateId: body.id, statusCode: 201 }, (transaction) => dependencies.repository.recordAlert(body, transaction)); });

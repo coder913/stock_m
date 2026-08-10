@@ -1,11 +1,25 @@
 import { z } from "zod";
-import type { CompanyNewsItem, MarketEvent, MarketQuote, MarketStatus, PriceBar } from "../../src/features/market/apiDomain";
+import type { BarsAdjustment, BatchPriceBars, CompanyNewsItem, MarketEvent, MarketQuote, MarketStatus, PriceBar } from "../../src/features/market/apiDomain";
 import { ProviderRateLimitError, ProviderTimeoutError } from "../core/errors";
 import type { ProviderResult } from "../core/providerTypes";
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 const snapshotSchema = z.record(z.string(), z.object({ latestTrade: z.object({ p: z.number(), t: z.string() }).optional(), latestQuote: z.object({ bp: z.number().optional(), ap: z.number().optional() }).optional(), dailyBar: z.object({ c: z.number().optional(), v: z.number().optional() }).optional(), previousDailyBar: z.object({ c: z.number().optional() }).optional() }));
 const barsSchema = z.object({ bars: z.array(z.object({ t: z.string(), o: z.number(), h: z.number(), l: z.number(), c: z.number(), v: z.number().optional() })) });
+const batchBarsSchema = z.object({
+  bars: z.record(
+    z.string(),
+    z.array(z.object({
+      t: z.string(),
+      o: z.number(),
+      h: z.number(),
+      l: z.number(),
+      c: z.number(),
+      v: z.number().optional(),
+    })),
+  ),
+  next_page_token: z.string().nullable().optional(),
+});
 
 export class AlpacaProvider {
   constructor(private readonly credentials: { keyId: string; secretKey: string } | undefined, private readonly fetcher: FetchLike = fetch) {}
@@ -28,6 +42,69 @@ export class AlpacaProvider {
     const response = await this.request(`https://data.alpaca.markets/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=${query.timeframe}&start=${encodeURIComponent(query.start)}&end=${encodeURIComponent(query.end)}&feed=${query.feed ?? "delayed_sip"}`);
     const payload = barsSchema.parse(await response.json());
     return { source: "alpaca", asOf: payload.bars.at(-1)?.t ?? query.end, delayMinutes: query.feed === "iex" ? undefined : 15, data: payload.bars.map((bar) => ({ symbol, startedAt: bar.t, open: bar.o, high: bar.h, low: bar.l, close: bar.c, volume: bar.v, adjusted: false })) };
+  }
+
+  async getBatchBars(
+    symbols: string[],
+    query: {
+      timeframe: "1Day";
+      start: string;
+      end: string;
+      adjustment: BarsAdjustment;
+      feed?: "delayed_sip" | "iex";
+    },
+  ): Promise<ProviderResult<BatchPriceBars>> {
+    const normalizedSymbols = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))];
+    const data: Record<string, PriceBar[]> = Object.fromEntries(
+      normalizedSymbols.map((symbol) => [symbol, []]),
+    );
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        symbols: normalizedSymbols.join(","),
+        timeframe: query.timeframe,
+        start: query.start,
+        end: query.end,
+        feed: query.feed ?? "delayed_sip",
+        adjustment: query.adjustment,
+        limit: "10000",
+        ...(pageToken ? { page_token: pageToken } : {}),
+      });
+      const response = await this.request(`https://data.alpaca.markets/v2/stocks/bars?${params}`);
+      const payload = batchBarsSchema.parse(await response.json());
+      for (const [symbol, bars] of Object.entries(payload.bars)) {
+        if (!data[symbol]) data[symbol] = [];
+        data[symbol].push(...bars.map((bar) => ({
+          symbol,
+          startedAt: bar.t,
+          open: bar.o,
+          high: bar.h,
+          low: bar.l,
+          close: bar.c,
+          volume: bar.v,
+          adjusted: query.adjustment !== "raw",
+        })));
+      }
+      pageToken = payload.next_page_token ?? undefined;
+    } while (pageToken);
+
+    for (const bars of Object.values(data)) {
+      bars.sort((left, right) => left.startedAt.localeCompare(right.startedAt));
+    }
+    const asOf = Object.values(data)
+      .flat()
+      .map((bar) => bar.startedAt)
+      .sort()
+      .at(-1) ?? query.end;
+    return {
+      source: "alpaca",
+      asOf,
+      delayMinutes: query.feed === "iex" ? undefined : 15,
+      data: {
+        symbols: data,
+        missingSymbols: normalizedSymbols.filter((symbol) => data[symbol].length === 0),
+      },
+    };
   }
 
   async getMarketStatus(): Promise<ProviderResult<MarketStatus>> {

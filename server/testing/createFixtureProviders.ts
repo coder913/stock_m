@@ -1,4 +1,6 @@
 import type {
+  BarsAdjustment,
+  BatchPriceBars,
   CompanyNewsItem,
   CompanyProfile,
   FinancialFact,
@@ -31,6 +33,7 @@ export function createFixtureProviders() {
     async getMarketStatus(): Promise<ProviderResult<MarketStatus>> { maybeFail("alpaca"); return value("alpaca", { isOpen: true, session: "regular", nextClose: "2026-08-07T20:00:00Z" }); },
     async getQuotes(symbols: string[]): Promise<ProviderResult<MarketQuote[]>> { maybeFail("alpaca"); return { ...value("alpaca", symbols.map((symbol) => ({ symbol, price: quoteState[symbol]?.price, previousClose: quoteState[symbol]?.previousClose, currency: "USD", marketSession: "regular" as const }))), delayMinutes: 15 }; },
     async getBars(symbol: string): Promise<ProviderResult<PriceBar[]>> { maybeFail("alpaca"); return value("alpaca", [{ symbol, startedAt: "2026-08-06T00:00:00Z", open: 160, high: 168, low: 159, close: quoteState[symbol]?.price ?? 167.32, volume: 50_000_000, adjusted: false }]); },
+    async getBatchBars(symbols: string[], query: { adjustment: BarsAdjustment }): Promise<ProviderResult<BatchPriceBars>> { maybeFail("alpaca"); return value("alpaca", { symbols: Object.fromEntries(symbols.map((symbol) => [symbol, [{ symbol, startedAt: "2026-08-06T00:00:00Z", open: 160, high: 168, low: 159, close: quoteState[symbol]?.price ?? 167.32, volume: 50_000_000, adjusted: query.adjustment !== "raw" }]])), missingSymbols: [] }); },
     async getNews(symbols: string[]): Promise<ProviderResult<CompanyNewsItem[]>> { maybeFail("alpaca"); return value("alpaca", [{ id: "alpaca:news:nvda-1", symbols, headline: "NVIDIA 发布新产品", summary: "测试新闻摘要", sourceName: "Benzinga", publishedAt: asOf, url: "https://example.test/news/nvda" }]); },
     async getCorporateActions(symbols: string[], _from?: string, _to?: string): Promise<ProviderResult<MarketEvent[]>> { maybeFail("alpaca"); const symbol = symbols[0] ?? "NVDA"; return value("alpaca", [{ id: `alpaca:action:${symbol}:dividend`, type: "dividend", symbol, title: `${symbol} 分红`, scheduledAt: "2026-08-20", timing: "all-day", source: "alpaca" }]); },
   };

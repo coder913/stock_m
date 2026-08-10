@@ -1,11 +1,16 @@
 import type { FastifyInstance } from "fastify";
-import type { MarketStatus, PriceBar, MarketQuote } from "../../src/features/market/apiDomain";
+import type { BarsAdjustment, BatchPriceBars, MarketStatus, PriceBar, MarketQuote } from "../../src/features/market/apiDomain";
 import { ApiError } from "../core/errors";
 import type { MarketDataGateway } from "../core/marketDataGateway";
 import type { RefreshRegistry } from "../core/refreshRegistry";
 import type { ProviderResult } from "../core/providerTypes";
 
-export interface MarketProvider { getQuotes(symbols: string[], feed?: "delayed_sip" | "iex"): Promise<ProviderResult<MarketQuote[]>>; getBars(symbol: string, query: { timeframe: "1Min" | "1Day"; start: string; end: string; feed?: "delayed_sip" | "iex" }): Promise<ProviderResult<PriceBar[]>>; getMarketStatus(): Promise<ProviderResult<MarketStatus>>; }
+export interface MarketProvider {
+  getQuotes(symbols: string[], feed?: "delayed_sip" | "iex"): Promise<ProviderResult<MarketQuote[]>>;
+  getBars(symbol: string, query: { timeframe: "1Min" | "1Day"; start: string; end: string; feed?: "delayed_sip" | "iex" }): Promise<ProviderResult<PriceBar[]>>;
+  getBatchBars(symbols: string[], query: { timeframe: "1Day"; start: string; end: string; adjustment: BarsAdjustment; feed?: "delayed_sip" | "iex" }): Promise<ProviderResult<BatchPriceBars>>;
+  getMarketStatus(): Promise<ProviderResult<MarketStatus>>;
+}
 
 const symbolsFrom = (value: string): string[] => {
   const symbols = [...new Set(value.split(",").map((item) => item.trim().toUpperCase()).filter(Boolean))];
@@ -19,6 +24,45 @@ export function registerMarketRoutes(app: FastifyInstance, dependencies: { gatew
   const quotes = (symbols: string[], forceRefresh = false) => dependencies.gateway.readThrough({ key: `quotes:delayed_sip:${[...symbols].sort().join(",")}`, source: "alpaca", ttlMs: 60_000, forceRefresh, load: () => dependencies.provider.getQuotes(symbols, "delayed_sip") });
   app.get("/api/market/status", () => dependencies.gateway.readThrough({ key: "market-status", source: "alpaca", ttlMs: 60_000, load: () => dependencies.provider.getMarketStatus() }));
   app.get("/api/market/quotes", async (request) => quotes(symbolsFrom((request.query as { symbols?: string }).symbols ?? "")));
+  app.get("/api/market/bars", async (request) => {
+    const query = request.query as {
+      symbols?: string;
+      timeframe?: string;
+      start?: string;
+      end?: string;
+      adjustment?: string;
+    };
+    const symbols = symbolsFrom(query.symbols ?? "");
+    const cacheSymbols = [...symbols].sort();
+    const adjustmentValues: BarsAdjustment[] = ["raw", "split", "dividend", "all"];
+    const validDate = (value: string | undefined) => Boolean(
+      value
+      && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)),
+    );
+    if (
+      query.timeframe !== "1Day"
+      || !validDate(query.start)
+      || !validDate(query.end)
+      || query.start! > query.end!
+      || !adjustmentValues.includes(query.adjustment as BarsAdjustment)
+    ) {
+      throw new ApiError("INVALID_BATCH_BARS_QUERY", "批量日线查询参数无效", 400, false);
+    }
+    const adjustment = query.adjustment as BarsAdjustment;
+    return dependencies.gateway.readThrough({
+      key: `bars-batch:delayed_sip:${cacheSymbols.join(",")}:1Day:${query.start}:${query.end}:${adjustment}`,
+      source: "alpaca",
+      ttlMs: 900_000,
+      load: () => dependencies.provider.getBatchBars(symbols, {
+        timeframe: "1Day",
+        start: query.start!,
+        end: query.end!,
+        adjustment,
+        feed: "delayed_sip",
+      }),
+    });
+  });
   app.get("/api/market/bars/:symbol", async (request) => {
     const params = request.params as { symbol: string };
     const query = request.query as { timeframe?: "1Min" | "1Day"; start?: string; end?: string };

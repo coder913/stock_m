@@ -44,6 +44,13 @@ export interface PriceBar {
   adjusted: boolean;
 }
 
+export type BarsAdjustment = "raw" | "split" | "dividend" | "all";
+
+export interface BatchPriceBars {
+  symbols: Record<string, PriceBar[]>;
+  missingSymbols: string[];
+}
+
 export interface CompanyProfile {
   symbol: string;
   name: string;

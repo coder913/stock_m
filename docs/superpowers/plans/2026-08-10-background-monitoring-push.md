@@ -44,7 +44,7 @@
 - Produces: `createRedisConnection`, queue constants, graceful worker lifecycle and PostgreSQL heartbeat records.
 - Consumes: `ServerConfig.redisUrl`, database factory and platform Inbox/Outbox from persistence milestone.
 
-- [ ] **Step 1: Write failing worker configuration and heartbeat tests**
+- [x] **Step 1: Write failing worker configuration and heartbeat tests**
 
 ```ts
 test("heartbeat reports queue lag without exposing redis credentials", async () => {
@@ -55,13 +55,13 @@ test("heartbeat reports queue lag without exposing redis credentials", async () 
 
 Also assert independent `MONITOR_WORKER_CONCURRENCY` and `NOTIFICATION_WORKER_CONCURRENCY` defaults of 1.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm test -- server/config.test.ts`  
 Run: `npm run test:integration -- server/queue`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement Redis factory and worker lifecycle**
+- [x] **Step 3: Implement Redis factory and worker lifecycle**
 
 ```ts
 export const queueNames = {
@@ -78,17 +78,17 @@ Add `"worker:monitor": "tsx server/workers/monitorWorker.ts"` and `"worker:notif
 
 Worker entrypoints migrate/check the database, wait for Redis, record `starting/ready/degraded/stopping` heartbeats, and close queues/connections on SIGTERM.
 
-- [ ] **Step 4: Add Compose worker services**
+- [x] **Step 4: Add Compose worker services**
 
 `monitor-worker` and `notification-worker` use the same image with distinct npm commands, no published ports, health checks based on heartbeat freshness and `depends_on` healthy API/PostgreSQL/Redis.
 
-- [ ] **Step 5: Run integration/build checks**
+- [x] **Step 5: Run integration/build checks**
 
 Run: `npm run test:integration -- server/queue`  
 Run: `npm run build`  
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```bash
 git add package.json package-lock.json .env.example docker-compose.yml server/config* server/queue server/workers server/db/migrations/007_worker_heartbeats.ts
@@ -110,7 +110,7 @@ git commit -m "feat: bootstrap background workers"
 - Produces: `requiredRunPeriods(now, marketCalendar, lastSuccess)` and BullMQ schedule reconciliation.
 - Produces: unique `(runType,naturalPeriod)` monitor run claims.
 
-- [ ] **Step 1: Write failing natural-period tests**
+- [x] **Step 1: Write failing natural-period tests**
 
 ```ts
 expect(requiredRunPeriods("2026-08-10T14:07:00Z", openCalendar, state)).toContainEqual({ type: "price", naturalPeriod: "2026-08-10T10:05-04:00" });
@@ -120,12 +120,12 @@ expect(requiredRunPeriods(holidayNoon, closedCalendar, state)).not.toContainEqua
 
 Cover DST boundaries, holidays, pre/post market, daily 18:00/18:15 ET and worker restart after multiple missed intervals.
 
-- [ ] **Step 2: Run unit tests and verify RED**
+- [x] **Step 2: Run unit tests and verify RED**
 
 Run: `npm test -- server/monitoring/scheduleDomain.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement pure schedule functions**
+- [x] **Step 3: Implement pure schedule functions**
 
 ```ts
 export type MonitorRunType = "price" | "financial" | "event";
@@ -152,21 +152,21 @@ export function requiredRunPeriods(input: ScheduleInput): RequiredRun[] {
 
 Implement the comments as explicit Temporal/date-time calculations using the existing market calendar response; do not use the host machine timezone.
 
-- [ ] **Step 4: Add schedule/run tables and claims**
+- [x] **Step 4: Add schedule/run tables and claims**
 
 Create `monitor.schedule_state` and `monitor.run`. `monitor.run` has unique `(run_type,natural_period)`, scheduled/start/finish timestamps, `fresh|stale|unavailable` aggregate state and diagnostics JSON.
 
-- [ ] **Step 5: Reconcile BullMQ schedules and catch-up**
+- [x] **Step 5: Reconcile BullMQ schedules and catch-up**
 
 At startup create repeatable tick jobs, compute required catch-up, and enqueue grouped run jobs with `jobId=monitor:<type>:<naturalPeriod>`. Competing startup instances must converge on one PostgreSQL run claim.
 
-- [ ] **Step 6: Run unit and real Redis/PostgreSQL tests**
+- [x] **Step 6: Run unit and real Redis/PostgreSQL tests**
 
 Run: `npm test -- server/monitoring/scheduleDomain.test.ts`  
 Run: `npm run test:integration -- server/monitoring/monitorScheduler.integration.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 ```bash
 git add server/monitoring/scheduleDomain* server/monitoring/monitorScheduleRepository* server/monitoring/monitorScheduler* server/db/migrations/008_monitor_schedules.ts
@@ -196,7 +196,7 @@ git commit -m "feat: schedule deterministic monitor runs"
 - Consumes: active latest thesis conditions from PostgreSQL and standardized market snapshots from API.
 - Produces: immutable evaluations, effective-state projection and alert Outbox events.
 
-- [ ] **Step 1: Write failing freshness-preservation tests**
+- [x] **Step 1: Write failing freshness-preservation tests**
 
 ```ts
 await service.run(freshBreachedRun);
@@ -207,12 +207,12 @@ expect((await repository.listAlerts()).filter((alert) => alert.toStatus === "con
 
 Cover fresh transition, stale/missing/unavailable preservation, condition-version isolation, batch symbol loading and one alert per natural period.
 
-- [ ] **Step 2: Run service tests and verify RED**
+- [x] **Step 2: Run service tests and verify RED**
 
 Run: `npm test -- server/monitoring/monitorRunService.test.ts server/routes/internalSnapshotRoutes.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement authenticated internal snapshot endpoint**
+- [x] **Step 3: Implement authenticated internal snapshot endpoint**
 
 `POST /internal/v1/monitor-snapshots` accepts symbols and required metrics/events, requires the exact internal service bearer token, and returns the existing `MonitorSnapshot` contract plus aggregate provenance. Do not expose this route through public navigation or CORS.
 
@@ -220,7 +220,7 @@ Register the internal route in `buildApp`; construct its market snapshot depende
 
 Move the pure evaluator into `shared/monitoring/conditionEvaluator.ts`, import transport/domain types from `shared/monitoring.ts`, and temporarily re-export the function from the old feature path so existing browser tests remain compatible. Both server and browser tests run the same shared evaluator cases.
 
-- [ ] **Step 4: Implement the run transaction**
+- [x] **Step 4: Implement the run transaction**
 
 ```ts
 export async function executeMonitorRun(input: ClaimedMonitorRun): Promise<MonitorRunResult> {
@@ -233,17 +233,17 @@ export async function executeMonitorRun(input: ClaimedMonitorRun): Promise<Monit
 
 `commitRun` writes evaluations, effective-state projection, unique alerts and `monitor.alert.created` Outbox events in one transaction.
 
-- [ ] **Step 5: Wire BullMQ processing**
+- [x] **Step 5: Wire BullMQ processing**
 
 Monitor Worker claims the PostgreSQL run, executes it, records aggregate data state and marks success/failure. Retry only retryable gateway/transport failures; deterministic validation errors close the run as failed without infinite retries.
 
-- [ ] **Step 6: Run unit/integration tests**
+- [x] **Step 6: Run unit/integration tests**
 
 Run: `npm test -- server/monitoring server/routes/internalSnapshotRoutes.test.ts`  
 Run: `npm run test:integration -- server/monitoring/monitorRunService.integration.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```bash
 git add server/routes/internalSnapshotRoutes* server/monitoring server/app.ts server/index.ts server/workers/monitorWorker.ts shared/monitoring src/features/monitoring/conditionEvaluator*

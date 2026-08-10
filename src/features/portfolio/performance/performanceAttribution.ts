@@ -23,7 +23,10 @@ const failed = (totalMoneyPnl: number, diagnostic: AttributionResult["diagnostic
 });
 
 export function calculateAttribution(performance: PerformanceResult): AttributionResult {
-  const days = performance.dailyInternals;
+  const segmentDays = performance.dailyInternals.filter((day) => day.marketDate >= (performance.summary.availableFrom ?? performance.summary.from));
+  const days = segmentDays[0]?.beginningValue === undefined && segmentDays[0]?.dailyReturn === undefined
+    ? segmentDays.slice(1)
+    : segmentDays;
   const totalMoneyPnl = performance.interval.endingValue
     - performance.interval.beginningValue
     - performance.interval.deposits

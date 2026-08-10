@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "vitest";
 import type { LedgerEvent, PortfolioSettings } from "../domain";
-import type { PerformanceViewModel } from "./domain";
+import type { PerformanceResult, PerformanceViewModel } from "./domain";
 import { PerformanceCacheRepository } from "./performanceCacheRepository";
 
 beforeEach(() => localStorage.clear());
@@ -9,6 +9,13 @@ const settings: PortfolioSettings = { version: 1, initialCash: 10_000, inception
 const buyNvda: LedgerEvent = { id: "buy", type: "buy", symbol: "NVDA", quantity: 1, price: 100, thesisVersionId: "t1", occurredAt: "2026-08-04T15:00:00Z" };
 const deposit: LedgerEvent = { id: "deposit", type: "deposit", amount: 500, reason: "追加", occurredAt: "2026-08-05T15:00:00Z" };
 const cacheInput = (overrides: Partial<Parameters<PerformanceCacheRepository["key"]>[0]> = {}) => ({ settings, events: [buyNvda], holdingsAsOf: "2026-08-10T20:00:00Z", benchmarkAsOf: "2026-08-10T20:00:00Z", range: { kind: "inception" }, benchmark: "SPY", algorithmVersion: "1", ...overrides });
+const cachedResult = (marketDate: string): PerformanceResult => ({
+  points: [{ marketDate, valuedAt: `${marketDate}T20:00:00Z`, cash: 10_000, totalValue: 10_000, holdingsValue: 0, externalFlow: 0, dailyReturn: 0, cumulativeTwr: 0, normalizedPortfolio: 100, dataState: "fresh", missingSymbols: [] }],
+  summary: { from: marketDate, to: marketDate, availableFrom: marketDate, twr: 0 },
+  dailyInternals: [],
+  interval: { beginningValue: 10_000, endingValue: 10_000, deposits: 0, withdrawals: 0 },
+  warnings: [],
+});
 
 test("invalidates cache when ledger or as-of changes", () => {
   const repo = new PerformanceCacheRepository(localStorage);
@@ -29,12 +36,17 @@ test("isolates a corrupt cached result", () => {
   expect(new PerformanceCacheRepository(localStorage).get("bad")).toBeUndefined();
 });
 
+test("isolates a partial view model that only contains result points", () => {
+  localStorage.setItem("stock_m:portfolio-performance-cache:v1", JSON.stringify([{ key: "partial", identityKey: "same", result: { result: { points: [] } }, createdAt: "2026-08-10T20:00:00Z" }]));
+  expect(new PerformanceCacheRepository(localStorage).getLatest("same")).toBeUndefined();
+});
+
 test("stores immutable results and retains only ten newest entries", () => {
   const repo = new PerformanceCacheRepository(localStorage);
-  for (let index = 0; index < 11; index += 1) repo.put(`key-${index}`, { points: [{ marketDate: `2026-08-${String(index + 1).padStart(2, "0")}` }] }, `2026-08-${String(index + 1).padStart(2, "0")}T00:00:00Z`);
+  for (let index = 0; index < 11; index += 1) repo.put(`key-${index}`, cachedResult(`2026-08-${String(index + 1).padStart(2, "0")}`), `2026-08-${String(index + 1).padStart(2, "0")}T00:00:00Z`);
   expect(repo.get("key-0")).toBeUndefined();
-  const latest = repo.get("key-10");
-  expect(latest).toEqual({ points: [{ marketDate: "2026-08-11" }] });
+  const latest = repo.get<PerformanceResult>("key-10");
+  expect(latest?.points[0].marketDate).toBe("2026-08-11");
   expect(Object.isFrozen(latest)).toBe(true);
 });
 
@@ -43,7 +55,7 @@ test("finds the newest complete view for the same inputs when market as-of chang
   const firstInput = cacheInput();
   const nextInput = cacheInput({ holdingsAsOf: "2026-08-11T20:00:00Z", benchmarkAsOf: "2026-08-11T20:00:00Z" });
   const identityKey = repo.latestKey(firstInput);
-  const view = (marketDate: string): PerformanceViewModel => ({ result: { points: [{ marketDate }], summary: { from: marketDate, to: marketDate }, dailyInternals: [], interval: { beginningValue: 0, endingValue: 0, deposits: 0, withdrawals: 0 }, warnings: [] } as unknown as PerformanceViewModel["result"], pendingSplits: [], notices: [], dataState: "fresh", provenance: { source: "alpaca" } });
+  const view = (marketDate: string): PerformanceViewModel => ({ result: cachedResult(marketDate), pendingSplits: [], notices: [], dataState: "fresh", provenance: { source: "alpaca" } });
   const older = view("2026-08-10");
   const newer = view("2026-08-11");
 

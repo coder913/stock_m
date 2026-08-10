@@ -104,6 +104,31 @@ test("resets linked returns, benchmark, and drawdown at the selected range bound
   expect(calculateAttribution(result).reconciled).toBe(true);
 });
 
+test("measures selected-range first-day losses from the normalized opening peak", () => {
+  const selectedDates = dates.slice(0, 4);
+  const buy = event({ type: "buy", symbol: "NVDA", quantity: 10, price: 100, thesisVersionId: "t1", occurredAt: "2026-08-04T15:00:00Z" });
+  const result = calculate(history({
+    events: [buy],
+    holdingBars: { NVDA: bars("NVDA", [100, 200, 180, 198], selectedDates) },
+    benchmarkBars: bars("SPY", [100, 150, 135, 148.5], selectedDates, true),
+  }), "2026-08-06", "2026-08-07");
+
+  expect(result.summary.twr).toBeCloseTo(-0.01);
+  expect(result.summary.benchmarkReturn).toBeCloseTo(-0.01);
+  expect(result.summary.maximumDrawdown).toBeCloseTo(0.1);
+  expect(result.summary.currentDrawdown).toBeCloseTo(0.01);
+  expect(result.points.at(-1)?.normalizedPortfolio).toBeCloseTo(99);
+});
+
+test("attributes the latest continuous segment after a valuation gap", () => {
+  const buy = event({ type: "buy", symbol: "NVDA", quantity: 10, price: 100, thesisVersionId: "t1", occurredAt: "2026-08-04T15:00:00Z" });
+  const holdingDates = [dates[0], dates[7], dates[8]];
+  const result = calculate(history({ events: [buy], holdingBars: { NVDA: bars("NVDA", [100, 100, 102], holdingDates) } }));
+
+  expect(result.summary.availableFrom).toBe(dates[7]);
+  expect(calculateAttribution(result).reconciled).toBe(true);
+});
+
 test("keeps drawdown neutral when only external cash flows change total assets", () => {
   const selectedDates = dates.slice(0, 3);
   const events = [

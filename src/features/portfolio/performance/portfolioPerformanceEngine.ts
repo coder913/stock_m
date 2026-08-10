@@ -176,7 +176,7 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
       selectedRangeEntered = true;
       segmentReturns = [];
       segmentStart = undefined;
-      segmentPeak = undefined;
+      segmentPeak = 100;
       segmentMaximumDrawdown = 0;
       benchmarkBase = previousBenchmarkClose ?? benchmarkClose;
     }
@@ -192,7 +192,7 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
       if (!segmentStart) {
         segmentStart = marketDate;
         segmentReturns = [];
-        segmentPeak = undefined;
+        segmentPeak = 100;
         segmentMaximumDrawdown = 0;
         benchmarkBase ??= previousBenchmarkClose ?? benchmarkClose;
       }

@@ -3,6 +3,79 @@ import type { CacheablePerformanceResult, PerformanceCacheKeyInput } from "./dom
 const key = "stock_m:portfolio-performance-cache:v1";
 const clone = <T,>(value: T): T => structuredClone(value);
 const immutable = <T extends object>(value: T): T => Object.freeze(clone(value));
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === "object" && !Array.isArray(value));
+const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const isOptionalFiniteNumber = (value: unknown): boolean => value === undefined || isFiniteNumber(value);
+const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string");
+const isResourceState = (value: unknown): boolean => value === "fresh" || value === "stale" || value === "unavailable";
+
+const validPoint = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  return typeof value.marketDate === "string"
+    && typeof value.valuedAt === "string"
+    && isFiniteNumber(value.cash)
+    && isFiniteNumber(value.externalFlow)
+    && isResourceState(value.dataState)
+    && isStringArray(value.missingSymbols)
+    && ["holdingsValue", "totalValue", "dailyReturn", "cumulativeTwr", "normalizedPortfolio", "benchmarkValue", "benchmarkReturn", "excessReturn", "drawdown"].every((field) => isOptionalFiniteNumber(value[field]));
+};
+
+const validDailyInternal = (value: unknown): boolean => {
+  if (!isRecord(value)
+    || typeof value.marketDate !== "string"
+    || typeof value.valuedAt !== "string"
+    || typeof value.periodStartedAt !== "string"
+    || !["beginningValue", "endingValue", "modifiedDietzDenominator", "dailyReturn"].every((field) => isOptionalFiniteNumber(value[field]))
+    || !["deposits", "withdrawals", "externalFlow", "fees"].every((field) => isFiniteNumber(value[field]))
+    || !isResourceState(value.dataState)
+    || !isRecord(value.positions)) return false;
+  return Object.values(value.positions).every((position) => isRecord(position)
+    && ["quantity", "cost", "realizedPnl", "beginningMarketValue", "buyCashPaid", "sellCashReceived", "realizedPnlChange", "dividends"].every((field) => isFiniteNumber(position[field]))
+    && isOptionalFiniteNumber(position.endingMarketValue));
+};
+
+const validPerformanceResult = (value: unknown): boolean => {
+  if (!isRecord(value) || !Array.isArray(value.points) || !value.points.every(validPoint) || !Array.isArray(value.dailyInternals) || !value.dailyInternals.every(validDailyInternal) || !isStringArray(value.warnings)) return false;
+  const summary = value.summary;
+  if (!isRecord(summary) || typeof summary.from !== "string" || typeof summary.to !== "string") return false;
+  if (!["twr", "mwr", "annualizedReturn", "benchmarkReturn", "excessReturn", "currentDrawdown", "maximumDrawdown", "positiveDayRate"].every((field) => isOptionalFiniteNumber(summary[field]))) return false;
+  if (summary.availableFrom !== undefined && typeof summary.availableFrom !== "string") return false;
+  const interval = value.interval;
+  return isRecord(interval)
+    && ["beginningValue", "endingValue", "deposits", "withdrawals"].every((field) => isFiniteNumber(interval[field]));
+};
+
+const validAttribution = (value: unknown): boolean => {
+  if (value === undefined) return true;
+  if (!isRecord(value) || !Array.isArray(value.items) || !isFiniteNumber(value.totalMoneyPnl) || typeof value.reconciled !== "boolean") return false;
+  return value.items.every((item) => isRecord(item)
+    && typeof item.key === "string"
+    && typeof item.label === "string"
+    && (item.symbol === undefined || typeof item.symbol === "string")
+    && ["moneyContribution", "realizedPnl", "unrealizedPnl", "dividends", "fees"].every((field) => isFiniteNumber(item[field]))
+    && isOptionalFiniteNumber(item.returnContribution));
+};
+
+const validMarketEvent = (value: unknown): boolean => {
+  if (!isRecord(value)
+    || typeof value.id !== "string"
+    || value.type !== "split"
+    || typeof value.symbol !== "string"
+    || typeof value.scheduledAt !== "string"
+    || typeof value.source !== "string") return false;
+  const split = value.split;
+  return split === undefined || (isRecord(split)
+    && ["oldRate", "newRate", "quantityMultiplier"].every((field) => isOptionalFiniteNumber(split[field]))
+    && (split.effectiveDate === undefined || typeof split.effectiveDate === "string"));
+};
+
+const validPerformanceViewModel = (value: unknown): boolean => {
+  if (!isRecord(value) || !Array.isArray(value.pendingSplits) || !value.pendingSplits.every(validMarketEvent) || !isStringArray(value.notices) || !isResourceState(value.dataState)) return false;
+  if (!isRecord(value.provenance) || typeof value.provenance.source !== "string") return false;
+  if (value.provenance.asOf !== undefined && typeof value.provenance.asOf !== "string") return false;
+  if (value.provenance.availableFrom !== undefined && typeof value.provenance.availableFrom !== "string") return false;
+  return (value.result === undefined || validPerformanceResult(value.result)) && validAttribution(value.attribution);
+};
 
 interface CacheEntry {
   key: string;
@@ -84,8 +157,6 @@ export class PerformanceCacheRepository {
   }
 
   private validResult(value: unknown): value is CacheablePerformanceResult {
-    if (!value || typeof value !== "object") return false;
-    const candidate = value as { points?: unknown; result?: { points?: unknown } };
-    return Array.isArray(candidate.points) || Array.isArray(candidate.result?.points);
+    return validPerformanceResult(value) || validPerformanceViewModel(value);
   }
 }

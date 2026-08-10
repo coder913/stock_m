@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("serves the complete fixture-backed API surface", async ({ request }) => {
   const routes = [

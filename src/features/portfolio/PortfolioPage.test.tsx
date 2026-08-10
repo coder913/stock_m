@@ -79,6 +79,21 @@ test("shows monitoring recovery warnings beside portfolio health", async () => {
   expect(screen.getByText("正常", { exact: true })).toBeVisible();
 });
 
+test("uses persisted reviews to clear a reviewed server-side concern", async () => {
+  const ledger = new PortfolioLedger(localStorage);
+  ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
+  const alert = { id: "alert-1", dedupeKey: "alert-1", symbol: "NVDA", thesisVersionId: "thesis-1", conditionId: "condition-1", conditionVersion: "condition-v1", fromStatus: "confirmed", toStatus: "breached", severity: "high", title: "NVDA 估值风险", explanation: "风险条件已触发", createdAt: "2026-08-09T11:00:00Z" };
+  const monitorState = {
+    listAlerts: vi.fn(async () => [alert]),
+    listReviews: vi.fn(async () => [{ id: "review-1", thesisVersionId: "thesis-1", symbol: "NVDA", decision: "reaffirmed", conditionSnapshot: [{ conditionId: "condition-1", conditionVersion: "condition-v1", name: "估值风险", severity: "high", status: "breached" }], createdAt: "2026-08-09T12:00:00Z" }]),
+  };
+
+  render(<MemoryRouter><PortfolioPage monitorState={monitorState as never} portfolioState={portfolioState() as never} /></MemoryRouter>);
+
+  expect(await screen.findByText("正常", { exact: true })).toBeVisible();
+  expect(monitorState.listReviews).toHaveBeenCalledWith("thesis-1");
+});
+
 test("shows the performance tab and deposit and withdrawal fields", async () => {
   const user = userEvent.setup();
   render(<PortfolioPage portfolioState={portfolioState() as never} />);

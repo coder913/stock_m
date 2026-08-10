@@ -13,7 +13,7 @@ type DatabaseExecutor = Kysely<Database> | Transaction<Database>;
 
 export class OutboxRepository {
   async append(executor: DatabaseExecutor, event: NewOutboxEvent): Promise<void> {
-    await executor.insertInto("platform.outbox_event").values({ ...event, publishedAt: null, attempts: 0 }).execute();
+    await executor.insertInto("platform.outbox_event").values({ ...event, payloadJson: JSON.stringify(event.payloadJson), publishedAt: null, attempts: 0 }).execute();
   }
 
   listUnpublishedForUpdate(transaction: Transaction<Database>, limit: number): Promise<Selectable<OutboxEventTable>[]> {

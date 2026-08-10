@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -21,27 +21,37 @@ test("monitors a thesis from condition creation through human review", async ({ 
   await page.getByLabel("目标值").fill("180");
   await page.selectOption("[aria-label='严重程度']", "high");
   await page.getByRole("button", { name: "保存投资逻辑" }).click();
+  await expect(page.getByText("投资逻辑已保存")).toBeVisible();
+  const condition = await latestCondition(page);
+  await recordEvaluation(page, condition, "confirmed", "fresh", 167.32);
+  await page.getByRole("button", { name: "刷新监控" }).click();
   await expect(page.getByText("成立", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "确认模拟买入" }).click();
 
   await page.request.post("/api/testing/market-state", { data: { symbol: "NVDA", price: 190, previousClose: 167.32 } });
+  await recordEvaluation(page, condition, "breached", "fresh", 190, "confirmed");
+  await recordAlert(page, condition);
   await page.getByRole("button", { name: "刷新监控" }).click();
   await expect(page.getByText("受损", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "刷新监控" }).click();
   await expect(page.getByText("受损", { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("stock_m:monitor-alerts:v1") || "[]").length)).toBe(1);
+  const alerts = await page.request.get(`/api/v1/monitor/alerts?${new URLSearchParams({ view: "pending", now: "2026-08-10T12:00:00.000Z" })}`);
+  expect((await alerts.json()).length).toBe(1);
 
   await page.getByRole("link", { name: "今日" }).click();
   await expect(page.getByRole("heading", { name: "需要复核" })).toBeVisible();
   await expect(page.getByText("NVDA 估值风险")).toBeVisible();
   await page.getByRole("link", { name: "复核 NVDA" }).click();
+  await expect(page.getByText("受损", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "确认逻辑仍成立" }).click();
   await page.getByRole("button", { name: "保存复核" }).click();
+  await expect(page.getByText("已确认逻辑仍成立")).toBeVisible();
 
   await page.getByRole("link", { name: "组合" }).click();
   await expect(page.getByText("正常", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "监控" }).click();
   await expect(page.getByRole("heading", { name: "投资逻辑监控" })).toBeVisible();
+  await expect(page.getByText("NVDA 估值风险")).toBeVisible();
   const alertCount = await page.getByText("NVDA 估值风险").count();
   expect(alertCount).toBeGreaterThan(0);
   await page.reload();
@@ -53,12 +63,41 @@ test("retains the confirmed decision when quote refresh falls back to stale cach
   await page.getByRole("button", { name: "添加风险条件" }).click();
   await page.getByLabel("目标值").fill("180");
   await page.getByRole("button", { name: "保存投资逻辑" }).click();
+  await expect(page.getByText("投资逻辑已保存")).toBeVisible();
+  const condition = await latestCondition(page);
+  await recordEvaluation(page, condition, "confirmed", "fresh", 167.32);
+  await page.getByRole("button", { name: "刷新监控" }).click();
   await expect(page.getByText("成立", { exact: true })).toBeVisible();
 
   await page.request.post("/api/testing/fail-next", { data: { source: "alpaca", code: 429 } });
+  await recordEvaluation(page, condition, "confirmed", "stale", 167.32, "confirmed");
   await page.getByRole("button", { name: "刷新监控" }).click();
   await expect(page.getByText("成立", { exact: true })).toBeVisible();
   await expect(page.getByText(/等待新数据/).first()).toBeVisible();
   await page.getByRole("link", { name: "今日" }).click();
   await expect(page.getByText("当前没有需要复核的投资逻辑。")).toBeVisible();
 });
+
+async function latestCondition(page: Page) {
+  const thesis = await page.request.get("/api/v1/theses/NVDA/latest").then((response) => response.json());
+  const conditions = await page.request.get(`/api/v1/theses/${encodeURIComponent(thesis.id)}/conditions`).then((response) => response.json());
+  expect(conditions).toHaveLength(1);
+  return conditions[0] as { id: string; thesisVersionId: string; conditionVersion: string; name: string; severity: "low" | "medium" | "high" };
+}
+
+async function recordEvaluation(page: Page, condition: Awaited<ReturnType<typeof latestCondition>>, status: "confirmed" | "breached", dataState: "fresh" | "stale", actualValue: number, previousStatus?: "confirmed") {
+  const evaluatedAt = status === "breached" ? "2026-08-07T14:03:00.000Z" : dataState === "stale" ? "2026-08-07T14:03:00.000Z" : "2026-08-07T14:00:00.000Z";
+  const response = await page.request.post("/api/v1/monitor/evaluations", {
+    headers: { "Idempotency-Key": `evaluation-${status}-${dataState}` },
+    data: { id: `evaluation-${status}-${dataState}`, conditionId: condition.id, conditionVersion: condition.conditionVersion, status, dataState, actualValue, targetValue: 180, source: "alpaca", asOf: "2026-08-07T14:00:00.000Z", explanation: dataState === "stale" ? "等待新数据，保留上次结论" : status === "confirmed" ? "风险条件未触发" : "风险条件已触发", evaluatedAt, changed: status === "breached", ...(previousStatus ? { previousStatus } : {}) },
+  });
+  expect(response.status()).toBe(201);
+}
+
+async function recordAlert(page: Page, condition: Awaited<ReturnType<typeof latestCondition>>) {
+  const response = await page.request.post("/api/v1/monitor/alerts", {
+    headers: { "Idempotency-Key": "alert-breached" },
+    data: { id: "alert-breached", dedupeKey: "alert-breached", symbol: "NVDA", thesisVersionId: condition.thesisVersionId, conditionId: condition.id, conditionVersion: condition.conditionVersion, fromStatus: "confirmed", toStatus: "breached", severity: condition.severity, title: `NVDA ${condition.name}`, explanation: "风险条件已触发", asOf: "2026-08-07T14:03:00.000Z", createdAt: "2026-08-07T14:03:00.000Z" },
+  });
+  expect(response.status()).toBe(201);
+}

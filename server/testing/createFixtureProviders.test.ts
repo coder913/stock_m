@@ -41,6 +41,18 @@ test("changes the next fixture quote without changing other symbols", async () =
   expect(quotes.data[1]).toMatchObject({ symbol: "MSFT", price: 505.41 });
 });
 
+test("resets mutated quotes and pending failures", async () => {
+  const fixtures = createFixtureProviders();
+  fixtures.setQuote("NVDA", 190, 180);
+  fixtures.failNext("alpaca", 429);
+
+  fixtures.reset();
+
+  await expect(fixtures.alpaca.getQuotes(["NVDA"])).resolves.toMatchObject({
+    data: [{ symbol: "NVDA", price: 167.32, previousClose: 165.32 }],
+  });
+});
+
 test("serves raw and adjusted performance history for every requested symbol", async () => {
   const fixtures = createFixtureProviders();
 

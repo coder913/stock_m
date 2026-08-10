@@ -87,7 +87,18 @@ export function PortfolioPage({ marketClient = defaultMarketClient, monitorServi
       }
       const alerts = await monitorState.listAlerts({ view: "pending", now });
       const relevant = alerts.filter((alert) => heldSymbols.includes(alert.symbol));
-      const items = heldSymbols.map((heldSymbol) => { const matching = relevant.filter((alert) => alert.symbol === heldSymbol); return { symbol: heldSymbol, thesisVersionId: matching[0]?.thesisVersionId, status: matching.length ? "review-needed" as const : "normal" as const, breachedCount: matching.filter((alert) => alert.toStatus === "breached").length, expiringCount: matching.filter((alert) => alert.toStatus === "expired").length, unreadAlertCount: matching.filter((alert) => !alert.readAt).length }; });
+      const thesisVersionIds = [...new Set(relevant.map((alert) => alert.thesisVersionId))];
+      const reviewsByThesis = new Map(await Promise.all(thesisVersionIds.map(async (thesisVersionId) => [thesisVersionId, await monitorState.listReviews(thesisVersionId)] as const)));
+      const items = heldSymbols.map((heldSymbol) => {
+        const matching = relevant.filter((alert) => alert.symbol === heldSymbol);
+        const reviewsForSymbol = matching.flatMap((alert) => reviewsByThesis.get(alert.thesisVersionId) ?? []).sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+        const latestReview = reviewsForSymbol.at(-1);
+        const concernReviewed = (alert: typeof matching[number]) => (reviewsByThesis.get(alert.thesisVersionId) ?? []).some((review) => review.decision === "reaffirmed" && review.createdAt >= alert.createdAt && review.conditionSnapshot.some((snapshot) => snapshot.conditionId === alert.conditionId && snapshot.conditionVersion === alert.conditionVersion && snapshot.status === alert.toStatus));
+        const status = latestReview?.decision === "invalidated" ? "invalidated" as const
+          : latestReview?.decision === "archived" ? "archived" as const
+            : matching.some((alert) => !concernReviewed(alert)) ? "review-needed" as const : "normal" as const;
+        return { symbol: heldSymbol, thesisVersionId: matching[0]?.thesisVersionId, status, breachedCount: matching.filter((alert) => alert.toStatus === "breached").length, expiringCount: matching.filter((alert) => alert.toStatus === "expired").length, unreadAlertCount: matching.filter((alert) => !alert.readAt).length };
+      });
       return { summary: { items, breachedCount: items.reduce((sum, item) => sum + item.breachedCount, 0), expiringCount: items.reduce((sum, item) => sum + item.expiringCount, 0), unreadAlertCount: items.reduce((sum, item) => sum + item.unreadAlertCount, 0) }, warnings: [] };
     };
     void loadHealth().then(({ summary, warnings }) => { if (active) { setHealth(summary); setHealthError(""); setHealthWarnings(warnings); } }).catch(() => { if (active) setHealthError("逻辑健康暂时不可用"); });

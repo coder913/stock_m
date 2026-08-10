@@ -27,6 +27,7 @@ docker compose up -d --build
 
 ```powershell
 npm test
+npm run test:integration
 npm run build
 npm run test:e2e
 npm run test:data:smoke
@@ -46,11 +47,13 @@ npm run test:e2e -- tests/e2e/portfolio-performance.spec.ts
 
 `npm run test:e2e` 会先构建生产前端，再启动 fixture-backed Fastify 服务器。该服务器注册与生产相同的 `/api/*` 路由，但使用确定性的 Alpaca、SEC、Finnhub 和 FRED fixture providers，因此浏览器测试不依赖外网或实时价格。
 
+浏览器测试默认监听 `http://127.0.0.1:4174`；可通过 `E2E_PORT` 覆盖。测试服务使用 `docker-compose.test.yml` 中的 PostgreSQL，页面状态与生产一样只经 `/api/v1` 写入。`server-persistence.spec.ts` 会覆盖全部 14 类旧浏览器数据的预览、隔离、备份与迁移，验证幂等重放、服务重启后数据保留、非空目标冲突不产生部分写入，以及行情旧缓存降级。
+
 测试服务器额外提供一次性故障注入接口：
 
 ```powershell
 Invoke-RestMethod -Method Post `
-  -Uri http://127.0.0.1:4173/api/testing/fail-next `
+  -Uri http://127.0.0.1:4174/api/testing/fail-next `
   -ContentType application/json `
   -Body '{"source":"alpaca","code":429}'
 ```
@@ -58,6 +61,8 @@ Invoke-RestMethod -Method Post `
 下一次对应供应商请求会返回模拟的 `429` 或 `503`，用于验证冷却、最后成功缓存和部分供应商失败。该路由只存在于 E2E 服务器，不会注册到生产服务。
 
 E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某只 fixture 股票的价格和前收盘价。该接口会推进测试时钟使一分钟报价缓存过期，只用于验证监控状态迁移，不会注册到生产服务。
+
+每个 Playwright 用例开始前会调用 `POST /api/testing/reset`，清空应用自有表、保留 `platform.schema_migration`，并重新创建 installation、股票池版本和默认组合基准行。`POST /api/testing/restart` 会关闭并重建 Fastify 与数据库连接池，用于验证 PostgreSQL 持久化；`GET /api/testing/database-state` 只返回测试断言所需的服务实例 ID 与分类计数。所有 `/api/testing/*` 路由都只在 `server/testing/e2eServer.ts` 注册，生产 `buildApp` 不包含这些入口。
 
 `npm run test:data:smoke` 仅检查已配置真实供应商的认证、响应结构、来源和时间戳，不断言固定价格或事件数量。Playwright 使用本机安装的稳定版 Chrome。
 

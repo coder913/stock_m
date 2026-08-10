@@ -28,7 +28,8 @@ export function createFixtureProviders() {
     if (code === 503) throw new ProviderTimeoutError(source);
   };
 
-  const quoteState: Record<string, { price: number; previousClose: number }> = Object.fromEntries(Object.entries({ SPY: 620, QQQ: 550, DIA: 440, IWM: 220, NVDA: 167.32, AAPL: 220, AMD: 158.11, MSFT: 505.41 }).map(([symbol, price]) => [symbol, { price, previousClose: price - 2 }]));
+  const defaultQuoteState = (): Record<string, { price: number; previousClose: number }> => Object.fromEntries(Object.entries({ SPY: 620, QQQ: 550, DIA: 440, IWM: 220, NVDA: 167.32, AAPL: 220, AMD: 158.11, MSFT: 505.41 }).map(([symbol, price]) => [symbol, { price, previousClose: price - 2 }]));
+  const quoteState = defaultQuoteState();
   const historyDates = ["2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07"];
   const historyCloses: Record<string, number[]> = {
     NVDA: [100, 105, 52.5, 55],
@@ -114,5 +115,10 @@ export function createFixtureProviders() {
     fred,
     failNext(source: Source, code: FailureCode) { failures.set(source, code); },
     setQuote(symbol: string, price: number, previousClose = price) { quoteState[symbol.toUpperCase()] = { price, previousClose }; },
+    reset() {
+      failures.clear();
+      for (const symbol of Object.keys(quoteState)) delete quoteState[symbol];
+      Object.assign(quoteState, defaultQuoteState());
+    },
   };
 }

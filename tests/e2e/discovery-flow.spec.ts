@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("discovers NVDA, adds it to a watchlist, and opens research", async ({ page }) => {
   await page.goto("/watchlist");

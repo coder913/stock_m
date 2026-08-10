@@ -50,7 +50,7 @@
 - Produces: `ServerConfig.databaseUrl`, `ServerConfig.redisUrl`, `ServerConfig.internalServiceToken`.
 - Consumes: existing `loadServerConfig` validation style and current Node ESM setup.
 
-- [ ] **Step 1: Add failing configuration and database integration tests**
+- [x] **Step 1: Add failing configuration and database integration tests**
 
 ```ts
 test("requires postgres, redis, and an internal service token", () => {
@@ -65,12 +65,12 @@ test("migrates the platform schema against postgres", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run: `npm test -- server/config.test.ts server/db/database.integration.test.ts`  
 Expected: FAIL because the database configuration and migration modules do not exist.
 
-- [ ] **Step 3: Add runtime dependencies and scripts**
+- [x] **Step 3: Add runtime dependencies and scripts**
 
 Add `pg`, `kysely`, `bullmq`, and `ioredis` to dependencies; add `@types/pg` to devDependencies. Add these scripts:
 
@@ -85,7 +85,7 @@ Add `pg`, `kysely`, `bullmq`, and `ioredis` to dependencies; add `@types/pg` to 
 
 Create `vitest.integration.config.ts` with Node environment, `server/**/*.integration.test.ts` inclusion, a 30-second timeout and one worker so schema-reset tests cannot race. Add `shared` to both TypeScript project includes.
 
-- [ ] **Step 4: Implement the typed database and first migration**
+- [x] **Step 4: Implement the typed database and first migration**
 
 ```ts
 export interface Database {
@@ -104,18 +104,18 @@ export const createDatabase = (connectionString: string) => new Kysely<Database>
 
 Migration `001_platform` must create the four schemas, platform tables, primary keys, unique `(consumer,event_id)` Inbox constraint, Outbox unpublished index, and one installation row.
 
-- [ ] **Step 5: Add Compose health checks and private networking**
+- [x] **Step 5: Add Compose health checks and private networking**
 
 `docker-compose.yml` must expose only `127.0.0.1:${PORT:-8787}:8787`; `postgres:5432` and `redis:6379` remain un-published. Health checks use `pg_isready`, `redis-cli ping`, and `/api/health`.
 
-- [ ] **Step 6: Run integration tests and build**
+- [x] **Step 6: Run integration tests and build**
 
 Run: `docker compose -f docker-compose.test.yml up -d postgres redis`  
 Run: `npm run test:integration -- server/db/database.integration.test.ts`  
 Run: `npm run build`  
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 1**
+- [x] **Step 7: Commit Task 1**
 
 ```bash
 git add package.json package-lock.json .env.example Dockerfile docker-compose.yml docker-compose.test.yml .dockerignore vitest.integration.config.ts tsconfig.json tsconfig.server.json server/db server/config.ts server/config.test.ts
@@ -143,7 +143,7 @@ git commit -m "feat: bootstrap postgres service platform"
 - Produces: `OutboxRepository.append(transaction, event)` and `OutboxPublisher.publishBatch(limit)`.
 - Produces topics used by later milestones without starting worker processes.
 
-- [ ] **Step 1: Write failing idempotency and Outbox tests**
+- [x] **Step 1: Write failing idempotency and Outbox tests**
 
 ```ts
 test("replays the original response for the same key and fingerprint", async () => {
@@ -165,13 +165,13 @@ test("publishes an outbox row once and marks it after BullMQ accepts it", async 
 });
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm test -- server/platform/withIdempotency.test.ts`  
 Run: `npm run test:integration -- server/platform`  
 Expected: FAIL because platform repositories do not exist.
 
-- [ ] **Step 3: Implement stable fingerprints and replay**
+- [x] **Step 3: Implement stable fingerprints and replay**
 
 ```ts
 export interface StoredHttpResponse { statusCode: number; body: unknown; }
@@ -187,21 +187,21 @@ export async function withIdempotency(
 
 Store successful and deterministic 4xx command responses; do not store transient 5xx responses. Expire ordinary command records after 30 days; migration and broker command records do not expire.
 
-- [ ] **Step 4: Implement Outbox publishing and Inbox helpers**
+- [x] **Step 4: Implement Outbox publishing and Inbox helpers**
 
 Select unpublished rows with `FOR UPDATE SKIP LOCKED`, enqueue with `jobId=event.id`, increment attempts on failure, and set `published_at` only after Redis accepts the job. Export `consumeOnce(trx, consumer, eventId, effect)` for later workers.
 
-- [ ] **Step 5: Register request IDs and idempotency errors in Fastify**
+- [x] **Step 5: Register request IDs and idempotency errors in Fastify**
 
 Update `buildApp` so all error responses include `requestId`; map missing idempotency keys on mutation routes to `400 IDEMPOTENCY_KEY_REQUIRED` and conflicting reuse to `409`. Start one `OutboxPublisher` polling loop from `server/index.ts`, inject a fake/manual publisher in E2E, and stop it during graceful shutdown.
 
-- [ ] **Step 6: Run unit/integration tests**
+- [x] **Step 6: Run unit/integration tests**
 
 Run: `npm test -- server/platform/withIdempotency.test.ts server/app.test.ts`  
 Run: `npm run test:integration -- server/platform`  
 Expected: PASS, including duplicate queue delivery.
 
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
 
 ```bash
 git add server/platform server/app.ts server/app.test.ts server/index.ts server/testing/e2eServer.ts
@@ -237,7 +237,7 @@ git commit -m "feat: add idempotent outbox commands"
 - Produces: async saved-screen, user-universe and watchlist repository interfaces.
 - Consumes: Task 2 idempotency wrapper and existing discovery/watchlist domain types.
 
-- [ ] **Step 1: Add failing PostgreSQL repository contract tests**
+- [x] **Step 1: Add failing PostgreSQL repository contract tests**
 
 Use the current local repository behaviors as the contract:
 
@@ -253,12 +253,12 @@ expect(await watchlists.listDeleted()).toHaveLength(1);
 
 Also cover saved-screen validation, stable IDs, universe symbol normalization and optimistic version conflicts.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm run test:integration -- server/discovery server/watchlists`  
 Expected: FAIL because schema/repositories are absent.
 
-- [ ] **Step 3: Create normalized tables and repository methods**
+- [x] **Step 3: Create normalized tables and repository methods**
 
 Migration `002` creates `core.user_universe_symbol`, `core.saved_screen`, `core.watchlist_group` and `core.watchlist_symbol`. Use `numeric order_index`, soft-delete timestamps and unique normalized symbols per group.
 
@@ -276,23 +276,23 @@ export interface AsyncWatchlistRepository {
 }
 ```
 
-- [ ] **Step 4: Add `/api/v1` routes and client repositories**
+- [x] **Step 4: Add `/api/v1` routes and client repositories**
 
 Routes validate symbols and names with Zod, require `Idempotency-Key` on writes, and return `409 VERSION_CONFLICT` with the latest group/screen. Create `ApiClient.requestJson<T>({method,path,body,idempotencyKey,signal})` in `src/app/apiClient.ts`; it parses the existing `{code,message,retryable}` error shape. Client repositories use it instead of duplicating `fetch`.
 
 Register the routes through explicit repository dependencies in `buildApp`; `server/index.ts` constructs the PostgreSQL repositories and passes them to the app.
 
-- [ ] **Step 5: Refactor pages to accept asynchronous repositories**
+- [x] **Step 5: Refactor pages to accept asynchronous repositories**
 
 Move local repository construction out of `DiscoveryPage` and `WatchlistPage`. Accept injected repository props with defaults supplied later by the application repository context. Keep pure rendering and interaction tests using fakes.
 
-- [ ] **Step 6: Run feature, route and integration tests**
+- [x] **Step 6: Run feature, route and integration tests**
 
 Run: `npm test -- src/features/discovery src/features/watchlist server/routes/stateDiscoveryRoutes.test.ts`  
 Run: `npm run test:integration -- server/discovery server/watchlists`  
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```bash
 git add server/db/migrations/002_discovery_watchlists.ts server/discovery server/watchlists server/routes/stateDiscoveryRoutes* server/app.ts server/index.ts shared/discoveryState.ts shared/watchlist.ts src/app/apiClient* src/features/discovery src/features/watchlist
@@ -723,7 +723,7 @@ git commit -m "feat: operate persistent service stack"
 **Interfaces:**
 - Produces: deterministic browser proof for migration, restart, API-only writes and stale reads.
 
-- [ ] **Step 1: Add the failing browser migration flow**
+- [x] **Step 1: Add the failing browser migration flow**
 
 The test must seed all recognized localStorage categories, load the production app, verify preview/quarantine counts, download or observe backup creation, import, and verify Discovery, Watchlist, Research, Monitor, Portfolio and Journal data.
 
@@ -733,15 +733,15 @@ await expect(page.getByText("迁移完成")).toBeVisible();
 await expect(page.evaluate(() => localStorage.getItem("stock_m:portfolio-ledger:v1"))).resolves.not.toBeNull();
 ```
 
-- [ ] **Step 2: Add idempotency, restart and conflict scenarios**
+- [x] **Step 2: Add idempotency, restart and conflict scenarios**
 
 Replay the same migration request and assert one receipt; restart `web-api`/PostgreSQL test composition and verify data; seed a non-empty target and assert `MIGRATION_TARGET_NOT_EMPTY` without partial inserts.
 
-- [ ] **Step 3: Extend fixture server with test-only reset/restart controls**
+- [x] **Step 3: Extend fixture server with test-only reset/restart controls**
 
 Register controls only in `server/testing/e2eServer.ts`. Production `buildApp` receives repositories but no testing routes. E2E reset truncates owned schemas and reapplies the one installation row.
 
-- [ ] **Step 4: Run complete validation**
+- [x] **Step 4: Run complete validation**
 
 Run: `npm test`  
 Run: `npm run test:integration`  
@@ -750,7 +750,7 @@ Run: `npm run test:e2e`
 Run: `npm run test:data:smoke`  
 Expected: every command exits 0.
 
-- [ ] **Step 5: Run safety scans**
+- [x] **Step 5: Run safety scans**
 
 Run scans that assert:
 
@@ -762,7 +762,7 @@ production /api/testing routes = 0
 better-sqlite3 and SqliteMarketDataCache references = 0
 ```
 
-- [ ] **Step 6: Mark this plan complete and commit**
+- [x] **Step 6: Mark this plan complete and commit**
 
 Update every completed checkbox only after the commands above pass.
 

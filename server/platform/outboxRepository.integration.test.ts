@@ -27,6 +27,19 @@ test("appends an event with its stable delivery identity", async () => {
   expect(stored).toMatchObject({ id: "event-1", topic: "watchlist.changed", attempts: 0, publishedAt: null });
 });
 
+test("stores array payloads as JSON rather than PostgreSQL arrays", async () => {
+  await outbox.append(database, {
+    id: "event-array",
+    topic: "portfolio.alerts.reconciled",
+    aggregateId: "default",
+    payloadJson: [{ id: "alert-1", symbol: "NVDA" }],
+    occurredAt: new Date("2026-08-10T01:00:00Z"),
+  });
+
+  const stored = await database.selectFrom("platform.outbox_event").select("payloadJson").where("id", "=", "event-array").executeTakeFirstOrThrow();
+  expect(stored.payloadJson).toEqual([{ id: "alert-1", symbol: "NVDA" }]);
+});
+
 test("consumes a duplicate event only once", async () => {
   const effect = vi.fn(async () => undefined);
 

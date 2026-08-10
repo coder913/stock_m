@@ -42,7 +42,7 @@ export class IdempotencyRepository implements IdempotencyStore {
     const response = await command();
     if (response.statusCode < 500) {
       await transaction.insertInto("platform.idempotency_record").values({
-        key, fingerprint, statusCode: response.statusCode, responseJson: response.body, createdAt: now,
+        key, fingerprint, statusCode: response.statusCode, responseJson: JSON.stringify(response.body), createdAt: now,
         expiresAt: retention === "permanent" ? permanentExpiry : new Date(now.getTime() + ordinaryRetentionMs),
       }).execute();
     }

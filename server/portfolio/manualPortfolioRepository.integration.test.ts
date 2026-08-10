@@ -22,3 +22,15 @@ test("deduplicates split events by source event id", async () => {
   expect(await repository.append(split)).toEqual(await repository.append(split));
   expect(await repository.listLedger()).toHaveLength(1);
 });
+
+test("returns PostgreSQL date settings as YYYY-MM-DD values", async () => {
+  const settings = await repository.saveSettings({
+    initialCash: 1_000,
+    inceptionDate: "2026-08-04",
+    benchmarkSymbol: "SPY",
+    baseCurrency: "USD",
+  });
+
+  expect(settings.inceptionDate).toBe("2026-08-04");
+  expect((await repository.getBootstrap()).settings.inceptionDate).toBe("2026-08-04");
+});

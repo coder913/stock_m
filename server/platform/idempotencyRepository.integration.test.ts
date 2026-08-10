@@ -23,6 +23,19 @@ test("stores a deterministic response and replays it without rerunning the comma
   expect(command).toHaveBeenCalledTimes(1);
 });
 
+test("stores and replays array responses as JSON", async () => {
+  const command = vi.fn(async () => ({ statusCode: 200, body: [{ id: "alert-1" }] }));
+
+  const first = await database.transaction().execute((transaction) =>
+    repository.execute(transaction, "array-key", "array-fingerprint", command));
+  const replay = await database.transaction().execute((transaction) =>
+    repository.execute(transaction, "array-key", "array-fingerprint", command));
+
+  expect(first.body).toEqual([{ id: "alert-1" }]);
+  expect(replay).toEqual(first);
+  expect(command).toHaveBeenCalledTimes(1);
+});
+
 test("rejects the same key when its fingerprint changes", async () => {
   await database.transaction().execute((transaction) =>
     repository.execute(transaction, "conflicting-key", "left", async () => ({ statusCode: 200, body: { ok: true } })));

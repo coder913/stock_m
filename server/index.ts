@@ -10,8 +10,19 @@ import { SecProvider } from "./providers/secProvider";
 import { FinnhubProvider } from "./providers/finnhubProvider";
 import { UniverseService } from "./universe/universeService";
 import { FredProvider } from "./providers/fredProvider";
+import IORedis from "ioredis";
+import { Queue } from "bullmq";
+import { createDatabase } from "./db/database";
+import { migrateToLatest } from "./db/migrate";
+import { OutboxRepository } from "./platform/outboxRepository";
+import { OutboxPublisher } from "./platform/outboxPublisher";
 
 const config = loadServerConfig(process.env);
+const database = createDatabase(config.databaseUrl);
+await migrateToLatest(database);
+const redis = new IORedis(config.redisUrl, { maxRetriesPerRequest: null });
+const eventQueue = new Queue("platform-events", { connection: redis });
+const outboxPublisher = new OutboxPublisher(database, new OutboxRepository(), eventQueue);
 mkdirSync(".data", { recursive: true });
 const cache = new SqliteMarketDataCache(join(".data", "stock-m-cache.sqlite"));
 const gateway = new MarketDataGateway({ cache, now: () => new Date().toISOString() });
@@ -33,4 +44,19 @@ const app = buildApp({
   macro: { gateway, provider: fred },
 });
 
-void app.listen({ host: config.host, port: config.port });
+await app.listen({ host: config.host, port: config.port });
+outboxPublisher.start();
+
+let shuttingDown = false;
+async function shutdown(): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await app.close();
+  await outboxPublisher.stop();
+  await eventQueue.close();
+  await redis.quit();
+  await database.destroy();
+}
+
+process.once("SIGINT", () => { void shutdown(); });
+process.once("SIGTERM", () => { void shutdown(); });

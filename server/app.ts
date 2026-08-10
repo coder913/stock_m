@@ -30,11 +30,21 @@ export interface AppDependencies {
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
   const app = Fastify({ logger: false });
   const refreshRegistry = dependencies.refreshRegistry ?? new RefreshRegistry();
-  app.setErrorHandler((error, _request, reply) => {
-    if (error instanceof ApiError) {
-      return reply.status(error.statusCode).send({ code: error.code, message: error.message, retryable: error.retryable });
+  app.addHook("onRequest", async (request) => {
+    const path = request.url.split("?", 1)[0];
+    const publicMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method)
+      && path.startsWith("/api/v1/");
+    if (!publicMutation) return;
+    const key = request.headers["idempotency-key"];
+    if (typeof key !== "string" || key.trim().length === 0) {
+      throw new ApiError("IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required", 400, false);
     }
-    return reply.status(500).send({ code: "INTERNAL_ERROR", message: "服务暂时不可用", retryable: true });
+  });
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof ApiError) {
+      return reply.status(error.statusCode).send({ code: error.code, message: error.message, retryable: error.retryable, requestId: request.id });
+    }
+    return reply.status(500).send({ code: "INTERNAL_ERROR", message: "服务暂时不可用", retryable: true, requestId: request.id });
   });
   app.get("/api/health", () => ({
     providers: dependencies.config.providers,

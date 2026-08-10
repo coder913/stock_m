@@ -1,5 +1,6 @@
 import { beforeEach, expect, test } from "vitest";
 import type { LedgerEvent, PortfolioSettings } from "../domain";
+import type { PerformanceViewModel } from "./domain";
 import { PerformanceCacheRepository } from "./performanceCacheRepository";
 
 beforeEach(() => localStorage.clear());
@@ -35,4 +36,19 @@ test("stores immutable results and retains only ten newest entries", () => {
   const latest = repo.get("key-10");
   expect(latest).toEqual({ points: [{ marketDate: "2026-08-11" }] });
   expect(Object.isFrozen(latest)).toBe(true);
+});
+
+test("finds the newest complete view for the same inputs when market as-of changes", () => {
+  const repo = new PerformanceCacheRepository(localStorage);
+  const firstInput = cacheInput();
+  const nextInput = cacheInput({ holdingsAsOf: "2026-08-11T20:00:00Z", benchmarkAsOf: "2026-08-11T20:00:00Z" });
+  const identityKey = repo.latestKey(firstInput);
+  const view = (marketDate: string): PerformanceViewModel => ({ result: { points: [{ marketDate }], summary: { from: marketDate, to: marketDate }, dailyInternals: [], interval: { beginningValue: 0, endingValue: 0, deposits: 0, withdrawals: 0 }, warnings: [] } as unknown as PerformanceViewModel["result"], pendingSplits: [], notices: [], dataState: "fresh", provenance: { source: "alpaca" } });
+  const older = view("2026-08-10");
+  const newer = view("2026-08-11");
+
+  repo.put(repo.key(firstInput), older, "2026-08-10T21:00:00Z", identityKey);
+  repo.put(repo.key(nextInput), newer, "2026-08-11T21:00:00Z", repo.latestKey(nextInput));
+
+  expect(repo.getLatest(identityKey)).toEqual(newer);
 });

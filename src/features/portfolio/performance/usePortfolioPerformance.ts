@@ -37,12 +37,16 @@ export function usePortfolioPerformance(input: { enabled: boolean; client: Pick<
   useEffect(() => {
     if (!input.enabled) return;
     let active = true;
-    setState({ status: "loading" });
     const to = new Date().toISOString().slice(0, 10);
     const selected = resolvePerformanceRange(input.range, input.settings, to);
+    const cacheIdentityInput = { settings: input.settings, events: input.events, range: input.range, benchmark: input.settings.benchmarkSymbol, algorithmVersion: "1" };
+    const identityKey = cache.latestKey(cacheIdentityInput);
+    const cached = cache.getLatest<PerformanceViewModel>(identityKey);
+    setState({ status: "loading", cached });
     const loader = new PerformanceHistoryLoader(input.client);
     void loader.load({ settings: input.settings, events: input.events, ignoredSplitIds: input.ignoredSplitIds, to: selected.to }).then((history) => {
       if (!active) return;
+      if (history.dataState === "unavailable" && cached) throw new Error("绩效数据刷新失败，已保留本地缓存");
       const result = calculatePerformance({ history, from: selected.from, to: selected.to });
       const validInternals = result.dailyInternals.filter((day) => day.marketDate >= (result.summary.availableFrom ?? "9999-12-31") && day.endingValue !== undefined);
       const attribution = validInternals.length ? calculateAttribution({ ...result, dailyInternals: validInternals }) : undefined;
@@ -55,10 +59,13 @@ export function usePortfolioPerformance(input: { enabled: boolean; client: Pick<
         provenance: { source: "alpaca", asOf: history.sourceAsOf.holdings, availableFrom: result.summary.availableFrom },
       };
       const cacheKey = cache.key({ settings: input.settings, events: input.events, holdingsAsOf: history.sourceAsOf.holdings, benchmarkAsOf: history.sourceAsOf.benchmark, range: input.range, benchmark: input.settings.benchmarkSymbol, algorithmVersion: "1" });
-      cache.put(cacheKey, result);
+      cache.put(cacheKey, model, new Date().toISOString(), identityKey);
       setState({ status: "ready", model });
     }).catch((error) => {
-      if (active) setState({ status: "error", message: error instanceof Error ? error.message : "绩效加载失败" });
+      if (!active) return;
+      const message = error instanceof Error ? error.message : "绩效加载失败";
+      const staleCached = cached ? { ...cached, dataState: "stale" as const, notices: [...new Set([...cached.notices, "使用本地绩效缓存"])] } : undefined;
+      setState({ status: "error", cached: staleCached, message });
     });
     return () => { active = false; };
   }, [cache, input.client, input.enabled, input.events, input.ignoredSplitIds, input.range, input.recoveryNotice, input.revision, input.settings, refreshToken]);

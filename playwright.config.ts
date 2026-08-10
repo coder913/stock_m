@@ -1,11 +1,13 @@
 import { defineConfig } from "@playwright/test";
 
+const port = Number(process.env.E2E_PORT ?? 4173);
+
 export default defineConfig({
   testDir: "./tests/e2e",
   workers: 1,
-  use: { baseURL: "http://127.0.0.1:4173", channel: "chrome" },
+  use: { baseURL: `http://127.0.0.1:${port}`, channel: "chrome" },
   webServer: {
     command: "npm run build && npm run test:e2e:server",
-    port: 4173,
+    port,
   },
 });

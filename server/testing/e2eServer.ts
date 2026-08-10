@@ -5,11 +5,12 @@ import { UniverseService } from "../universe/universeService";
 import { createFixtureProviders } from "./createFixtureProviders";
 
 const cache = new SqliteMarketDataCache(":memory:");
+const port = Number(process.env.E2E_PORT ?? 4173);
 let now = "2026-08-07T14:00:00Z";
 const gateway = new MarketDataGateway({ cache, now: () => now });
 const fixtures = createFixtureProviders();
 const app = buildApp({
-  config: { host: "127.0.0.1", port: 4173, providers: { alpaca: { configured: true }, sec: { configured: true }, finnhub: { configured: true }, fred: { configured: true } }, publicStatus: { providers: {} } },
+  config: { host: "127.0.0.1", port, providers: { alpaca: { configured: true }, sec: { configured: true }, finnhub: { configured: true }, fred: { configured: true } }, publicStatus: { providers: {} } },
   cache,
   market: { gateway, provider: fixtures.alpaca },
   company: { gateway, sec: fixtures.sec, profile: fixtures.finnhub, news: fixtures.alpaca },
@@ -34,4 +35,4 @@ app.post("/api/testing/market-state", (request, reply) => {
   fixtures.setQuote(body.symbol, body.price!, body.previousClose);
   return { ok: true, now };
 });
-void app.listen({ host: "127.0.0.1", port: 4173 });
+void app.listen({ host: "127.0.0.1", port });

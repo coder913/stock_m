@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import type { PriceBar } from "../../market/apiDomain";
 import type { LedgerEvent, PortfolioSettings } from "../domain";
 import type { PerformanceHistoryLoad } from "./domain";
+import { calculateAttribution } from "./performanceAttribution";
 import { calculatePerformance } from "./portfolioPerformanceEngine";
 
 const settings: PortfolioSettings = { version: 1, initialCash: 1000, inceptionDate: "2026-08-04", benchmarkSymbol: "SPY", baseCurrency: "USD", updatedAt: "2026-08-10T00:00:00Z" };
@@ -85,4 +86,47 @@ test("assigns a weekend external flow to the next valuation subperiod", () => {
   expect(result.points.at(-1)?.totalValue).toBe(1500);
   expect(result.points.at(-1)?.externalFlow).toBe(500);
   expect(result.summary.twr).toBeCloseTo(0);
+});
+
+test("resets linked returns, benchmark, and drawdown at the selected range boundary", () => {
+  const selectedDates = dates.slice(0, 4);
+  const buy = event({ type: "buy", symbol: "NVDA", quantity: 10, price: 100, thesisVersionId: "t1", occurredAt: "2026-08-04T15:00:00Z" });
+  const result = calculate(history({
+    events: [buy],
+    holdingBars: { NVDA: bars("NVDA", [100, 200, 200, 220], selectedDates) },
+    benchmarkBars: bars("SPY", [100, 150, 150, 165], selectedDates, true),
+  }), "2026-08-06", "2026-08-07");
+
+  expect(result.summary.twr).toBeCloseTo(0.1);
+  expect(result.summary.benchmarkReturn).toBeCloseTo(0.1);
+  expect(result.summary.maximumDrawdown).toBeCloseTo(0);
+  expect(result.points.at(-1)?.normalizedPortfolio).toBeCloseTo(110);
+  expect(calculateAttribution(result).reconciled).toBe(true);
+});
+
+test("keeps drawdown neutral when only external cash flows change total assets", () => {
+  const selectedDates = dates.slice(0, 3);
+  const events = [
+    event({ type: "deposit", amount: 500, reason: "cash in", occurredAt: "2026-08-05T15:00:00Z" }),
+    event({ type: "withdrawal", amount: 500, reason: "cash out", occurredAt: "2026-08-06T15:00:00Z" }),
+  ];
+  const result = calculate(history({ events, benchmarkBars: bars("SPY", [100, 100, 100], selectedDates, true) }), "2026-08-04", "2026-08-06");
+
+  expect(result.summary.twr).toBeCloseTo(0);
+  expect(result.summary.currentDrawdown).toBeCloseTo(0);
+  expect(result.summary.maximumDrawdown).toBeCloseTo(0);
+});
+
+test("includes a weekend flow mapped into a Monday-only selected interval in XIRR", () => {
+  const weekendDeposit = event({ type: "deposit", amount: 500, reason: "weekend cash in", occurredAt: "2026-08-08T15:00:00Z" });
+  const selectedDates = ["2026-08-07", "2026-08-10"];
+  const result = calculatePerformance({
+    history: history({ events: [weekendDeposit], benchmarkBars: bars("SPY", [100, 100], selectedDates, true) }),
+    from: "2026-08-10",
+    to: "2026-08-10",
+  });
+
+  expect(result.interval.deposits).toBe(500);
+  expect(result.summary.mwr).toBeDefined();
+  expect(result.summary.mwr).toBeCloseTo(0, 8);
 });

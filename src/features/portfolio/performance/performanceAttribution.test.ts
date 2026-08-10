@@ -24,6 +24,7 @@ const result = (days: DailyPerformanceInternal[], twr: number, beginningValue: n
 const day = (overrides: Partial<DailyPerformanceInternal> = {}): DailyPerformanceInternal => ({
   marketDate: "2026-08-04",
   valuedAt: "2026-08-04T20:00:00Z",
+  periodStartedAt: "2026-08-03T20:00:00Z",
   beginningValue: 1000,
   endingValue: 1015,
   deposits: 0,

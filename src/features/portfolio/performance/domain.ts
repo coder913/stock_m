@@ -68,6 +68,7 @@ export interface DailyPositionInternal {
 export interface DailyPerformanceInternal {
   marketDate: string;
   valuedAt: string;
+  periodStartedAt: string;
   beginningValue?: number;
   endingValue?: number;
   deposits: number;
@@ -103,7 +104,7 @@ export interface PerformanceResult {
   [key: string]: unknown;
 }
 
-export type CacheablePerformanceResult = PerformanceResult | ({ points: unknown[] } & Record<string, unknown>);
+export type CacheablePerformanceResult = PerformanceResult | PerformanceViewModel | ({ points: unknown[] } & Record<string, unknown>);
 
 export interface ContributionItem {
   key: string;

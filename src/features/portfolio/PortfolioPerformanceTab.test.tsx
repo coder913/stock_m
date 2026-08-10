@@ -11,7 +11,7 @@ afterEach(cleanup);
 const model = (overrides: Partial<PerformanceViewModel> = {}): PerformanceViewModel => ({
   result: {
     points: [{ marketDate: "2026-08-04", valuedAt: "2026-08-04T20:00:00Z", cash: 1000, holdingsValue: 0, totalValue: 1000, externalFlow: 0, dailyReturn: 0, cumulativeTwr: 0, normalizedPortfolio: 100, benchmarkValue: 100, benchmarkReturn: 0, excessReturn: 0, drawdown: 0, dataState: "fresh", missingSymbols: [] }],
-    summary: { from: "2026-08-04", to: "2026-08-04", availableFrom: "2026-08-04", twr: 0, benchmarkReturn: 0, excessReturn: 0, currentDrawdown: 0, maximumDrawdown: 0 },
+    summary: { from: "2026-08-04", to: "2026-08-04", availableFrom: "2026-08-04", twr: 0, annualizedReturn: 0.12, benchmarkReturn: 0, excessReturn: 0, currentDrawdown: 0.03, maximumDrawdown: 0.05 },
     dailyInternals: [],
     interval: { beginningValue: 1000, endingValue: 1000, deposits: 0, withdrawals: 0 },
     warnings: [],
@@ -54,6 +54,14 @@ test("renders gaps and unavailable metric reasons", () => {
   expect(screen.getByText("MWR 无法计算：现金流不足")).toBeVisible();
 });
 
+test("renders annualized return, current drawdown, and interval cash flows", () => {
+  render(<PortfolioPerformanceTab {...props()} />);
+  expect(screen.getByText("年化收益").parentElement).toHaveTextContent("12.00%");
+  expect(screen.getByText("当前回撤").parentElement).toHaveTextContent("3.00%");
+  expect(screen.getByRole("table", { name: "绩效现金流" })).toHaveTextContent("期初资金");
+  expect(screen.getByRole("table", { name: "绩效现金流" })).toHaveTextContent("1000.00");
+});
+
 test("keeps the saved benchmark when a custom symbol has no usable history", async () => {
   const user = userEvent.setup();
   const values = props();
@@ -82,9 +90,26 @@ test("confirms an edited split ratio", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn();
   const candidate: MarketEvent = { id: "split", type: "split", symbol: "NVDA", title: "NVDA split", scheduledAt: "2026-08-06", timing: "all-day", source: "alpaca", split: { oldRate: 1, newRate: 2, quantityMultiplier: 2, effectiveDate: "2026-08-06" } };
-  render(<SplitReviewPanel candidates={[candidate]} onConfirm={onConfirm} onIgnore={vi.fn()} onManual={vi.fn()} />);
+  render(<SplitReviewPanel candidates={[candidate]} quantities={{ NVDA: 10 }} onConfirm={onConfirm} onIgnore={vi.fn()} onManual={vi.fn()} />);
   await user.clear(screen.getByLabelText("新股比例"));
   await user.type(screen.getByLabelText("新股比例"), "4");
   await user.click(screen.getByRole("button", { name: "确认 NVDA 拆股" }));
   expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ oldRate: 1, newRate: 4, quantityMultiplier: 4 }));
+  expect(screen.getByText(/拆股前 10 股 → 拆股后 40 股/)).toBeVisible();
+});
+
+test("validates and submits an editable manual split with quantity preview", async () => {
+  const user = userEvent.setup();
+  const onManual = vi.fn();
+  render(<SplitReviewPanel candidates={[]} quantities={{ NVDA: 10 }} onConfirm={vi.fn()} onIgnore={vi.fn()} onManual={onManual} />);
+  await user.click(screen.getByText("手动补录拆股"));
+  await user.click(screen.getByRole("button", { name: "新增手动拆股" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("请填写有效的股票代码和生效日期");
+  await user.type(screen.getByLabelText("手动拆股代码"), "NVDA");
+  await user.type(screen.getByLabelText("手动拆股日期"), "2026-08-06");
+  await user.clear(screen.getByLabelText("手动新股比例"));
+  await user.type(screen.getByLabelText("手动新股比例"), "3");
+  expect(screen.getByText(/拆股前 10 股 → 拆股后 30 股/)).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "新增手动拆股" }));
+  expect(onManual).toHaveBeenCalledWith(expect.objectContaining({ symbol: "NVDA", oldRate: 1, newRate: 3, quantityMultiplier: 3, effectiveDate: "2026-08-06" }));
 });

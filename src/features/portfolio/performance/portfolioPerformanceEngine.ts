@@ -25,10 +25,14 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
     ...history.benchmarkBars.map((bar) => toNewYorkMarketDate(bar.startedAt)),
   ])].filter((date) => date <= input.to).sort();
   const eventsByDate = new Map<string, LedgerEvent[]>();
+  const mappedValuationDates = new Map<string, string>();
   for (const ledgerEvent of sortLedgerEvents(history.events)) {
     const sourceDate = marketDateOfEvent(ledgerEvent);
     const valuationDate = valuationDates.find((date) => date >= sourceDate);
-    if (valuationDate) eventsByDate.set(valuationDate, [...(eventsByDate.get(valuationDate) ?? []), ledgerEvent]);
+    if (valuationDate) {
+      eventsByDate.set(valuationDate, [...(eventsByDate.get(valuationDate) ?? []), ledgerEvent]);
+      mappedValuationDates.set(ledgerEvent.id, valuationDate);
+    }
   }
 
   const positions = new Map<string, WorkingPosition>();
@@ -46,6 +50,8 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
   let segmentPeak: number | undefined;
   let segmentMaximumDrawdown = 0;
   let benchmarkBase: number | undefined;
+  let previousBenchmarkClose: number | undefined;
+  let selectedRangeEntered = false;
 
   for (const marketDate of valuationDates) {
     const allBars = [
@@ -53,6 +59,7 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
       ...history.benchmarkBars.filter((bar) => toNewYorkMarketDate(bar.startedAt) === marketDate),
     ];
     const valuedAt = allBars.map((bar) => bar.startedAt).sort().at(-1) ?? `${marketDate}T20:00:00Z`;
+    const periodStartedAt = previousValuedAt ?? `${history.settings.inceptionDate}T00:00:00Z`;
     const beginningValue = previousTotal ?? (!everValued ? history.settings.initialCash : undefined);
     const beginningValues = new Map<string, number>();
     for (const [symbol, position] of positions) beginningValues.set(symbol, position.quantity * (lastPrices.get(symbol) ?? 0));
@@ -145,7 +152,7 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
     let denominator: number | undefined;
     let dailyReturn: number | undefined;
     if (beginningValue !== undefined && totalValue !== undefined) {
-      const periodStart = new Date(previousValuedAt ?? `${history.settings.inceptionDate}T00:00:00Z`).getTime();
+      const periodStart = new Date(periodStartedAt).getTime();
       const periodEnd = new Date(valuedAt).getTime();
       const flowEvents = (eventsByDate.get(marketDate) ?? []).filter((event) => event.type === "deposit" || event.type === "withdrawal");
       const weightedFlows = flowEvents.reduce((sum, flow) => {
@@ -164,6 +171,15 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
     let benchmarkValue: number | undefined;
     let benchmarkReturn: number | undefined;
     let drawdown: number | undefined;
+    const benchmarkClose = benchmarkMap.get(marketDate)?.close;
+    if (marketDate >= input.from && !selectedRangeEntered) {
+      selectedRangeEntered = true;
+      segmentReturns = [];
+      segmentStart = undefined;
+      segmentPeak = undefined;
+      segmentMaximumDrawdown = 0;
+      benchmarkBase = previousBenchmarkClose ?? benchmarkClose;
+    }
     if (totalValue === undefined) {
       previousTotal = undefined;
       previousValuedAt = undefined;
@@ -176,20 +192,19 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
       if (!segmentStart) {
         segmentStart = marketDate;
         segmentReturns = [];
-        segmentPeak = totalValue;
+        segmentPeak = undefined;
         segmentMaximumDrawdown = 0;
-        benchmarkBase = benchmarkMap.get(marketDate)?.close;
+        benchmarkBase ??= previousBenchmarkClose ?? benchmarkClose;
       }
       if (dailyReturn !== undefined) segmentReturns.push(dailyReturn);
       cumulativeTwr = productReturn(segmentReturns);
       normalizedPortfolio = 100 * (1 + cumulativeTwr);
-      const benchmarkClose = benchmarkMap.get(marketDate)?.close;
       if (benchmarkClose !== undefined && benchmarkBase !== undefined && benchmarkBase > 0) {
         benchmarkValue = (benchmarkClose / benchmarkBase) * 100;
         benchmarkReturn = benchmarkClose / benchmarkBase - 1;
       }
-      segmentPeak = Math.max(segmentPeak ?? totalValue, totalValue);
-      drawdown = segmentPeak > 0 ? (segmentPeak - totalValue) / segmentPeak : 0;
+      segmentPeak = Math.max(segmentPeak ?? normalizedPortfolio, normalizedPortfolio);
+      drawdown = segmentPeak > 0 ? (segmentPeak - normalizedPortfolio) / segmentPeak : 0;
       segmentMaximumDrawdown = Math.max(segmentMaximumDrawdown, drawdown);
       previousTotal = totalValue;
       previousValuedAt = valuedAt;
@@ -198,8 +213,9 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
 
     if (marketDate >= input.from) {
       points.push({ marketDate, valuedAt, cash, holdingsValue: unavailable ? undefined : holdingsValue, totalValue, externalFlow, dailyReturn, cumulativeTwr, normalizedPortfolio, benchmarkValue, benchmarkReturn, excessReturn: cumulativeTwr !== undefined && benchmarkReturn !== undefined ? cumulativeTwr - benchmarkReturn : undefined, drawdown, dataState: baseState, missingSymbols: missingSymbols.sort() });
-      dailyInternals.push({ marketDate, valuedAt, beginningValue, endingValue: totalValue, deposits, withdrawals, externalFlow, fees, modifiedDietzDenominator: denominator, dailyReturn, positions: positionInternals, dataState: baseState });
+      dailyInternals.push({ marketDate, valuedAt, periodStartedAt, beginningValue, endingValue: totalValue, deposits, withdrawals, externalFlow, fees, modifiedDietzDenominator: denominator, dailyReturn, positions: positionInternals, dataState: baseState });
     }
+    if (benchmarkClose !== undefined) previousBenchmarkClose = benchmarkClose;
   }
 
   const lastAvailableIndex = points.map((point) => point.totalValue !== undefined).lastIndexOf(true);
@@ -216,10 +232,10 @@ export function calculatePerformance(input: PerformanceInput): PerformanceResult
   const twr = segmentPoints.at(-1)?.cumulativeTwr;
   const xirrFlows: XirrCashFlow[] = [];
   if (segmentPoints.length) {
-    xirrFlows.push({ at: firstInternal.beginningValue !== undefined ? `${segmentPoints[0].marketDate}T00:00:00Z` : segmentPoints[0].valuedAt, amount: -beginningValue });
+    xirrFlows.push({ at: firstInternal.beginningValue !== undefined ? firstInternal.periodStartedAt : segmentPoints[0].valuedAt, amount: -beginningValue });
     for (const ledgerEvent of history.events) {
-      const date = marketDateOfEvent(ledgerEvent);
-      if (date < segmentPoints[0].marketDate || date > segmentPoints.at(-1)!.marketDate) continue;
+      const valuationDate = mappedValuationDates.get(ledgerEvent.id);
+      if (!valuationDate || valuationDate < segmentPoints[0].marketDate || valuationDate > segmentPoints.at(-1)!.marketDate) continue;
       if (ledgerEvent.type === "deposit") xirrFlows.push({ at: ledgerEvent.occurredAt, amount: -(ledgerEvent.amount ?? 0) });
       if (ledgerEvent.type === "withdrawal") xirrFlows.push({ at: ledgerEvent.occurredAt, amount: ledgerEvent.amount ?? 0 });
     }

@@ -75,3 +75,17 @@ test("shows monitoring recovery warnings beside portfolio health", async () => {
   expect(await screen.findByText("skipped corrupt monitoring data")).toBeVisible();
   expect(screen.getByText("正常", { exact: true })).toBeVisible();
 });
+
+test("shows the performance tab and deposit and withdrawal fields", async () => {
+  const user = userEvent.setup();
+  render(<PortfolioPage />);
+  expect(screen.getByRole("tab", { name: "绩效分析" })).toBeVisible();
+  await user.click(screen.getByRole("tab", { name: "持仓与交易" }));
+  await user.click(screen.getByRole("button", { name: "记录交易" }));
+  await user.selectOptions(screen.getByLabelText("事件类型"), "deposit");
+  expect(screen.getByLabelText("金额")).toBeVisible();
+  expect(screen.getByLabelText("调整原因")).toBeVisible();
+  expect(screen.queryByLabelText("代码")).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("事件类型"), "withdrawal");
+  expect(screen.getByLabelText("金额")).toBeVisible();
+});

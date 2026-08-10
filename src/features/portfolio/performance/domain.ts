@@ -124,3 +124,16 @@ export interface AttributionResult {
   reconciled: boolean;
   diagnostic?: "DAILY_RECONCILIATION_FAILED" | "RETURN_RECONCILIATION_FAILED" | "MONEY_RECONCILIATION_FAILED";
 }
+
+export type PerformanceRange =
+  | { kind: "inception" | "ytd" | "1y" | "6m" | "3m" }
+  | { kind: "custom"; from: string; to: string };
+
+export interface PerformanceViewModel {
+  result?: PerformanceResult;
+  attribution?: AttributionResult;
+  pendingSplits: MarketEvent[];
+  notices: string[];
+  dataState: PerformanceResourceState;
+  provenance: { source: string; asOf?: string; availableFrom?: string };
+}

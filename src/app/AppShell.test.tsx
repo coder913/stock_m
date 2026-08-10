@@ -16,4 +16,5 @@ test("renders the approved six-item primary navigation", () => {
 
   expect(screen.getByRole("link", { name: "跳到主要内容" })).toBeVisible();
   expect(screen.getByRole("link", { name: "监控" })).toHaveAttribute("href", "/monitor");
+  expect(screen.getByRole("link", { name: "通知设置" })).toHaveAttribute("href", "/settings/notifications");
 });

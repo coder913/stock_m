@@ -8,6 +8,7 @@ import { PortfolioApiRepository, type PortfolioStateService } from "../features/
 import { ThesisApiRepository, type ThesisStateService } from "../features/thesis/thesisApiRepository";
 import { WatchlistApiRepository } from "../features/watchlist/watchlistApiRepository";
 import { ApiClient } from "./apiClient";
+import { NotificationApiClient, type NotificationApi } from "../features/notifications/notificationApiClient";
 
 export interface ApplicationRepositories {
   discovery: AsyncDiscoveryStateRepository;
@@ -16,6 +17,7 @@ export interface ApplicationRepositories {
   monitoring: MonitorStateService;
   portfolio: PortfolioStateService;
   migration: MigrationClient;
+  notifications: NotificationApi;
 }
 
 export function createApplicationRepositories(baseUrl = "/api/v1"): ApplicationRepositories {
@@ -27,6 +29,7 @@ export function createApplicationRepositories(baseUrl = "/api/v1"): ApplicationR
     monitoring: new MonitorApiRepository(client),
     portfolio: new PortfolioApiRepository(client),
     migration: new MigrationApiClient(client),
+    notifications: new NotificationApiClient(client),
   };
 }
 

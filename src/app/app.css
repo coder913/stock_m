@@ -12,6 +12,9 @@ a { color: inherit; text-decoration: none; }
 .primary-nav a { padding: 12px; border-radius: 8px; font-size: 16px; }
 .primary-nav a[aria-current="page"] { color: var(--brand); background: #eff4ff; font-weight: 700; }
 .data-state { margin-top: auto; }
+.settings-link { margin-top: auto; padding: 10px 12px; border-top: 1px solid var(--divider); color: var(--text-secondary); font-size: 14px; }
+.settings-link[aria-current="page"] { color: var(--brand); font-weight: 700; }
+.settings-link + .data-state { margin-top: 0; }
 .main-content { min-width: 0; padding: 28px 32px; }
 .skip-link { position: fixed; top: -100px; left: 16px; z-index: 10; padding: 10px 14px; color: white; background: var(--brand); border-radius: 6px; }
 .skip-link:focus { top: 16px; }
@@ -30,7 +33,7 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 1023px) {
   .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
   .sidebar { padding: 20px 10px; }
-  .brand span, .primary-nav a { font-size: 0; }
+  .brand span, .primary-nav a, .settings-link { font-size: 0; }
   .brand strong { font-size: 0; }
   .brand strong::after { content: "sm"; font-size: 20px; }
   .primary-nav a::first-letter { font-size: 16px; }

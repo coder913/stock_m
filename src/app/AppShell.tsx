@@ -27,6 +27,7 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
+        <NavLink className="settings-link" to="/settings/notifications">通知设置</NavLink>
         <p className="data-state">模拟数据 · 延迟 15 分钟</p>
       </aside>
       <main id="main" className="main-content">

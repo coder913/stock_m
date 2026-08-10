@@ -432,7 +432,7 @@ git commit -m "feat: deliver durable web push alerts"
 - Produces: opt-in subscription UX, Service Worker push display and deep-link click behavior.
 - Consumes: Task 5 notification API and public VAPID key.
 
-- [ ] **Step 1: Add failing subscription/component tests**
+- [x] **Step 1: Add failing subscription/component tests**
 
 ```tsx
 render(<NotificationSettings permission="default" api={api} />);
@@ -443,20 +443,20 @@ expect(Notification.requestPermission).toHaveBeenCalledTimes(1);
 
 Cover denied permission, existing subscription, re-subscribe, revoke, test delivery and server-not-configured states.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm test -- src/features/notifications`  
 Expected: FAIL.
 
-- [ ] **Step 3: Configure inject-manifest PWA build**
+- [x] **Step 3: Configure inject-manifest PWA build**
 
 Add `vite-plugin-pwa` with `strategies: "injectManifest"`, `srcDir: "src"`, `filename: "service-worker.ts"`, same-origin scope `/`, and no runtime caching of authenticated/business APIs.
 
-- [ ] **Step 4: Implement Push subscription helpers**
+- [x] **Step 4: Implement Push subscription helpers**
 
 Convert the URL-safe VAPID key to `Uint8Array`, call `registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey})`, and send the serialized subscription through the notification API with endpoint-hash idempotency.
 
-- [ ] **Step 5: Implement Service Worker events**
+- [x] **Step 5: Implement Service Worker events**
 
 ```ts
 self.addEventListener("push", (event) => {
@@ -467,11 +467,11 @@ self.addEventListener("push", (event) => {
 
 On `notificationclick`, close the notification, focus/navigate a same-origin existing window or open a new one. Reject absolute/external URLs.
 
-- [ ] **Step 6: Add settings route/navigation and tests**
+- [x] **Step 6: Add settings route/navigation and tests**
 
 Expose `/settings/notifications`, status, last success/failure, test, revoke and explanatory copy that Compose/network/browser services must run for page-closed delivery.
 
-- [ ] **Step 7: Run tests/build and commit**
+- [x] **Step 7: Run tests/build and commit**
 
 Run: `npm test -- src/features/notifications src/app`  
 Run: `npm run build`  

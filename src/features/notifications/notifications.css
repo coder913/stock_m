@@ -1,0 +1,16 @@
+.notification-settings { display: grid; gap: 24px; max-width: 880px; }
+.notification-settings header { display: grid; gap: 8px; }
+.notification-settings h1, .notification-settings h2, .notification-settings p { margin: 0; }
+.notification-settings .eyebrow { color: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.notification-status-card, .notification-explainer { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--divider); border-radius: 12px; background: var(--surface); }
+.notification-status-card > div:first-child { display: flex; align-items: center; gap: 10px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #98a2b3; }
+.status-enabled { background: #12b76a; }
+.status-denied, .status-error { background: #f04438; }
+.status-not-configured, .status-unsupported { background: #f79009; }
+.notification-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.notification-actions button { min-height: 40px; padding: 0 16px; border: 1px solid var(--brand); border-radius: 8px; color: white; background: var(--brand); cursor: pointer; }
+.notification-actions button.secondary { color: var(--text-primary); background: transparent; border-color: var(--divider); }
+.notification-actions button:disabled { opacity: .55; cursor: wait; }
+.notification-result { color: var(--brand); font-weight: 600; }
+.notification-explainer ul { display: grid; gap: 10px; margin: 0; padding-left: 20px; color: var(--text-secondary); }

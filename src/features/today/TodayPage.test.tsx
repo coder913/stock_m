@@ -6,9 +6,10 @@ import { TodayPage } from "./TodayPage";
 import type { MonitorAlert } from "../monitoring/domain";
 
 afterEach(cleanup);
+const emptyMonitorState = { listAlerts: vi.fn(async () => []), listEvaluations: vi.fn(async () => []), recordEvaluation: vi.fn(), getAlert: vi.fn(), recordAlert: vi.fn(), act: vi.fn(), listAlertActions: vi.fn(async () => []), listReviews: vi.fn(async () => []), recordReview: vi.fn() };
 
 test("changes the research action when the selected signal changes", async () => {
-  render(<MemoryRouter><TodayPage /></MemoryRouter>);
+  render(<MemoryRouter><TodayPage monitorState={emptyMonitorState as never} /></MemoryRouter>);
 
   expect(await screen.findByRole("heading", { name: "今天值得关注" })).toBeVisible();
   expect(screen.getByText("延迟 15 分钟")).toBeVisible();
@@ -20,7 +21,7 @@ test("changes the research action when the selected signal changes", async () =>
 
 test("renders live index quotes and refreshes their batch", async () => {
   const client = { getQuotes: vi.fn().mockResolvedValue({ data: [{ symbol: "SPY", price: 620, currency: "USD", marketSession: "regular" }], source: "alpaca", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, delayMinutes: 15, notices: [] }), refresh: vi.fn().mockResolvedValue({}) };
-  render(<MemoryRouter><TodayPage marketClient={client as never} /></MemoryRouter>);
+  render(<MemoryRouter><TodayPage marketClient={client as never} monitorState={emptyMonitorState as never} /></MemoryRouter>);
   expect(await screen.findByText("620")).toBeVisible();
   await userEvent.click(screen.getByRole("button", { name: "刷新市场数据" }));
   expect(client.refresh).toHaveBeenCalledWith({ resource: "quotes", symbols: ["SPY", "QQQ", "DIA", "IWM"] });

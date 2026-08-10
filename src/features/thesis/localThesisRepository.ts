@@ -1,4 +1,5 @@
-export interface Thesis { id: string; symbol: string; coreJudgment: string; evidence: string[]; risks: string[]; validationConditions: string[]; version: number; createdAt: string; }
+import type { Thesis } from "../../../shared/thesis";
+export type { Thesis } from "../../../shared/thesis";
 
 const clone = <T,>(value: T): T => structuredClone(value);
 const legacyCreatedAt = "1970-01-01T00:00:00.000Z";

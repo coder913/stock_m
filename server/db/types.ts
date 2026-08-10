@@ -85,6 +85,13 @@ export interface WatchlistSymbolTable {
   createdAt: Timestamp;
 }
 
+export interface ThesisVersionTable { id: string; symbol: string; version: number; coreJudgment: string; evidenceJson: unknown; risksJson: unknown; validationConditionsJson: unknown; createdAt: Timestamp; }
+export interface ThesisConditionTable { id: string; thesisVersionId: string; symbol: string; kind: "metric" | "event"; name: string; direction: "support" | "risk"; severity: "low" | "medium" | "high"; deadline: ColumnType<string | null, string | null, string | null>; note: string | null; specJson: unknown; conditionVersion: string; createdAt: Timestamp; updatedAt: Timestamp; deletedAt: NullableTimestamp; }
+export interface ConditionEvaluationTable { id: string; conditionId: string; conditionVersion: string; dedupeKey: string; status: "pending" | "confirmed" | "breached" | "expired"; dataState: "fresh" | "missing" | "stale" | "unavailable"; actualValueJson: unknown | null; targetValueJson: unknown | null; source: string | null; asOf: NullableTimestamp; explanation: string; evaluatedAt: Timestamp; changed: boolean; previousStatus: string | null; }
+export interface MonitorAlertTable { id: string; dedupeKey: string; symbol: string; thesisVersionId: string; conditionId: string; conditionVersion: string; fromStatus: string | null; toStatus: "pending" | "confirmed" | "breached" | "expired"; severity: "low" | "medium" | "high"; title: string; explanation: string; asOf: NullableTimestamp; createdAt: Timestamp; }
+export interface MonitorAlertActionTable { id: string; ordinal: Generated<number>; alertId: string; type: "read" | "snooze" | "archive" | "restore"; untilAt: NullableTimestamp; createdAt: Timestamp; }
+export interface ThesisReviewTable { id: string; thesisVersionId: string; symbol: string; decision: "reaffirmed" | "invalidated" | "archived"; note: string | null; conditionSnapshotJson: unknown; createdAt: Timestamp; }
+
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
   "platform.idempotency_record": IdempotencyRecordTable;
@@ -97,4 +104,10 @@ export interface Database {
   "core.saved_screen": SavedScreenTable;
   "core.watchlist_group": WatchlistGroupTable;
   "core.watchlist_symbol": WatchlistSymbolTable;
+  "core.thesis_version": ThesisVersionTable;
+  "core.thesis_condition": ThesisConditionTable;
+  "monitor.condition_evaluation": ConditionEvaluationTable;
+  "monitor.alert": MonitorAlertTable;
+  "monitor.alert_action": MonitorAlertActionTable;
+  "monitor.thesis_review": ThesisReviewTable;
 }

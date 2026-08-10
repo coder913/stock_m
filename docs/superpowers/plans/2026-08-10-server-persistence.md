@@ -329,7 +329,7 @@ git commit -m "feat: persist discovery and watchlists"
 - Produces: `ThesisStateService` and `MonitorStateService` async APIs.
 - Preserves: unique `(symbol, version)`, immutable condition versions/evaluations/reviews and append-only alert actions.
 
-- [ ] **Step 1: Write failing repository invariants**
+- [x] **Step 1: Write failing repository invariants**
 
 ```ts
 test("allocates thesis versions transactionally", async () => {
@@ -345,32 +345,32 @@ test("appends alert actions without rewriting the alert fact", async () => {
 });
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `npm run test:integration -- server/thesis server/monitoring`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement schema and PostgreSQL repositories**
+- [x] **Step 3: Implement schema and PostgreSQL repositories**
 
 Create `core.thesis_version`, `core.thesis_condition`, `monitor.condition_evaluation`, `monitor.alert`, `monitor.alert_action` and `monitor.thesis_review`. Use JSONB only for typed condition targets and immutable snapshots; keep searchable symbol/status/deadline fields in columns.
 
 Move `Thesis` and transport-safe monitoring DTOs into `shared/thesis.ts` and `shared/monitoring.ts`. Re-export them from existing feature modules during the cutover so current imports compile, then update server/client repositories to use the shared paths.
 
-- [ ] **Step 4: Implement API routes and HTTP repositories**
+- [x] **Step 4: Implement API routes and HTTP repositories**
 
 Provide list/latest/history/create routes for theses, condition create/soft-delete/version-copy commands, evaluation/alert timelines and alert action commands. Reject edits to old thesis versions with `409 THESIS_VERSION_NOT_CURRENT`. Register both route groups from `buildApp` and construct their PostgreSQL repositories in `server/index.ts`.
 
-- [ ] **Step 5: Refactor Today, Research and Monitor consumers**
+- [x] **Step 5: Refactor Today, Research and Monitor consumers**
 
 Replace synchronous constructor reads with loading/error/ready state. Preserve current corrupt-record recovery notices by converting server quarantine/import notices into the same non-blocking UI copy.
 
-- [ ] **Step 6: Run all monitoring and research tests**
+- [x] **Step 6: Run all monitoring and research tests**
 
 Run: `npm test -- src/features/thesis src/features/monitoring src/features/research src/features/today server/routes/thesisStateRoutes.test.ts server/routes/monitorStateRoutes.test.ts`  
 Run: `npm run test:integration -- server/thesis server/monitoring`  
 Expected: PASS.
 
-- [ ] **Step 7: Commit Task 4**
+- [x] **Step 7: Commit Task 4**
 
 ```bash
 git add server/db/migrations/003_thesis_monitoring.ts server/thesis server/monitoring server/routes/thesisStateRoutes* server/routes/monitorStateRoutes* server/app.ts server/index.ts shared/thesis.ts shared/monitoring.ts src/features/thesis src/features/monitoring src/features/research src/features/today

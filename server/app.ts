@@ -15,6 +15,8 @@ import { registerEventRoutes, type EventsProvider } from "./routes/eventRoutes";
 import type { UniverseService } from "./universe/universeService";
 import { registerMacroRoutes, type MacroProvider } from "./routes/macroRoutes";
 import { registerStateDiscoveryRoutes, type StateDiscoveryRouteDependencies } from "./routes/stateDiscoveryRoutes";
+import { registerThesisStateRoutes, type ThesisStateRouteDependencies } from "./routes/thesisStateRoutes";
+import { registerMonitorStateRoutes, type MonitorStateRouteDependencies } from "./routes/monitorStateRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
@@ -26,6 +28,8 @@ export interface AppDependencies {
   events?: { gateway: MarketDataGateway; provider: EventsProvider };
   macro?: { gateway: MarketDataGateway; provider: MacroProvider };
   stateDiscovery?: StateDiscoveryRouteDependencies;
+  thesisState?: ThesisStateRouteDependencies;
+  monitorState?: MonitorStateRouteDependencies;
   staticDir?: string;
 }
 
@@ -58,6 +62,8 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.events) registerEventRoutes(app, { ...dependencies.events, refreshRegistry });
   if (dependencies.macro) registerMacroRoutes(app, { ...dependencies.macro, refreshRegistry });
   if (dependencies.stateDiscovery) registerStateDiscoveryRoutes(app, dependencies.stateDiscovery);
+  if (dependencies.thesisState) registerThesisStateRoutes(app, dependencies.thesisState);
+  if (dependencies.monitorState) registerMonitorStateRoutes(app, dependencies.monitorState);
   registerCacheRoutes(app, refreshRegistry);
   if (dependencies.staticDir) {
     void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false });

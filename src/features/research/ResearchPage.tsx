@@ -4,6 +4,8 @@ import type { CompanyProfile, MarketQuote } from "../market/apiDomain";
 import { MarketApiClient } from "../market/marketApiClient";
 import { LocalPortfolioRepository } from "../portfolio/localPortfolioRepository";
 import { ResearchMonitorPanel } from "../monitoring/ResearchMonitorPanel";
+import type { ThesisStateService } from "../thesis/thesisApiRepository";
+import type { MonitorStateService } from "../monitoring/monitorApiRepository";
 import { CompanyActions } from "./CompanyActions";
 import { CompanyNews } from "./CompanyNews";
 import { FilingsList } from "./FilingsList";
@@ -16,7 +18,7 @@ import "./research.css";
 const defaultMarketClient = new MarketApiClient();
 type ResearchClient = Pick<MarketApiClient, "getCompany" | "getQuotes" | "getBars" | "getFinancials" | "getFilings" | "getNews" | "getEvents" | "getUniverse">;
 
-export function ResearchPage({ marketClient = defaultMarketClient }: { marketClient?: ResearchClient }) {
+export function ResearchPage({ marketClient = defaultMarketClient, thesisService, monitorState }: { marketClient?: ResearchClient; thesisService?: ThesisStateService; monitorState?: MonitorStateService }) {
   const { symbol = "" } = useParams();
   const [core, setCore] = useState<{ profile: CompanyProfile; quote?: MarketQuote }>();
   const [coreError, setCoreError] = useState<string>();
@@ -68,7 +70,7 @@ export function ResearchPage({ marketClient = defaultMarketClient }: { marketCli
         <ResearchDataSection title="公司行为" request={events} errorMessage="公司行为暂时不可用" emptyMessage="暂无公司行为">
           {(items) => <CompanyActions items={items.filter((event) => event.type !== "earnings")} showHeading={false} />}
         </ResearchDataSection>
-        <ResearchMonitorPanel symbol={symbol} marketClient={marketClient} onThesisSaved={setThesisId} />
+        <ResearchMonitorPanel symbol={symbol} marketClient={marketClient} onThesisSaved={setThesisId} thesisService={thesisService} monitorState={monitorState} />
         <div>
           <button type="button" disabled={!thesisId || core.quote?.price === undefined} onClick={buy}>确认模拟买入</button>
           <p role="status">{message}</p>

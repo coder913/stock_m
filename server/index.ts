@@ -19,6 +19,8 @@ import { OutboxPublisher } from "./platform/outboxPublisher";
 import { IdempotencyRepository } from "./platform/idempotencyRepository";
 import { PostgresDiscoveryStateRepository } from "./discovery/discoveryStateRepository";
 import { PostgresWatchlistRepository } from "./watchlists/watchlistRepository";
+import { PostgresThesisRepository } from "./thesis/thesisRepository";
+import { PostgresMonitorStateRepository } from "./monitoring/monitorStateRepository";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
@@ -26,6 +28,7 @@ await migrateToLatest(database);
 const redis = new IORedis(config.redisUrl, { maxRetriesPerRequest: null });
 const eventQueue = new Queue("platform-events", { connection: redis });
 const outbox = new OutboxRepository();
+const idempotency = new IdempotencyRepository();
 const outboxPublisher = new OutboxPublisher(database, outbox, eventQueue);
 mkdirSync(".data", { recursive: true });
 const cache = new SqliteMarketDataCache(join(".data", "stock-m-cache.sqlite"));
@@ -48,11 +51,13 @@ const app = buildApp({
   macro: { gateway, provider: fred },
   stateDiscovery: {
     database,
-    idempotency: new IdempotencyRepository(),
+    idempotency,
     outbox,
     discovery: new PostgresDiscoveryStateRepository(database),
     watchlists: new PostgresWatchlistRepository(database),
   },
+  thesisState: { database, idempotency, outbox, repository: new PostgresThesisRepository(database) },
+  monitorState: { database, idempotency, outbox, repository: new PostgresMonitorStateRepository(database) },
 });
 
 await app.listen({ host: config.host, port: config.port });

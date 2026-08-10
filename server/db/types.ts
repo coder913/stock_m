@@ -91,6 +91,14 @@ export interface ConditionEvaluationTable { id: string; conditionId: string; con
 export interface MonitorAlertTable { id: string; dedupeKey: string; symbol: string; thesisVersionId: string; conditionId: string; conditionVersion: string; fromStatus: string | null; toStatus: "pending" | "confirmed" | "breached" | "expired"; severity: "low" | "medium" | "high"; title: string; explanation: string; asOf: NullableTimestamp; createdAt: Timestamp; }
 export interface MonitorAlertActionTable { id: string; ordinal: Generated<number>; alertId: string; type: "read" | "snooze" | "archive" | "restore"; untilAt: NullableTimestamp; createdAt: Timestamp; }
 export interface ThesisReviewTable { id: string; thesisVersionId: string; symbol: string; decision: "reaffirmed" | "invalidated" | "archived"; note: string | null; conditionSnapshotJson: unknown; createdAt: Timestamp; }
+export interface ManualPortfolioTable { id: string; revision: number; }
+export interface ManualPortfolioSettingsTable { portfolioId: string; initialCash: ColumnType<string, string | number, string | number>; inceptionDate: ColumnType<string, string, string>; benchmarkSymbol: string; baseCurrency: "USD"; version: number; updatedAt: Timestamp; }
+export interface ManualPortfolioLedgerEventTable { id: string; ordinal: Generated<number>; portfolioId: string; type: "buy"|"sell"|"dividend"|"fee"|"deposit"|"withdrawal"|"split"; symbol: string|null; occurredAt: Timestamp; quantity: ColumnType<string|null, string|number|null, never>; price: ColumnType<string|null, string|number|null, never>; amount: ColumnType<string|null, string|number|null, never>; thesisVersionId: string|null; reason: string|null; oldRate: ColumnType<string|null, string|number|null, never>; newRate: ColumnType<string|null, string|number|null, never>; quantityMultiplier: ColumnType<string|null, string|number|null, never>; source: "alpaca"|"manual"|null; sourceEventId: string|null; confirmedAt: NullableTimestamp; }
+export interface IgnoredSplitTable { sourceEventId: string; portfolioId: string; symbol: string; note: string; ignoredAt: Timestamp; }
+export interface PortfolioAlertTable { id:string; portfolioId:string; dedupeKey:string; rule:string; severity:"info"|"warning"|"critical"; symbol:string|null; message:string; currentValueJson:unknown; thresholdJson:unknown; createdAt:Timestamp; }
+export interface PortfolioAlertActionTable { id:string; ordinal:Generated<number>; alertId:string; type:string; untilAt:NullableTimestamp; createdAt:Timestamp; }
+export interface PortfolioSnapshotTable { id:string; portfolioId:string; asOf:Timestamp; snapshotJson:unknown; createdAt:Timestamp; }
+export interface PortfolioWeeklyReviewTable { id:string; portfolioId:string; week:string; version:number; snapshotId:string; judgment:string; action:string; result:string; nextObservationsJson:unknown; tradeCount:number; openAlertCount:number; createdAt:Timestamp; }
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -110,4 +118,12 @@ export interface Database {
   "monitor.alert": MonitorAlertTable;
   "monitor.alert_action": MonitorAlertActionTable;
   "monitor.thesis_review": ThesisReviewTable;
+  "core.manual_portfolio": ManualPortfolioTable;
+  "core.manual_portfolio_settings": ManualPortfolioSettingsTable;
+  "core.manual_portfolio_ledger_event": ManualPortfolioLedgerEventTable;
+  "core.manual_portfolio_ignored_split": IgnoredSplitTable;
+  "core.portfolio_alert": PortfolioAlertTable;
+  "core.portfolio_alert_action": PortfolioAlertActionTable;
+  "core.portfolio_snapshot": PortfolioSnapshotTable;
+  "core.portfolio_weekly_review": PortfolioWeeklyReviewTable;
 }

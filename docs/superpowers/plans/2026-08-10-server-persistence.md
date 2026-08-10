@@ -400,7 +400,7 @@ git commit -m "feat: persist thesis monitoring state"
 - Produces: server-owned manual settings, ledger, ignored splits, alerts, snapshots and reviews.
 - Consumes: existing `LedgerEvent`, `PortfolioSettings`, `WeeklyReview` and performance engine contracts.
 
-- [ ] **Step 1: Add failing ledger and review repository tests**
+- [x] **Step 1: Add failing ledger and review repository tests**
 
 Cover append-only event order, unique split `sourceEventId`, withdrawal cash checks, sell quantity checks, immutable weekly review versions and exact `numeric(28,8)` round trips.
 
@@ -411,32 +411,32 @@ expect((await reviews.submit(input)).version).toBe(1);
 expect((await reviews.submit(input)).version).toBe(2);
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm run test:integration -- server/portfolio`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement normalized portfolio tables**
+- [x] **Step 3: Implement normalized portfolio tables**
 
 Create one `manual_portfolio`, settings, append-only ledger event, ignored split decision, portfolio alert/action, snapshot and weekly review tables. Store discriminated ledger fields in typed nullable columns plus a `type` check constraint; do not store events as opaque JSON.
 
 Move ledger/settings/alert/review transport types into `shared/portfolio.ts` and re-export them from `src/features/portfolio/domain.ts`. Database repositories, route schemas and client adapters must use the same discriminated union.
 
-- [ ] **Step 4: Implement routes and client adapter**
+- [x] **Step 4: Implement routes and client adapter**
 
 Expose settings, ledger, split-decision, alert-action, snapshot and review commands. Return the same deterministic domain errors currently shown by the page. Add a batch read endpoint returning one consistent portfolio revision for page bootstrap. Register the route group and construct repositories in the production composition root.
 
-- [ ] **Step 5: Refactor PortfolioPage and performance loader**
+- [x] **Step 5: Refactor PortfolioPage and performance loader**
 
 Load settings/events/decisions/reviews asynchronously from `PortfolioApiRepository`. Pass immutable arrays into existing analytics/performance code. A failed mutation must not update React state optimistically; reload the server revision after success.
 
-- [ ] **Step 6: Run portfolio and performance tests**
+- [x] **Step 6: Run portfolio and performance tests**
 
 Run: `npm test -- src/features/portfolio server/routes/manualPortfolioRoutes.test.ts`  
 Run: `npm run test:integration -- server/portfolio`  
 Expected: PASS, including the 226 existing regression tests.
 
-- [ ] **Step 7: Commit Task 5**
+- [x] **Step 7: Commit Task 5**
 
 ```bash
 git add server/db/migrations/004_manual_portfolio.ts server/portfolio server/routes/manualPortfolioRoutes* server/app.ts server/index.ts shared/portfolio.ts src/features/portfolio

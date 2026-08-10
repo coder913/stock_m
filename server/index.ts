@@ -21,6 +21,8 @@ import { PostgresDiscoveryStateRepository } from "./discovery/discoveryStateRepo
 import { PostgresWatchlistRepository } from "./watchlists/watchlistRepository";
 import { PostgresThesisRepository } from "./thesis/thesisRepository";
 import { PostgresMonitorStateRepository } from "./monitoring/monitorStateRepository";
+import { PostgresManualPortfolioRepository } from "./portfolio/manualPortfolioRepository";
+import { PostgresPortfolioReviewRepository } from "./portfolio/portfolioReviewRepository";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
@@ -58,6 +60,7 @@ const app = buildApp({
   },
   thesisState: { database, idempotency, outbox, repository: new PostgresThesisRepository(database) },
   monitorState: { database, idempotency, outbox, repository: new PostgresMonitorStateRepository(database) },
+  manualPortfolio: { database, idempotency, outbox, repository: new PostgresManualPortfolioRepository(database), reviews: new PostgresPortfolioReviewRepository(database) },
 });
 
 await app.listen({ host: config.host, port: config.port });

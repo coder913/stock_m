@@ -4,13 +4,16 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { PortfolioPage } from "./PortfolioPage";
 import { PortfolioLedger } from "./portfolioLedger";
 import { MemoryRouter } from "react-router-dom";
+import { ReviewRepository } from "./reviewRepository";
+
+function portfolioState() { const ledger=new PortfolioLedger(localStorage);const reviews=new ReviewRepository(localStorage);let alerts:any[]=[];return {getBootstrap:async()=>({revision:ledger.list().length,settings:{version:1 as const,initialCash:10_000,inceptionDate:"2026-08-01",benchmarkSymbol:"SPY",baseCurrency:"USD" as const,updatedAt:"2026-08-10T00:00:00Z"},events:ledger.list(),ignoredSplits:[],alerts,reviews:reviews.list()}),append:async(input:any)=>ledger.append(input),saveSettings:async(input:any)=>({...input,version:1 as const,updatedAt:"2026-08-10T00:00:00Z"}),ignoreSplit:async(input:any)=>input,reconcileAlerts:async(input:any[])=>{alerts=input.map((item,index)=>({...item,id:`alert-${index}`,status:"open",createdAt:"2026-08-10T00:00:00Z",updatedAt:"2026-08-10T00:00:00Z"}));return alerts;},actAlert:async(id:string,input:any)=>{const alert=alerts.find(item=>item.id===id);if(input.type==="resolve")alert.status="resolved";if(input.type==="snooze"){alert.status="snoozed";alert.snoozedUntil=input.until;}return alert;},submitReview:async(input:any)=>reviews.submit(input)};}
 
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
 test("shows portfolio tabs and records a dividend using the amount form", async () => {
   const user = userEvent.setup();
-  render(<PortfolioPage />);
+  render(<PortfolioPage portfolioState={portfolioState() as never} />);
   expect(screen.getByRole("tab", { name: "组合总览" })).toBeVisible();
   await user.click(screen.getByRole("tab", { name: "持仓与交易" }));
   await user.click(screen.getByRole("button", { name: "记录交易" }));
@@ -23,7 +26,7 @@ test("snoozes a concentration alert and creates a versioned weekly review", asyn
   const ledger = new PortfolioLedger(localStorage);
   ledger.append({ type: "buy", symbol: "NVDA", quantity: 20, price: 167.32, thesisVersionId: "v1", occurredAt: "2026-08-06T10:00:00Z" });
   const user = userEvent.setup();
-  render(<PortfolioPage />);
+  render(<PortfolioPage portfolioState={portfolioState() as never} />);
   await user.click(screen.getByRole("tab", { name: "复盘中心" }));
   expect(screen.getByText("NVDA 仓位集中")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "暂缓 NVDA 仓位集中" }));
@@ -38,7 +41,7 @@ test("uses the live quote for an existing ledger position", async () => {
   const ledger = new PortfolioLedger(localStorage);
   ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "v1", occurredAt: "2026-08-06T10:00:00Z" });
   const client = { getQuotes: vi.fn().mockResolvedValue({ data: [{ symbol: "NVDA", price: 175, previousClose: 170, currency: "USD", marketSession: "regular" }], source: "alpaca", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, notices: [] }) };
-  render(<PortfolioPage marketClient={client as never} />);
+  render(<PortfolioPage marketClient={client as never} portfolioState={portfolioState() as never} />);
   expect(await screen.findByText("10150.00")).toBeVisible();
   expect(client.getQuotes).toHaveBeenCalledWith(["NVDA"]);
 });
@@ -48,7 +51,7 @@ test("renders thesis health without changing holdings", async () => {
   ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
   const service = { evaluate: vi.fn().mockResolvedValue({ conditions: [], alertsCreated: 0, warnings: [] }), getHealth: vi.fn().mockReturnValue({ breachedCount: 1, expiringCount: 0, unreadAlertCount: 1, items: [{ symbol: "NVDA", thesisVersionId: "thesis-1", status: "review-needed", breachedCount: 1, expiringCount: 0, unreadAlertCount: 1 }] }) };
   const client = { getQuotes: vi.fn().mockResolvedValue({ data: [{ symbol: "NVDA", price: 175, previousClose: 170, currency: "USD", marketSession: "regular" }], source: "alpaca", asOf: "2026-08-09T10:00:00Z", fetchedAt: "2026-08-09T10:00:00Z", expiresAt: "2026-08-09T10:01:00Z", stale: false, notices: [] }) };
-  render(<MemoryRouter><PortfolioPage marketClient={client as never} monitorService={service as never} /></MemoryRouter>);
+  render(<MemoryRouter><PortfolioPage marketClient={client as never} monitorService={service as never} portfolioState={portfolioState() as never} /></MemoryRouter>);
 
   expect(await screen.findByText("需要复核")).toBeVisible();
   expect(screen.getByText("受损条件 1")).toBeVisible();
@@ -60,7 +63,7 @@ test("keeps valuation visible when thesis monitoring fails", async () => {
   const ledger = new PortfolioLedger(localStorage);
   ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
   const service = { evaluate: vi.fn().mockRejectedValue(new Error("offline")), getHealth: vi.fn() };
-  render(<MemoryRouter><PortfolioPage monitorService={service as never} /></MemoryRouter>);
+  render(<MemoryRouter><PortfolioPage monitorService={service as never} portfolioState={portfolioState() as never} /></MemoryRouter>);
   expect(await screen.findByText("逻辑健康暂时不可用")).toBeVisible();
   expect(screen.getByText("10134.64")).toBeVisible();
   expect(ledger.list()).toHaveLength(1);
@@ -70,7 +73,7 @@ test("shows monitoring recovery warnings beside portfolio health", async () => {
   const ledger = new PortfolioLedger(localStorage);
   ledger.append({ type: "buy", symbol: "NVDA", quantity: 2, price: 100, thesisVersionId: "thesis-1", occurredAt: "2026-08-09T10:00:00Z" });
   const service = { evaluate: vi.fn().mockResolvedValue({ conditions: [], alertsCreated: 0, warnings: ["skipped corrupt monitoring data"] }), getHealth: vi.fn().mockReturnValue({ breachedCount: 0, expiringCount: 0, unreadAlertCount: 0, items: [{ symbol: "NVDA", thesisVersionId: "thesis-1", status: "normal", breachedCount: 0, expiringCount: 0, unreadAlertCount: 0 }] }) };
-  render(<MemoryRouter><PortfolioPage monitorService={service as never} /></MemoryRouter>);
+  render(<MemoryRouter><PortfolioPage monitorService={service as never} portfolioState={portfolioState() as never} /></MemoryRouter>);
 
   expect(await screen.findByText("skipped corrupt monitoring data")).toBeVisible();
   expect(screen.getByText("正常", { exact: true })).toBeVisible();
@@ -78,7 +81,7 @@ test("shows monitoring recovery warnings beside portfolio health", async () => {
 
 test("shows the performance tab and deposit and withdrawal fields", async () => {
   const user = userEvent.setup();
-  render(<PortfolioPage />);
+  render(<PortfolioPage portfolioState={portfolioState() as never} />);
   expect(screen.getByRole("tab", { name: "绩效分析" })).toBeVisible();
   await user.click(screen.getByRole("tab", { name: "持仓与交易" }));
   await user.click(screen.getByRole("button", { name: "记录交易" }));

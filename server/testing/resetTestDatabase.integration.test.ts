@@ -18,6 +18,11 @@ afterAll(async () => {
 
 test("clears owned state while preserving migrations and recreating singleton rows", async () => {
   const now = new Date("2026-08-10T00:00:00Z");
+  await resetTestDatabase(database);
+  await database.deleteFrom("platform.worker_heartbeat").execute();
+  await database.deleteFrom("monitor.run").execute();
+  await database.deleteFrom("monitor.schedule_state").execute();
+  const migrationsBefore = await database.selectFrom("platform.schema_migration").select("name").orderBy("name").execute();
   await database.insertInto("core.watchlist_group").values({
     id: "reset-me",
     name: "Reset me",
@@ -37,12 +42,16 @@ test("clears owned state while preserving migrations and recreating singleton ro
     delayMinutes: null,
     noticesJson: [],
   }).execute();
+  await database.insertInto("platform.worker_heartbeat").values({ worker: "monitor", state: "ready", queueLag: 2, heartbeatAt: now }).execute();
+  await database.insertInto("monitor.schedule_state").values({ runType: "price", lastSuccessNaturalPeriod: "2026-08-10T10:00-04:00", lastSuccessAt: now, updatedAt: now }).execute();
 
   await resetTestDatabase(database);
 
   expect(await database.selectFrom("core.watchlist_group").selectAll().execute()).toEqual([]);
   expect(await database.selectFrom("market.cache_entry").selectAll().execute()).toEqual([]);
-  expect(await database.selectFrom("platform.schema_migration").select("name").execute()).toHaveLength(6);
+  expect(await database.selectFrom("platform.worker_heartbeat").selectAll().execute()).toEqual([]);
+  expect(await database.selectFrom("monitor.schedule_state").selectAll().execute()).toEqual([]);
+  expect(await database.selectFrom("platform.schema_migration").select("name").orderBy("name").execute()).toEqual(migrationsBefore);
   expect(await database.selectFrom("platform.installation").select("id").execute()).toEqual([{ id: "local-single-user" }]);
   expect(await database.selectFrom("core.user_universe_revision").selectAll().execute()).toEqual([
     { id: "local-single-user", version: 0 },

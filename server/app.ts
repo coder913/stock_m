@@ -18,6 +18,7 @@ import { registerStateDiscoveryRoutes, type StateDiscoveryRouteDependencies } fr
 import { registerThesisStateRoutes, type ThesisStateRouteDependencies } from "./routes/thesisStateRoutes";
 import { registerMonitorStateRoutes, type MonitorStateRouteDependencies } from "./routes/monitorStateRoutes";
 import { registerManualPortfolioRoutes, type ManualPortfolioRouteDependencies } from "./routes/manualPortfolioRoutes";
+import { registerBrowserMigrationRoutes, type BrowserMigrationRouteDependencies } from "./routes/browserMigrationRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
@@ -32,6 +33,7 @@ export interface AppDependencies {
   thesisState?: ThesisStateRouteDependencies;
   monitorState?: MonitorStateRouteDependencies;
   manualPortfolio?: ManualPortfolioRouteDependencies;
+  browserMigration?: BrowserMigrationRouteDependencies;
   staticDir?: string;
 }
 
@@ -67,6 +69,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.thesisState) registerThesisStateRoutes(app, dependencies.thesisState);
   if (dependencies.monitorState) registerMonitorStateRoutes(app, dependencies.monitorState);
   if (dependencies.manualPortfolio) registerManualPortfolioRoutes(app, dependencies.manualPortfolio);
+  if (dependencies.browserMigration) registerBrowserMigrationRoutes(app, dependencies.browserMigration);
   registerCacheRoutes(app, refreshRegistry);
   if (dependencies.staticDir) {
     void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false });

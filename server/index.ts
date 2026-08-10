@@ -23,6 +23,7 @@ import { PostgresThesisRepository } from "./thesis/thesisRepository";
 import { PostgresMonitorStateRepository } from "./monitoring/monitorStateRepository";
 import { PostgresManualPortfolioRepository } from "./portfolio/manualPortfolioRepository";
 import { PostgresPortfolioReviewRepository } from "./portfolio/portfolioReviewRepository";
+import { BrowserMigrationService } from "./migration/browserMigrationService";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
@@ -61,6 +62,7 @@ const app = buildApp({
   thesisState: { database, idempotency, outbox, repository: new PostgresThesisRepository(database) },
   monitorState: { database, idempotency, outbox, repository: new PostgresMonitorStateRepository(database) },
   manualPortfolio: { database, idempotency, outbox, repository: new PostgresManualPortfolioRepository(database), reviews: new PostgresPortfolioReviewRepository(database) },
+  browserMigration: { service: new BrowserMigrationService(database) },
 });
 
 await app.listen({ host: config.host, port: config.port });

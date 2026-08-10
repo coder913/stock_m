@@ -465,7 +465,7 @@ git commit -m "feat: persist manual portfolio state"
 - Produces: canonical `BrowserMigrationDocumentV1`, preview, import and receipt contracts.
 - Consumes: Tasks 3–5 repositories in one database transaction.
 
-- [ ] **Step 1: Write failing export validation tests**
+- [x] **Step 1: Write failing export validation tests**
 
 ```ts
 test("quarantines one invalid item without dropping valid siblings", async () => {
@@ -490,12 +490,12 @@ export const migrationKeys = [
 ] as const;
 ```
 
-- [ ] **Step 2: Run client migration tests and verify RED**
+- [x] **Step 2: Run client migration tests and verify RED**
 
 Run: `npm test -- src/features/migration`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement canonical export and immutable backup**
+- [x] **Step 3: Implement canonical export and immutable backup**
 
 ```ts
 export interface BrowserMigrationDocumentV1 {
@@ -510,27 +510,27 @@ export interface BrowserMigrationDocumentV1 {
 
 Use Web Crypto SHA-256 over canonical UTF-8 JSON. Try to write `stock_m:server-migration-backup:v1` and always provide a Blob download. Import is enabled when the immutable local write succeeds or, after a quota failure, when the browser reports a completed user-initiated download; source business keys remain untouched in both cases.
 
-- [ ] **Step 4: Write failing server import tests**
+- [x] **Step 4: Write failing server import tests**
 
 Cover empty target success, full rollback on one insert failure, preserved IDs/timestamps, identical retry, non-empty target conflict, hash mismatch and category-count verification.
 
-- [ ] **Step 5: Implement preview/import/receipt transaction**
+- [x] **Step 5: Implement preview/import/receipt transaction**
 
 Create `platform.browser_migration_receipt` with unique document hash, category counts/hashes and completed timestamp. Lock the installation row during import, verify all target category counts are zero, call each repository’s `importPreservingIdentity` method, verify counts, and write the receipt before commit.
 
 Register preview/import/receipt routes with the fully constructed migration service in `server/index.ts`; the service receives every Task 3–5 import repository explicitly.
 
-- [ ] **Step 6: Implement the blocking migration wizard**
+- [x] **Step 6: Implement the blocking migration wizard**
 
 States are `detecting`, `preview`, `backing-up`, `importing`, `verifying`, `complete` and `blocked`. Do not render normal routes until the server has a receipt or all recognized keys are empty. On success store `stock_m:server-migration-receipt:v1` without deleting source keys.
 
-- [ ] **Step 7: Run unit, integration and component tests**
+- [x] **Step 7: Run unit, integration and component tests**
 
 Run: `npm test -- src/features/migration server/routes/browserMigrationRoutes.test.ts`  
 Run: `npm run test:integration -- server/migration`  
 Expected: PASS.
 
-- [ ] **Step 8: Commit Task 6**
+- [x] **Step 8: Commit Task 6**
 
 ```bash
 git add server/db/migrations/005_browser_migration.ts server/migration server/routes/browserMigrationRoutes* server/app.ts server/index.ts src/features/migration src/app/App.tsx

@@ -99,6 +99,8 @@ export interface PortfolioAlertTable { id:string; portfolioId:string; dedupeKey:
 export interface PortfolioAlertActionTable { id:string; ordinal:Generated<number>; alertId:string; type:string; untilAt:NullableTimestamp; createdAt:Timestamp; }
 export interface PortfolioSnapshotTable { id:string; portfolioId:string; asOf:Timestamp; snapshotJson:unknown; createdAt:Timestamp; }
 export interface PortfolioWeeklyReviewTable { id:string; portfolioId:string; week:string; version:number; snapshotId:string; judgment:string; action:string; result:string; nextObservationsJson:unknown; tradeCount:number; openAlertCount:number; createdAt:Timestamp; }
+export interface BrowserMigrationReceiptTable{id:string;documentHash:string;browserId:string;categoryCountsJson:unknown;categoryHashesJson:unknown;completedAt:Timestamp;}
+export interface BrowserMigrationRecordTable{category:string;ordinal:number;payloadJson:unknown;}
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -126,4 +128,6 @@ export interface Database {
   "core.portfolio_alert_action": PortfolioAlertActionTable;
   "core.portfolio_snapshot": PortfolioSnapshotTable;
   "core.portfolio_weekly_review": PortfolioWeeklyReviewTable;
+  "platform.browser_migration_receipt":BrowserMigrationReceiptTable;
+  "platform.browser_migration_record":BrowserMigrationRecordTable;
 }

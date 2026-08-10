@@ -72,4 +72,16 @@ export class PushSubscriptionRepository {
       .where("revokedAt", "is", null).where("invalidAt", "is", null).orderBy("createdAt", "asc").execute();
     return rows.map((row) => ({ id: row.id, endpointHash: row.endpointHash, subscription: decryptSubscription(row, this.encryptionKey) }));
   }
+
+  async listActiveIds(): Promise<string[]> {
+    const rows = await this.database.selectFrom("notification.push_subscription").select("id")
+      .where("revokedAt", "is", null).where("invalidAt", "is", null).orderBy("createdAt", "asc").execute();
+    return rows.map(({ id }) => id);
+  }
+
+  async loadActiveById(id: string): Promise<ActivePushSubscription | undefined> {
+    const row = await this.database.selectFrom("notification.push_subscription").selectAll().where("id", "=", id)
+      .where("revokedAt", "is", null).where("invalidAt", "is", null).executeTakeFirst();
+    return row ? { id: row.id, endpointHash: row.endpointHash, subscription: decryptSubscription(row, this.encryptionKey) } : undefined;
+  }
 }

@@ -18,6 +18,8 @@ export async function resetTestDatabase(database: Kysely<Database>): Promise<voi
         platform.browser_migration_record,
         platform.browser_migration_receipt,
         platform.installation,
+        notification.delivery_attempt,
+        notification.delivery,
         notification.push_subscription,
         monitor.alert_action,
         monitor.alert,

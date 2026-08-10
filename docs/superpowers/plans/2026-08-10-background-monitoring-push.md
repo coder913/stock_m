@@ -378,7 +378,7 @@ git commit -m "feat: persist encrypted push subscriptions"
 - Consumes: `monitor.alert.created` Outbox events and test-delivery commands.
 - Produces: one delivery per `(alertId,subscriptionId)`, bounded retries and dead-letter records.
 
-- [ ] **Step 1: Write failing retry/dedupe tests**
+- [x] **Step 1: Write failing retry/dedupe tests**
 
 ```ts
 expect(classifyPushFailure({ statusCode: 410 })).toEqual({ action: "invalidate" });
@@ -388,24 +388,24 @@ await service.consume(event);
 expect(await repository.countDeliveries(event.alertId)).toBe(1);
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm test -- server/notifications/notificationService.test.ts server/notifications/pushProvider.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Create delivery tables and provider adapter**
+- [x] **Step 3: Create delivery tables and provider adapter**
 
 Create unique `(alert_id,subscription_id)` deliveries and attempt rows. Payload contains alert ID, symbol, severity, concise title/explanation and relative URL only. Enforce a 3,000-byte JSON limit.
 
-- [ ] **Step 4: Implement Inbox consumption and retry scheduling**
+- [x] **Step 4: Implement Inbox consumption and retry scheduling**
 
 The worker decrypts one active subscription at send time, records each attempt, invalidates `404/410`, retries timeout/`429/5xx` at 1/5/15/60 minutes, then writes `platform.dead_letter`. Successful delivery is terminal.
 
-- [ ] **Step 5: Run real Redis/PostgreSQL recovery tests**
+- [x] **Step 5: Run real Redis/PostgreSQL recovery tests**
 
 Delete the BullMQ Redis keys after an alert transaction, run Outbox republish, and assert exactly one successful delivery after recovery.
 
-- [ ] **Step 6: Commit Task 6**
+- [x] **Step 6: Commit Task 6**
 
 ```bash
 git add server/db/migrations/010_notification_deliveries.ts server/notifications server/workers/notificationWorker.ts

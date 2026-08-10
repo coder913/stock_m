@@ -19,10 +19,13 @@ test("upserts by endpoint hash, reactivates revoked subscriptions, and never ret
   expect(second).not.toHaveProperty("endpoint");
   expect(JSON.stringify(second)).not.toContain("rotated");
   expect((await repository.loadActive()).map((item) => item.subscription.keys.auth)).toEqual(["rotated"]);
+  expect(await repository.listActiveIds()).toEqual([first.id]);
+  expect((await repository.loadActiveById(first.id))?.subscription.keys.auth).toBe("rotated");
 });
 
 test("invalid subscriptions are excluded from active delivery", async () => {
   const saved = await repository.upsert(subscription, "Chrome");
   await repository.invalidate(saved.id);
   expect(await repository.loadActive()).toEqual([]);
+  expect(await repository.loadActiveById(saved.id)).toBeUndefined();
 });

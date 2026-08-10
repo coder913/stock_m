@@ -1,4 +1,4 @@
-export type LedgerEventType = "buy" | "sell" | "dividend" | "fee";
+export type LedgerEventType = "buy" | "sell" | "dividend" | "fee" | "deposit" | "withdrawal" | "split";
 
 export interface LedgerEvent {
   id: string;
@@ -10,10 +10,32 @@ export interface LedgerEvent {
   amount?: number;
   thesisVersionId?: string;
   reason?: string;
+  oldRate?: number;
+  newRate?: number;
+  quantityMultiplier?: number;
+  source?: "alpaca" | "manual";
+  sourceEventId?: string;
+  confirmedAt?: string;
 }
 
 export type LedgerEventInput = Omit<LedgerEvent, "id">;
 export interface MigrationResult { migrated: number; skipped: boolean; }
+
+export interface PortfolioSettings {
+  version: 1;
+  initialCash: number;
+  inceptionDate: string;
+  benchmarkSymbol: string;
+  baseCurrency: "USD";
+  updatedAt: string;
+}
+
+export interface IgnoredSplitDecision {
+  sourceEventId: string;
+  symbol: string;
+  note: string;
+  ignoredAt: string;
+}
 
 export interface PortfolioQuote { price: number; previousClose: number; }
 export interface PositionSnapshot { symbol: string; quantity: number; averageCost: number; marketPrice?: number; marketValue?: number; realizedPnl: number; unrealizedPnl?: number; weight?: number; sector: string; }

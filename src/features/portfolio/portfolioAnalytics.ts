@@ -1,4 +1,5 @@
 import type { LedgerEvent, PortfolioAnalyticsInput, PortfolioAnalyticsResult, PositionSnapshot } from "./domain";
+import { sortLedgerEvents } from "./portfolioLedger";
 
 interface WorkingPosition { symbol: string; quantity: number; cost: number; realizedPnl: number; }
 
@@ -11,11 +12,14 @@ export function calculateDrawdown(values: number[]): { current: number; maximum:
 
 export function calculatePortfolio(input: PortfolioAnalyticsInput): PortfolioAnalyticsResult {
   const positions = new Map<string, WorkingPosition>(); let cash = input.initialCash; let dividends = 0; let fees = 0;
-  for (const event of [...input.events].sort((left, right) => left.occurredAt.localeCompare(right.occurredAt))) {
+  for (const event of sortLedgerEvents(input.events)) {
+    if (event.type === "split" && event.symbol) { const item = positions.get(event.symbol); if (item) item.quantity = Math.round((item.quantity * event.quantityMultiplier! + Number.EPSILON) * 1e8) / 1e8; }
     if (event.type === "buy" && event.symbol) { const item = positions.get(event.symbol) ?? { symbol: event.symbol, quantity: 0, cost: 0, realizedPnl: 0 }; item.quantity += event.quantity!; item.cost += event.quantity! * event.price!; positions.set(item.symbol, item); cash -= event.quantity! * event.price!; }
     if (event.type === "sell" && event.symbol) { const item = positions.get(event.symbol) ?? { symbol: event.symbol, quantity: 0, cost: 0, realizedPnl: 0 }; const average = item.quantity ? item.cost / item.quantity : 0; item.realizedPnl += (event.price! - average) * event.quantity!; item.quantity -= event.quantity!; item.cost -= average * event.quantity!; positions.set(item.symbol, item); cash += event.quantity! * event.price!; }
     if (event.type === "dividend") { cash += event.amount!; dividends += event.amount!; }
     if (event.type === "fee") { cash -= event.amount!; fees += event.amount!; }
+    if (event.type === "deposit") cash += event.amount!;
+    if (event.type === "withdrawal") cash -= event.amount!;
   }
   const raw = [...positions.values()].filter((item) => item.quantity > 0);
   const missingPrice = raw.some((item) => !input.quotes[item.symbol]);

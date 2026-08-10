@@ -62,3 +62,15 @@ test("uses a loopback internal API URL by default and supports the Compose servi
   const compose = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", INTERNAL_API_BASE_URL: "http://web-api:8787" });
   expect(compose.internalApiBaseUrl).toBe("http://web-api:8787");
 });
+
+test("enables Push only with a complete valid VAPID and 32-byte encryption configuration", () => {
+  const disabled = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com" });
+  expect(disabled.notifications.configured).toBe(false);
+  const enabled = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", VAPID_PUBLIC_KEY: "public", VAPID_PRIVATE_KEY: "private", VAPID_SUBJECT: "mailto:owner@example.com", PUSH_SUBSCRIPTION_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64") });
+  expect(enabled.notifications).toEqual({ configured: true, publicKey: "public", subject: "mailto:owner@example.com" });
+  expect(JSON.stringify(enabled.publicStatus)).not.toContain("private");
+});
+
+test("rejects invalid Push subjects and encryption key lengths", () => {
+  expect(() => loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", VAPID_PUBLIC_KEY: "public", VAPID_PRIVATE_KEY: "private", VAPID_SUBJECT: "owner@example.com", PUSH_SUBSCRIPTION_ENCRYPTION_KEY: Buffer.alloc(16).toString("base64") })).toThrow();
+});

@@ -322,7 +322,7 @@ git commit -m "feat: read durable monitor results"
 - Produces: create/revoke/status/test Push APIs and encrypted subscription storage.
 - Consumes: `VAPID_*` and `PUSH_SUBSCRIPTION_ENCRYPTION_KEY` server configuration.
 
-- [ ] **Step 1: Add failing crypto/repository tests**
+- [x] **Step 1: Add failing crypto/repository tests**
 
 ```ts
 const encrypted = encryptSubscription(subscription, key, fixedNonce);
@@ -332,26 +332,26 @@ expect(decryptSubscription(encrypted, key)).toEqual(subscription);
 
 Cover wrong key rejection, endpoint-hash upsert, revoked/invalid state and API responses that omit endpoint keys.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm test -- server/notifications server/routes/notificationRoutes.test.ts server/config.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Add dependencies and validated configuration**
+- [x] **Step 3: Add dependencies and validated configuration**
 
 Add `web-push` and `@types/web-push`. VAPID subject must be `mailto:` or HTTPS. Encryption key decodes to exactly 32 bytes. Missing Push settings yields `notifications.configured=false` rather than server startup failure.
 
-- [ ] **Step 4: Implement AES-256-GCM storage**
+- [x] **Step 4: Implement AES-256-GCM storage**
 
 Store endpoint hash, ciphertext, IV, auth tag, user agent, created/last-seen/revoked/invalid timestamps. Never log plaintext subscriptions.
 
-- [ ] **Step 5: Implement subscription routes**
+- [x] **Step 5: Implement subscription routes**
 
 Routes: `GET /api/v1/notifications/status`, `POST /subscriptions`, `DELETE /subscriptions/:endpointHash`, and `POST /test`. All mutations require idempotency. Test notification emits a durable test-delivery command, not a direct HTTP push.
 
 Register these routes only when notification dependencies are supplied; production composition injects configured/unconfigured status without exposing secrets.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- server/notifications server/routes/notificationRoutes.test.ts server/config.test.ts`  
 Run: `npm run test:integration -- server/notifications/pushSubscriptionRepository.integration.test.ts`  

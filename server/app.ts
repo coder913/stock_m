@@ -21,9 +21,10 @@ import { registerManualPortfolioRoutes, type ManualPortfolioRouteDependencies } 
 import { registerBrowserMigrationRoutes, type BrowserMigrationRouteDependencies } from "./routes/browserMigrationRoutes";
 import type { HealthService } from "./platform/healthService";
 import { registerInternalSnapshotRoutes, type InternalSnapshotRouteDependencies } from "./routes/internalSnapshotRoutes";
+import { registerNotificationRoutes, type NotificationRouteDependencies } from "./routes/notificationRoutes";
 
 export interface AppDependencies {
-  config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
+  config: Pick<ServerConfig, "host" | "port" | "providers"> & { publicStatus: { providers: Record<string, { configured: boolean }>; notifications?: ServerConfig["notifications"] } };
   cache: HealthCache;
   refreshRegistry?: RefreshRegistry;
   market?: { gateway: MarketDataGateway; provider: MarketProvider };
@@ -38,6 +39,7 @@ export interface AppDependencies {
   browserMigration?: BrowserMigrationRouteDependencies;
   health?: Pick<HealthService, "liveness" | "readiness">;
   internalSnapshots?: InternalSnapshotRouteDependencies;
+  notifications?: NotificationRouteDependencies;
   staticDir?: string;
 }
 
@@ -75,6 +77,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.monitorState) registerMonitorStateRoutes(app, dependencies.monitorState);
   if (dependencies.manualPortfolio) registerManualPortfolioRoutes(app, dependencies.manualPortfolio);
   if (dependencies.browserMigration) registerBrowserMigrationRoutes(app, dependencies.browserMigration);
+  if (dependencies.notifications) registerNotificationRoutes(app, dependencies.notifications);
   registerCacheRoutes(app, refreshRegistry);
   if (dependencies.staticDir) {
     void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false });

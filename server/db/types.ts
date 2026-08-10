@@ -107,6 +107,7 @@ export interface MarketRefreshAttemptTable { id:Generated<number>; cacheKey:stri
 export interface WorkerHeartbeatTable { worker:"monitor"|"notifications"; state:"starting"|"ready"|"degraded"|"stopping"; queueLag:number; heartbeatAt:Timestamp; }
 export interface MonitorScheduleStateTable { runType:"price"|"financial"|"event"; lastSuccessNaturalPeriod:string; lastSuccessAt:Timestamp; updatedAt:Timestamp; }
 export interface MonitorRunTable { id:string; runType:"price"|"financial"|"event"; naturalPeriod:string; scheduledFor:Timestamp; catchUp:boolean; status:"claimed"|"running"|"succeeded"|"failed"; dataState:"fresh"|"stale"|"unavailable"|null; diagnosticsJson:unknown; createdAt:Timestamp; startedAt:NullableTimestamp; finishedAt:NullableTimestamp; }
+export interface PushSubscriptionTable { id:string; endpointHash:string; ciphertext:string; iv:string; authTag:string; userAgent:string; createdAt:Timestamp; lastSeenAt:Timestamp; revokedAt:NullableTimestamp; invalidAt:NullableTimestamp; }
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -142,4 +143,5 @@ export interface Database {
   "platform.worker_heartbeat":WorkerHeartbeatTable;
   "monitor.schedule_state":MonitorScheduleStateTable;
   "monitor.run":MonitorRunTable;
+  "notification.push_subscription":PushSubscriptionTable;
 }

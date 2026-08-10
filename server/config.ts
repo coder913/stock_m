@@ -14,11 +14,13 @@ export interface ServerConfig {
     notificationConcurrency: number;
   };
   providers: Record<"alpaca" | "sec" | "finnhub" | "fred", ProviderConfiguration>;
-  publicStatus: { providers: Record<string, ProviderConfiguration> };
+  notifications: { configured: boolean; publicKey?: string; subject?: string };
+  publicStatus: { providers: Record<string, ProviderConfiguration>; notifications: { configured: boolean; publicKey?: string; subject?: string } };
   secrets: {
     alpaca?: { keyId: string; secretKey: string };
     finnhub?: { apiKey: string };
     fred?: { apiKey: string };
+    push?: { privateKey: string; subscriptionEncryptionKey: Buffer };
     secUserAgent: string;
   };
 }
@@ -43,7 +45,18 @@ const environmentSchema = z.object({
   INTERNAL_API_BASE_URL: z.string().url().optional(),
   MONITOR_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
   NOTIFICATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
+  VAPID_PUBLIC_KEY: optionalNonEmptyString,
+  VAPID_PRIVATE_KEY: optionalNonEmptyString,
+  VAPID_SUBJECT: optionalNonEmptyString,
+  PUSH_SUBSCRIPTION_ENCRYPTION_KEY: optionalNonEmptyString,
 });
+
+function decodeEncryptionKey(value: string): Buffer {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) throw new Error("PUSH_SUBSCRIPTION_ENCRYPTION_KEY must be valid base64");
+  const key = Buffer.from(value, "base64");
+  if (key.length !== 32) throw new Error("PUSH_SUBSCRIPTION_ENCRYPTION_KEY must decode to exactly 32 bytes");
+  return key;
+}
 
 export function loadServerConfig(environment: Record<string, string | undefined>): ServerConfig {
   const parsed = environmentSchema.parse(environment);
@@ -56,6 +69,15 @@ export function loadServerConfig(environment: Record<string, string | undefined>
     finnhub: { configured: Boolean(parsed.FINNHUB_API_KEY) },
     fred: { configured: Boolean(parsed.FRED_API_KEY) },
   };
+  const pushValues = [parsed.VAPID_PUBLIC_KEY, parsed.VAPID_PRIVATE_KEY, parsed.VAPID_SUBJECT, parsed.PUSH_SUBSCRIPTION_ENCRYPTION_KEY];
+  const hasAnyPushValue = pushValues.some(Boolean);
+  const hasAllPushValues = pushValues.every(Boolean);
+  if (hasAnyPushValue && !hasAllPushValues) throw new Error("Push configuration must include all VAPID and encryption values");
+  if (parsed.VAPID_SUBJECT && !/^(mailto:|https:\/\/)/.test(parsed.VAPID_SUBJECT)) throw new Error("VAPID_SUBJECT must use mailto: or https://");
+  const subscriptionEncryptionKey = parsed.PUSH_SUBSCRIPTION_ENCRYPTION_KEY ? decodeEncryptionKey(parsed.PUSH_SUBSCRIPTION_ENCRYPTION_KEY) : undefined;
+  const notifications = hasAllPushValues
+    ? { configured: true, publicKey: parsed.VAPID_PUBLIC_KEY!, subject: parsed.VAPID_SUBJECT! }
+    : { configured: false };
   const port = parsed.PORT ?? 8787;
   return {
     host: parsed.HOST ?? "127.0.0.1",
@@ -69,11 +91,13 @@ export function loadServerConfig(environment: Record<string, string | undefined>
       notificationConcurrency: parsed.NOTIFICATION_WORKER_CONCURRENCY ?? 1,
     },
     providers,
-    publicStatus: { providers },
+    notifications,
+    publicStatus: { providers, notifications },
     secrets: {
       alpaca: providers.alpaca.configured ? { keyId: parsed.ALPACA_API_KEY_ID!, secretKey: parsed.ALPACA_API_SECRET_KEY! } : undefined,
       finnhub: parsed.FINNHUB_API_KEY ? { apiKey: parsed.FINNHUB_API_KEY } : undefined,
       fred: parsed.FRED_API_KEY ? { apiKey: parsed.FRED_API_KEY } : undefined,
+      push: hasAllPushValues ? { privateKey: parsed.VAPID_PRIVATE_KEY!, subscriptionEncryptionKey: subscriptionEncryptionKey! } : undefined,
       secUserAgent: parsed.SEC_USER_AGENT,
     },
   };

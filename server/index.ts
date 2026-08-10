@@ -31,6 +31,7 @@ import { MonitorScheduleRepository } from "./monitoring/monitorScheduleRepositor
 import { MonitorScheduler } from "./monitoring/monitorScheduler";
 import { createUsEquityMarketCalendar } from "./monitoring/scheduleDomain";
 import { MonitorTaskHealthService } from "./monitoring/monitorTaskHealthService";
+import { PushSubscriptionRepository } from "./notifications/pushSubscriptionRepository";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
@@ -43,6 +44,7 @@ const idempotency = new IdempotencyRepository();
 const outboxPublisher = new OutboxPublisher(database, outbox, eventQueue);
 const monitorSchedules = new MonitorScheduleRepository(database);
 const monitorScheduler = new MonitorScheduler({ repository: monitorSchedules, queue: monitorQueue, calendar: createUsEquityMarketCalendar() });
+const pushSubscriptions = config.secrets.push ? new PushSubscriptionRepository(database, config.secrets.push.subscriptionEncryptionKey) : undefined;
 const cache = new PostgresMarketDataCache(database);
 const gateway = new MarketDataGateway({ cache, now: () => new Date().toISOString() });
 const alpaca = new AlpacaProvider(config.secrets.alpaca);
@@ -77,6 +79,7 @@ const app = buildApp({
     token: config.internalServiceToken,
     loader: new MonitorSnapshotLoader(new MarketApiClient(undefined, config.internalApiBaseUrl)),
   },
+  notifications: { configured: config.notifications.configured, publicKey: config.notifications.publicKey, database, idempotency, outbox, repository: pushSubscriptions },
 });
 
 await app.listen({ host: config.host, port: config.port });

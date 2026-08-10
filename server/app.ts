@@ -14,6 +14,7 @@ import { registerDiscoveryRoutes } from "./routes/discoveryRoutes";
 import { registerEventRoutes, type EventsProvider } from "./routes/eventRoutes";
 import type { UniverseService } from "./universe/universeService";
 import { registerMacroRoutes, type MacroProvider } from "./routes/macroRoutes";
+import { registerStateDiscoveryRoutes, type StateDiscoveryRouteDependencies } from "./routes/stateDiscoveryRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers" | "publicStatus">;
@@ -24,6 +25,7 @@ export interface AppDependencies {
   discovery?: { universe: UniverseService };
   events?: { gateway: MarketDataGateway; provider: EventsProvider };
   macro?: { gateway: MarketDataGateway; provider: MacroProvider };
+  stateDiscovery?: StateDiscoveryRouteDependencies;
   staticDir?: string;
 }
 
@@ -42,7 +44,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
-      return reply.status(error.statusCode).send({ code: error.code, message: error.message, retryable: error.retryable, requestId: request.id });
+      return reply.status(error.statusCode).send({ code: error.code, message: error.message, retryable: error.retryable, requestId: request.id, ...(error.details === undefined ? {} : { details: error.details }) });
     }
     return reply.status(500).send({ code: "INTERNAL_ERROR", message: "服务暂时不可用", retryable: true, requestId: request.id });
   });
@@ -55,7 +57,13 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.discovery) registerDiscoveryRoutes(app, dependencies.discovery);
   if (dependencies.events) registerEventRoutes(app, { ...dependencies.events, refreshRegistry });
   if (dependencies.macro) registerMacroRoutes(app, { ...dependencies.macro, refreshRegistry });
+  if (dependencies.stateDiscovery) registerStateDiscoveryRoutes(app, dependencies.stateDiscovery);
   registerCacheRoutes(app, refreshRegistry);
-  if (dependencies.staticDir) { void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false }); app.get("/*", (_request, reply) => reply.sendFile("index.html")); }
+  if (dependencies.staticDir) {
+    void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false });
+    app.get("/*", (request, reply) => request.url.startsWith("/api/")
+      ? reply.status(404).send({ code: "NOT_FOUND", message: "API route not found", retryable: false, requestId: request.id })
+      : reply.sendFile("index.html"));
+  }
   return app;
 }

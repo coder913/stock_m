@@ -1,17 +1,12 @@
-import type { SavedScreen, ScreenerCondition, ScreenerMetric } from "./domain";
+import type { SavedScreen, SavedScreenInput, ScreenerCondition } from "../../../shared/discoveryState";
+export type { SavedScreenInput } from "../../../shared/discoveryState";
 
 const storageKey = "stock_m:saved-screens:v1";
 const copyConditions = (conditions: ScreenerCondition[]) => conditions.map((condition) => ({
   ...condition,
   value: Array.isArray(condition.value) ? [...condition.value] as [number, number] : condition.value,
 }));
-const copy = (screen: SavedScreen): SavedScreen => ({ ...screen, conditions: copyConditions(screen.conditions), sort: { ...screen.sort } });
-
-export interface SavedScreenInput {
-  name: string;
-  conditions: ScreenerCondition[];
-  sort: { metric: ScreenerMetric; direction: "asc" | "desc" };
-}
+const copy = (screen: SavedScreen): SavedScreen => ({ ...screen, version: screen.version ?? 1, conditions: copyConditions(screen.conditions), sort: { ...screen.sort } });
 
 export class SavedScreenRepository {
   constructor(private readonly storage: Storage) {}
@@ -22,13 +17,13 @@ export class SavedScreenRepository {
 
   save(input: SavedScreenInput): SavedScreen {
     const now = new Date().toISOString();
-    const saved: SavedScreen = { id: this.createId(), name: input.name.trim(), conditions: copyConditions(input.conditions), sort: { ...input.sort }, createdAt: now, updatedAt: now };
+    const saved: SavedScreen = { id: this.createId(), name: input.name.trim(), conditions: copyConditions(input.conditions), sort: { ...input.sort }, version: 1, createdAt: now, updatedAt: now };
     this.write([...this.read(), saved]);
     return copy(saved);
   }
 
   rename(id: string, name: string): SavedScreen {
-    return this.update(id, (screen) => ({ ...screen, name: name.trim() }));
+    return this.update(id, (screen) => ({ ...screen, name: name.trim(), version: (screen.version ?? 1) + 1 }));
   }
 
   duplicate(id: string): SavedScreen {
@@ -59,7 +54,7 @@ export class SavedScreenRepository {
   private read(): SavedScreen[] {
     const raw = this.storage.getItem(storageKey);
     if (!raw) return [];
-    try { return JSON.parse(raw) as SavedScreen[]; } catch { return []; }
+    try { return (JSON.parse(raw) as SavedScreen[]).map((screen) => ({ ...screen, version: screen.version ?? 1 })); } catch { return []; }
   }
 
   private write(screens: SavedScreen[]): void {

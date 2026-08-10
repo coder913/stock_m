@@ -3,6 +3,7 @@ import { SqliteMarketDataCache } from "../cache/sqliteMarketDataCache";
 import { MarketDataGateway } from "../core/marketDataGateway";
 import { UniverseService } from "../universe/universeService";
 import { createFixtureProviders } from "./createFixtureProviders";
+import { createFixtureStateDependencies } from "./createFixtureStateDependencies";
 
 const cache = new SqliteMarketDataCache(":memory:");
 const port = Number(process.env.E2E_PORT ?? 4173);
@@ -17,6 +18,7 @@ const app = buildApp({
   discovery: { universe: new UniverseService({ getQuotes: (symbols) => fixtures.alpaca.getQuotes(symbols), getCompanyProfile: (symbol) => fixtures.finnhub.getCompanyProfile(symbol), getFinancialFacts: (symbol) => fixtures.sec.getFinancialFacts(symbol) }, () => "2026-08-07T14:00:00Z") },
   events: { gateway, provider: { getEarnings: (...args) => fixtures.finnhub.getEarnings(...args), getCorporateActions: (...args) => fixtures.alpaca.getCorporateActions(...args), getReleaseEvents: (...args) => fixtures.fred.getReleaseEvents(...args) } },
   macro: { gateway, provider: fixtures.fred },
+  stateDiscovery: createFixtureStateDependencies(),
   staticDir: "dist",
 });
 app.post("/api/testing/fail-next", (request, reply) => {

@@ -1,5 +1,5 @@
-export type ScreenerOperator = ">" | ">=" | "<" | "<=" | "=" | "between";
-export type ScreenerPeriod = "CURRENT" | "MRQ" | "TTM" | "FY1";
+import type { SavedScreen, ScreenerCondition, ScreenerMetric, ScreenerOperator, ScreenerPeriod } from "../../../shared/discoveryState";
+export type { SavedScreen, ScreenerCondition, ScreenerMetric, ScreenerOperator, ScreenerPeriod } from "../../../shared/discoveryState";
 
 export interface StockMetrics {
   price: number;
@@ -23,16 +23,6 @@ export interface StockMetrics {
   operatingMargin: number;
   return3Months: number;
   beta: number;
-}
-
-export type ScreenerMetric = keyof StockMetrics;
-
-export interface ScreenerCondition {
-  id: string;
-  metric: ScreenerMetric;
-  operator: ScreenerOperator;
-  value: number | readonly [number, number];
-  period: ScreenerPeriod;
 }
 
 export interface ScreenerTemplate {
@@ -71,15 +61,6 @@ export interface ScreenValidationError {
   conditionId: string;
   code: "invalid-value" | "invalid-range" | "conflict";
   message: string;
-}
-
-export interface SavedScreen {
-  id: string;
-  name: string;
-  conditions: ScreenerCondition[];
-  sort: { metric: ScreenerMetric; direction: "asc" | "desc" };
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface MarketTheme {

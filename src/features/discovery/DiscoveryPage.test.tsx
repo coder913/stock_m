@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { DiscoveryPage } from "./DiscoveryPage";
 import { SavedScreenRepository } from "./savedScreenRepository";
+import { WatchlistRepository } from "../watchlist/watchlistRepository";
 
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
@@ -11,10 +12,28 @@ const liveClient = {
   getUniverse: vi.fn().mockResolvedValue({ data: { version: "v1", generatedAt: "2026-08-07T10:00:00Z", items: [{ symbol: "NVDA", kind: "stock", name: "NVIDIA Corp", sector: "Technology", metrics: { price: 167.32, revenueGrowthYoY: 30, operatingMargin: 25, freeCashFlow: 10 }, coverage: { status: "ready", availableMetrics: 4, totalMetrics: 14 } }] }, source: "composite", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, notices: [] }),
   getEvents: vi.fn().mockResolvedValue({ data: [], source: "composite", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, notices: [] }),
 };
+const stateRepositories = () => {
+  const screens = new SavedScreenRepository(localStorage);
+  const watchlists = new WatchlistRepository(localStorage);
+  return {
+    stateRepository: {
+      getUniverseState: async () => ({ addedSymbols: [], removedDefaultSymbols: [], version: 0 }),
+      addUniverseSymbol: vi.fn(), removeUniverseSymbol: vi.fn(), restoreUniverseSymbol: vi.fn(),
+      listScreens: async () => screens.list(), createScreen: async (input: Parameters<typeof screens.save>[0]) => screens.save(input),
+      renameScreen: async (id: string, name: string) => screens.rename(id, name),
+      duplicateScreen: async (id: string) => screens.duplicate(id), removeScreen: async (id: string) => screens.remove(id),
+    },
+    watchlistRepository: {
+      list: async () => watchlists.list(), listDeleted: async () => watchlists.listDeleted(),
+      createGroup: vi.fn(), renameGroup: vi.fn(), addSymbol: async (id: string, symbol: string) => watchlists.addSymbol(id, symbol),
+      removeSymbol: vi.fn(), removeGroup: vi.fn(), restoreGroup: vi.fn(), moveGroup: vi.fn(),
+    },
+  };
+};
 
 test("selecting a template updates conditions and matching results", async () => {
   const user = userEvent.setup();
-  render(<MemoryRouter><DiscoveryPage marketClient={liveClient as never} /></MemoryRouter>);
+  render(<MemoryRouter><DiscoveryPage marketClient={liveClient as never} {...stateRepositories()} /></MemoryRouter>);
 
   await user.click(await screen.findByRole("button", { name: "高质量成长" }));
 
@@ -27,7 +46,7 @@ test("runs, duplicates, renames, and removes a saved screen", async () => {
   const repository = new SavedScreenRepository(localStorage);
   repository.save({ name: "成长", conditions: [{ id: "price", metric: "price", operator: ">=", value: 5, period: "CURRENT" }], sort: { metric: "price", direction: "asc" } });
   const user = userEvent.setup();
-  render(<MemoryRouter><DiscoveryPage marketClient={liveClient as never} /></MemoryRouter>);
+  render(<MemoryRouter><DiscoveryPage marketClient={liveClient as never} {...stateRepositories()} /></MemoryRouter>);
 
   await user.click(screen.getByRole("button", { name: "已保存筛选" }));
   await user.click(screen.getByRole("button", { name: "复制 成长" }));
@@ -43,6 +62,21 @@ test("runs, duplicates, renames, and removes a saved screen", async () => {
 
 test("loads screener rows from the live discovery universe", async () => {
   const client = { getUniverse: vi.fn().mockResolvedValue({ data: { version: "v1", generatedAt: "2026-08-07T10:00:00Z", items: [{ symbol: "LIVE", kind: "stock", name: "Live Corp", sector: "Technology", metrics: { price: 42, revenueGrowthYoY: 30, operatingMargin: 20, freeCashFlow: 10 }, coverage: { status: "ready", availableMetrics: 4, totalMetrics: 14 } }] }, source: "composite", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, notices: [] }), getEvents: vi.fn().mockResolvedValue({ data: [], source: "composite", asOf: "2026-08-07T10:00:00Z", fetchedAt: "2026-08-07T10:00:00Z", expiresAt: "2026-08-07T10:01:00Z", stale: false, notices: [] }) };
-  render(<MemoryRouter><DiscoveryPage marketClient={client as never} /></MemoryRouter>);
+  render(<MemoryRouter><DiscoveryPage marketClient={client as never} {...stateRepositories()} /></MemoryRouter>);
   expect(await screen.findByRole("row", { name: /LIVE/ })).toBeVisible();
+});
+
+test("loads saved screens from the injected state repository", async () => {
+  const repositories = stateRepositories();
+  repositories.stateRepository.listScreens = vi.fn(async () => [{
+    id: "server-screen", name: "Server Screen", conditions: [], sort: { metric: "price" as const, direction: "asc" as const },
+    version: 3, createdAt: "2026-08-10T00:00:00Z", updatedAt: "2026-08-10T00:00:00Z",
+  }]);
+  const user = userEvent.setup();
+  render(<MemoryRouter><DiscoveryPage marketClient={liveClient as never} {...repositories} /></MemoryRouter>);
+
+  await user.click(screen.getByRole("button", { name: "已保存筛选" }));
+
+  expect(await screen.findByText("Server Screen")).toBeVisible();
+  expect(repositories.stateRepository.listScreens).toHaveBeenCalled();
 });

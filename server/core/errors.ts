@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(public readonly code: string, message: string, public readonly statusCode = 500, public readonly retryable = false) {
+  constructor(public readonly code: string, message: string, public readonly statusCode = 500, public readonly retryable = false, public readonly details?: unknown) {
     super(message);
   }
 }

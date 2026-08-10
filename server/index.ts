@@ -16,13 +16,17 @@ import { createDatabase } from "./db/database";
 import { migrateToLatest } from "./db/migrate";
 import { OutboxRepository } from "./platform/outboxRepository";
 import { OutboxPublisher } from "./platform/outboxPublisher";
+import { IdempotencyRepository } from "./platform/idempotencyRepository";
+import { PostgresDiscoveryStateRepository } from "./discovery/discoveryStateRepository";
+import { PostgresWatchlistRepository } from "./watchlists/watchlistRepository";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
 await migrateToLatest(database);
 const redis = new IORedis(config.redisUrl, { maxRetriesPerRequest: null });
 const eventQueue = new Queue("platform-events", { connection: redis });
-const outboxPublisher = new OutboxPublisher(database, new OutboxRepository(), eventQueue);
+const outbox = new OutboxRepository();
+const outboxPublisher = new OutboxPublisher(database, outbox, eventQueue);
 mkdirSync(".data", { recursive: true });
 const cache = new SqliteMarketDataCache(join(".data", "stock-m-cache.sqlite"));
 const gateway = new MarketDataGateway({ cache, now: () => new Date().toISOString() });
@@ -42,6 +46,13 @@ const app = buildApp({
   discovery: { universe: new UniverseService({ getQuotes: (symbols) => alpaca.getQuotes(symbols), getCompanyProfile: (symbol) => finnhub.getCompanyProfile(symbol), getFinancialFacts: (symbol) => sec.getFinancialFacts(symbol) }) },
   events: { gateway, provider: { getEarnings: (...args) => finnhub.getEarnings(...args), getCorporateActions: (...args) => alpaca.getCorporateActions(...args), getReleaseEvents: (...args) => fred.getReleaseEvents(...args) } },
   macro: { gateway, provider: fred },
+  stateDiscovery: {
+    database,
+    idempotency: new IdempotencyRepository(),
+    outbox,
+    discovery: new PostgresDiscoveryStateRepository(database),
+    watchlists: new PostgresWatchlistRepository(database),
+  },
 });
 
 await app.listen({ host: config.host, port: config.port });

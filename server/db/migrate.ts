@@ -3,6 +3,7 @@ import { sql, type Kysely } from "kysely";
 import { createDatabase } from "./database";
 import type { Database } from "./types";
 import * as platformMigration from "./migrations/001_platform";
+import * as discoveryWatchlistsMigration from "./migrations/002_discovery_watchlists";
 
 interface Migration {
   up(database: Kysely<unknown>): Promise<void>;
@@ -10,6 +11,7 @@ interface Migration {
 
 const migrations: ReadonlyArray<readonly [string, Migration]> = [
   ["001_platform", platformMigration],
+  ["002_discovery_watchlists", discoveryWatchlistsMigration],
 ];
 
 export async function migrateToLatest(database: Kysely<Database>): Promise<void> {

@@ -29,7 +29,7 @@ test("creates a watchlist through the idempotent route and appends its event", a
   const state = dependencies();
   const app = buildApp({
     config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } },
-    cache: { health: () => ({ writable: true, entries: 0 }) },
+    cache: { health: async () => ({ writable: true, entries: 0 }) },
     stateDiscovery: state as unknown as StateDiscoveryRouteDependencies,
   });
 
@@ -45,7 +45,7 @@ test("rejects an invalid universe symbol before calling the repository", async (
   const state = dependencies();
   const app = buildApp({
     config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } },
-    cache: { health: () => ({ writable: true, entries: 0 }) },
+    cache: { health: async () => ({ writable: true, entries: 0 }) },
     stateDiscovery: state as unknown as StateDiscoveryRouteDependencies,
   });
 

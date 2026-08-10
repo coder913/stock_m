@@ -17,7 +17,7 @@ function dependencies() {
 
 test("appends an alert action through an idempotent command", async () => {
   const state = dependencies();
-  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: () => ({ writable: true, entries: 0 }) }, monitorState: state as unknown as MonitorStateRouteDependencies });
+  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: async () => ({ writable: true, entries: 0 }) }, monitorState: state as unknown as MonitorStateRouteDependencies });
   const response = await app.inject({ method: "POST", url: "/api/v1/monitor/alerts/alert-1/actions", headers: { "idempotency-key": "alert-action-1" }, payload: { type: "snooze", until: "2026-08-12T00:00:00.000Z" } });
   expect(response.statusCode).toBe(201);
   expect(state.repository.act).toHaveBeenCalledWith("alert-1", { type: "snooze", until: "2026-08-12T00:00:00.000Z" }, expect.anything());
@@ -27,7 +27,7 @@ test("appends an alert action through an idempotent command", async () => {
 
 test("lists the alert queue with server-side filters", async () => {
   const state = dependencies();
-  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: () => ({ writable: true, entries: 0 }) }, monitorState: state as unknown as MonitorStateRouteDependencies });
+  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: async () => ({ writable: true, entries: 0 }) }, monitorState: state as unknown as MonitorStateRouteDependencies });
   const response = await app.inject({ method: "GET", url: "/api/v1/monitor/alerts?view=pending&now=2026-08-10T10%3A00%3A00.000Z&symbol=nvda&severity=high" });
   expect(response.statusCode).toBe(200);
   expect(state.repository.listAlerts).toHaveBeenCalledWith(expect.objectContaining({ view: "pending", symbol: "NVDA", severity: "high" }));

@@ -17,7 +17,7 @@ function dependencies() {
 
 test("creates an immutable thesis version through an idempotent command", async () => {
   const state = dependencies();
-  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: () => ({ writable: true, entries: 0 }) }, thesisState: state as unknown as ThesisStateRouteDependencies });
+  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: async () => ({ writable: true, entries: 0 }) }, thesisState: state as unknown as ThesisStateRouteDependencies });
   const payload = { symbol: "NVDA", coreJudgment: "AI demand", evidence: ["revenue"], risks: ["valuation"], validationConditions: ["earnings"] };
   const response = await app.inject({ method: "POST", url: "/api/v1/theses", headers: { "idempotency-key": "thesis-create-1" }, payload });
   expect(response.statusCode).toBe(201);
@@ -28,7 +28,7 @@ test("creates an immutable thesis version through an idempotent command", async 
 
 test("serves latest thesis and its history", async () => {
   const state = dependencies();
-  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: () => ({ writable: true, entries: 0 }) }, thesisState: state as unknown as ThesisStateRouteDependencies });
+  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: async () => ({ writable: true, entries: 0 }) }, thesisState: state as unknown as ThesisStateRouteDependencies });
   expect((await app.inject({ method: "GET", url: "/api/v1/theses/NVDA/latest" })).statusCode).toBe(200);
   expect((await app.inject({ method: "GET", url: "/api/v1/theses/NVDA/history" })).json()).toHaveLength(1);
   await app.close();
@@ -37,7 +37,7 @@ test("serves latest thesis and its history", async () => {
 test("returns a null latest thesis for a symbol with no history", async () => {
   const state = dependencies();
   state.repository.getLatest.mockResolvedValueOnce(undefined as never);
-  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: () => ({ writable: true, entries: 0 }) }, thesisState: state as unknown as ThesisStateRouteDependencies });
+  const app = buildApp({ config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } }, cache: { health: async () => ({ writable: true, entries: 0 }) }, thesisState: state as unknown as ThesisStateRouteDependencies });
   const response = await app.inject({ method: "GET", url: "/api/v1/theses/MSFT/latest" });
   expect(response.statusCode).toBe(200);
   expect(response.json()).toBeNull();

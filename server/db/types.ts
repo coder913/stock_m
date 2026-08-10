@@ -101,6 +101,9 @@ export interface PortfolioSnapshotTable { id:string; portfolioId:string; asOf:Ti
 export interface PortfolioWeeklyReviewTable { id:string; portfolioId:string; week:string; version:number; snapshotId:string; judgment:string; action:string; result:string; nextObservationsJson:unknown; tradeCount:number; openAlertCount:number; createdAt:Timestamp; }
 export interface BrowserMigrationReceiptTable{id:string;documentHash:string;browserId:string;categoryCountsJson:unknown;categoryHashesJson:unknown;completedAt:Timestamp;}
 export interface BrowserMigrationRecordTable{category:string;ordinal:number;payloadJson:unknown;}
+export interface MarketCacheEntryTable { cacheKey:string; source:string; payloadJson:unknown; asOf:Timestamp; fetchedAt:Timestamp; expiresAt:Timestamp; delayMinutes:number|null; noticesJson:unknown; }
+export interface MarketProviderStateTable { source:string; cooldownUntil:NullableTimestamp; lastSuccessAt:NullableTimestamp; lastErrorCode:string|null; }
+export interface MarketRefreshAttemptTable { id:Generated<number>; cacheKey:string; source:string; status:"success"|"error"; errorCode:string|null; attemptedAt:Timestamp; }
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -130,4 +133,7 @@ export interface Database {
   "core.portfolio_weekly_review": PortfolioWeeklyReviewTable;
   "platform.browser_migration_receipt":BrowserMigrationReceiptTable;
   "platform.browser_migration_record":BrowserMigrationRecordTable;
+  "market.cache_entry":MarketCacheEntryTable;
+  "market.provider_state":MarketProviderStateTable;
+  "market.refresh_attempt":MarketRefreshAttemptTable;
 }

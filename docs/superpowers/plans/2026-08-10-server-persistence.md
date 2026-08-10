@@ -556,7 +556,7 @@ git commit -m "feat: migrate browser state to postgres"
 - Produces: async `MarketDataCache` with get/put/cooldown/health/refresh-attempt methods.
 - Preserves: last-success fallback, TTLs, notices and source/as-of semantics.
 
-- [ ] **Step 1: Port the cache contract to async failing tests**
+- [x] **Step 1: Port the cache contract to async failing tests**
 
 ```ts
 await cache.put(record);
@@ -567,31 +567,31 @@ expect((await cache.get(record.key))?.fetchedAt).toBe(newer.fetchedAt);
 
 Cover invalid data rejection, provider cooldown sharing, health counts and compare-and-set ordering.
 
-- [ ] **Step 2: Run cache/gateway tests and verify RED**
+- [x] **Step 2: Run cache/gateway tests and verify RED**
 
 Run: `npm run test:integration -- server/cache/postgresMarketDataCache.integration.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Create market tables and async cache**
+- [x] **Step 3: Create market tables and async cache**
 
 Create `market.cache_entry`, `market.provider_state` and `market.refresh_attempt`. Store validated payload as JSONB, timestamps as `timestamptz`, and update only when `excluded.fetched_at >= cache_entry.fetched_at`.
 
-- [ ] **Step 4: Convert MarketDataGateway to await cache operations**
+- [x] **Step 4: Convert MarketDataGateway to await cache operations**
 
 All cache reads, writes, cooldown updates and health checks become asynchronous. Update every route/provider test fake to implement the async contract; do not add a synchronous compatibility layer.
 
-- [ ] **Step 5: Switch production and E2E composition roots**
+- [x] **Step 5: Switch production and E2E composition roots**
 
 `server/index.ts` creates one Kysely database, migrates before app construction, and injects `PostgresMarketDataCache`. The E2E server uses the test PostgreSQL database and truncates owned schemas between suites.
 
-- [ ] **Step 6: Remove SQLite dependencies and rerun market tests**
+- [x] **Step 6: Remove SQLite dependencies and rerun market tests**
 
 Run: `npm test -- server/core server/routes server/providers`  
 Run: `npm run test:integration -- server/cache`  
 Run: `npm run build`  
 Expected: PASS and `rg "better-sqlite3|SqliteMarketDataCache" server package.json` returns no matches.
 
-- [ ] **Step 7: Commit Task 7**
+- [x] **Step 7: Commit Task 7**
 
 ```bash
 git add package.json package-lock.json server/db/migrations/006_market_cache.ts server/cache server/core server/index.ts server/testing/e2eServer.ts

@@ -6,7 +6,7 @@ import { RefreshRegistry } from "../core/refreshRegistry";
 test("rejects a manual refresh for a resource that has no registered handler", async () => {
   const app = buildApp({
     config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } },
-    cache: { health: () => ({ writable: true, entries: 0 }) },
+    cache: { health: async () => ({ writable: true, entries: 0 }) },
     refreshRegistry: new RefreshRegistry(),
   });
 

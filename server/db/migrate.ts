@@ -7,6 +7,7 @@ import * as discoveryWatchlistsMigration from "./migrations/002_discovery_watchl
 import * as thesisMonitoringMigration from "./migrations/003_thesis_monitoring";
 import * as manualPortfolioMigration from "./migrations/004_manual_portfolio";
 import * as browserMigration from "./migrations/005_browser_migration";
+import * as marketCacheMigration from "./migrations/006_market_cache";
 
 interface Migration {
   up(database: Kysely<unknown>): Promise<void>;
@@ -18,6 +19,7 @@ const migrations: ReadonlyArray<readonly [string, Migration]> = [
   ["003_thesis_monitoring", thesisMonitoringMigration],
   ["004_manual_portfolio", manualPortfolioMigration],
   ["005_browser_migration", browserMigration],
+  ["006_market_cache", marketCacheMigration],
 ];
 
 export async function migrateToLatest(database: Kysely<Database>): Promise<void> {

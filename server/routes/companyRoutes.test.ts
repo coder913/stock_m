@@ -1,15 +1,12 @@
 // @vitest-environment node
-import { afterEach, expect, test } from "vitest";
+import { expect, test } from "vitest";
 import { buildApp } from "../app";
-import { SqliteMarketDataCache } from "../cache/sqliteMarketDataCache";
 import { MarketDataGateway } from "../core/marketDataGateway";
 import { RefreshRegistry } from "../core/refreshRegistry";
-
-let cache: SqliteMarketDataCache | undefined;
-afterEach(() => cache?.close());
+import { InMemoryMarketDataCache } from "../testing/inMemoryMarketDataCache";
 
 test("serves normalized financial facts and filings through cached company routes", async () => {
-  cache = new SqliteMarketDataCache(":memory:");
+  const cache = new InMemoryMarketDataCache();
   const app = buildApp({
     config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } },
     cache,

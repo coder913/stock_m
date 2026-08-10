@@ -56,9 +56,9 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
     }
     return reply.status(500).send({ code: "INTERNAL_ERROR", message: "服务暂时不可用", retryable: true, requestId: request.id });
   });
-  app.get("/api/health", () => ({
+  app.get("/api/health", async () => ({
     providers: dependencies.config.providers,
-    cache: dependencies.cache.health(),
+    cache: await dependencies.cache.health(),
   }));
   if (dependencies.market) registerMarketRoutes(app, { ...dependencies.market, refreshRegistry });
   if (dependencies.company) registerCompanyRoutes(app, { ...dependencies.company, refreshRegistry });

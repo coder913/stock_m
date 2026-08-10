@@ -1,11 +1,18 @@
 import { buildApp } from "../app";
-import { SqliteMarketDataCache } from "../cache/sqliteMarketDataCache";
+import { PostgresMarketDataCache } from "../cache/postgresMarketDataCache";
 import { MarketDataGateway } from "../core/marketDataGateway";
+import { createDatabase } from "../db/database";
+import { migrateToLatest } from "../db/migrate";
 import { UniverseService } from "../universe/universeService";
 import { createFixtureProviders } from "./createFixtureProviders";
 import { createFixtureStateDependencies } from "./createFixtureStateDependencies";
 
-const cache = new SqliteMarketDataCache(":memory:");
+const database = createDatabase(process.env.TEST_DATABASE_URL ?? "postgresql://stock_m:stock_m@127.0.0.1:55432/stock_m_test");
+await migrateToLatest(database);
+await database.deleteFrom("market.refresh_attempt").execute();
+await database.deleteFrom("market.provider_state").execute();
+await database.deleteFrom("market.cache_entry").execute();
+const cache = new PostgresMarketDataCache(database);
 const port = Number(process.env.E2E_PORT ?? 4173);
 let now = "2026-08-07T14:00:00Z";
 const gateway = new MarketDataGateway({ cache, now: () => now });
@@ -37,4 +44,11 @@ app.post("/api/testing/market-state", (request, reply) => {
   fixtures.setQuote(body.symbol, body.price!, body.previousClose);
   return { ok: true, now };
 });
-void app.listen({ host: "127.0.0.1", port });
+await app.listen({ host: "127.0.0.1", port });
+
+async function close(): Promise<void> {
+  await app.close();
+  await database.destroy();
+}
+process.once("SIGINT", () => { void close(); });
+process.once("SIGTERM", () => { void close(); });

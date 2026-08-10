@@ -10,7 +10,7 @@ export function createTestDependencies(overrides: Partial<AppDependencies> = {})
       },
       publicStatus: { providers: {} },
     },
-    cache: { health: () => ({ writable: true, entries: 0 }) },
+    cache: { health: async () => ({ writable: true, entries: 0 }) },
     ...overrides,
   };
 }

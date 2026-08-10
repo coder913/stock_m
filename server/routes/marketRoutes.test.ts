@@ -1,14 +1,11 @@
 // @vitest-environment node
-import { afterEach, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 import type { PriceBar } from "../../src/features/market/apiDomain";
 import { buildApp } from "../app";
-import { SqliteMarketDataCache } from "../cache/sqliteMarketDataCache";
 import { MarketDataGateway } from "../core/marketDataGateway";
 import { RefreshRegistry } from "../core/refreshRegistry";
+import { InMemoryMarketDataCache } from "../testing/inMemoryMarketDataCache";
 import type { MarketProvider } from "./marketRoutes";
-
-let cache: SqliteMarketDataCache | undefined;
-afterEach(() => cache?.close());
 
 const fixtureBar = (symbol: string): PriceBar => ({
   symbol,
@@ -22,7 +19,7 @@ const fixtureBar = (symbol: string): PriceBar => ({
 });
 
 const createApp = (marketOverrides: Partial<MarketProvider> = {}) => {
-  cache = new SqliteMarketDataCache(":memory:");
+  const cache = new InMemoryMarketDataCache();
   return buildApp({
     config: { host: "127.0.0.1", port: 8787, providers: { alpaca: { configured: true }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } }, publicStatus: { providers: {} } },
     cache,

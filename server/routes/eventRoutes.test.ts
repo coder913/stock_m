@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { expect, test } from "vitest";
 import { buildApp } from "../app";
-import { SqliteMarketDataCache } from "../cache/sqliteMarketDataCache";
 import { MarketDataGateway } from "../core/marketDataGateway";
+import { InMemoryMarketDataCache } from "../testing/inMemoryMarketDataCache";
 
 const config = {
   host: "127.0.0.1",
@@ -17,7 +17,7 @@ const config = {
 };
 
 test("serves cached earnings through events route", async () => {
-  const cache = new SqliteMarketDataCache(":memory:");
+  const cache = new InMemoryMarketDataCache();
   const app = buildApp({
     config,
     cache,
@@ -35,11 +35,10 @@ test("serves cached earnings through events route", async () => {
   const response = await app.inject("/api/events?from=2026-08-01&to=2026-08-31");
   expect(response.json().data[0]).toMatchObject({ type: "earnings", timing: "after-market" });
   await app.close();
-  cache.close();
 });
 
 test("caches FRED release events separately for 24 hours", async () => {
-  const cache = new SqliteMarketDataCache(":memory:");
+  const cache = new InMemoryMarketDataCache();
   const app = buildApp({
     config,
     cache,
@@ -54,13 +53,12 @@ test("caches FRED release events separately for 24 hours", async () => {
 
   await app.inject("/api/events?from=2026-08-01&to=2026-08-31");
 
-  expect(cache.get("events:macro:2026-08-01:2026-08-31")?.expiresAt).toBe("2026-08-08T00:00:00.000Z");
+  expect((await cache.get("events:macro:2026-08-01:2026-08-31"))?.expiresAt).toBe("2026-08-08T00:00:00.000Z");
   await app.close();
-  cache.close();
 });
 
 test("sorts timed events before date-only macro releases on the same date", async () => {
-  const cache = new SqliteMarketDataCache(":memory:");
+  const cache = new InMemoryMarketDataCache();
   const app = buildApp({
     config,
     cache,
@@ -77,5 +75,4 @@ test("sorts timed events before date-only macro releases on the same date", asyn
 
   expect(response.json().data.map((event: { id: string }) => event.id)).toEqual(["earnings", "cpi"]);
   await app.close();
-  cache.close();
 });

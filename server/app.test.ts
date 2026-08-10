@@ -16,7 +16,7 @@ test("health reports safe configuration and writable cache status", async () => 
       publicStatus: { providers: {} },
     },
     cache: {
-      health: () => ({ writable: true, entries: 0, oldestFetchedAt: undefined }),
+      health: async () => ({ writable: true, entries: 0, oldestFetchedAt: undefined }),
     },
   });
 
@@ -39,7 +39,7 @@ test("requires an idempotency key for public API mutations", async () => {
       providers: { alpaca: { configured: false }, sec: { configured: true }, finnhub: { configured: false }, fred: { configured: false } },
       publicStatus: { providers: {} },
     },
-    cache: { health: () => ({ writable: true, entries: 0 }) },
+    cache: { health: async () => ({ writable: true, entries: 0 }) },
   });
   app.post("/api/v1/test-command", async () => ({ ok: true }));
 

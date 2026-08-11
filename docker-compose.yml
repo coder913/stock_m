@@ -78,6 +78,7 @@ services:
       retries: 4
       start_period: 30s
     networks:
+      - edge
       - backend
     stop_grace_period: 25s
 
@@ -100,6 +101,7 @@ services:
       retries: 4
       start_period: 30s
     networks:
+      - edge
       - backend
     stop_grace_period: 25s
 
@@ -121,6 +123,7 @@ services:
       retries: 4
       start_period: 30s
     networks:
+      - edge
       - backend
     stop_grace_period: 25s
 

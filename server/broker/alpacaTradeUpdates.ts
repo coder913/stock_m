@@ -20,6 +20,9 @@ export class AlpacaTradeUpdates {
       this.sent.push({ action: "listen", data: { streams: ["trade_updates"] } });
       return true;
     }
+    if (message.stream === "listening") {
+      return Array.isArray(message.data.streams) && message.data.streams.includes("trade_updates");
+    }
     if (message.stream !== "trade_updates") return false;
     const raw = message.data.order as Record<string, unknown>;
     const event = String(message.data.event);

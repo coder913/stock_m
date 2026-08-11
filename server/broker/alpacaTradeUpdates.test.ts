@@ -7,6 +7,7 @@ test("authenticates, subscribes and deduplicates remote trade updates", async ()
   const stream = new AlpacaTradeUpdates({ keyId: "k", secretKey: "s", observe: observed });
   await stream.accept({ stream: "authorization", data: { status: "authorized" } });
   expect(stream.outgoing()).toEqual([{ action: "auth", key: "k", secret: "s" }, { action: "listen", data: { streams: ["trade_updates"] } }]);
+  await expect(stream.accept({ stream: "listening", data: { streams: ["trade_updates"] } })).resolves.toBe(true);
   const update = { stream: "trade_updates", data: { event: "new", order: { id: "o1", client_order_id: "c1", symbol: "AAPL", side: "buy", qty: "1", filled_qty: "0", type: "market", time_in_force: "day", status: "new", submitted_at: "2026-08-11T00:00:00Z", updated_at: "2026-08-11T00:00:00Z" } } };
   await stream.accept(update);
   await stream.accept(update);
@@ -43,6 +44,9 @@ test("reports health, reconnects, and cancels reconnects on idempotent stop", as
   expect(onHealth).toHaveBeenLastCalledWith(false);
   sockets[0].open();
   sockets[0].message({ stream: "authorization", data: { status: "authorized" } });
+  await vi.runAllTicks();
+  expect(onHealth).toHaveBeenLastCalledWith(true);
+  sockets[0].message({ stream: "listening", data: { streams: ["trade_updates"] } });
   await vi.runAllTicks();
   expect(onHealth).toHaveBeenLastCalledWith(true);
 

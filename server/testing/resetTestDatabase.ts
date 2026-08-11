@@ -10,6 +10,19 @@ export async function resetTestDatabase(database: Kysely<Database>): Promise<voi
   await database.transaction().execute(async (transaction) => {
     await sql`
       truncate table
+        broker.drift,
+        broker.reconciliation_run,
+        broker.ledger_event,
+        broker.activity,
+        broker.fill,
+        broker.order_projection,
+        broker.order_event,
+        broker.remote_order,
+        broker.cancel_intent,
+        broker.order_intent,
+        broker.order_preview_audit,
+        broker.account_snapshot,
+        broker.account,
         platform.idempotency_record,
         platform.outbox_event,
         platform.inbox_event,

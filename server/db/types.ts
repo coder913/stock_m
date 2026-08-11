@@ -110,6 +110,21 @@ export interface MonitorRunTable { id:string; runType:"price"|"financial"|"event
 export interface PushSubscriptionTable { id:string; endpointHash:string; ciphertext:string; iv:string; authTag:string; userAgent:string; createdAt:Timestamp; lastSeenAt:Timestamp; revokedAt:NullableTimestamp; invalidAt:NullableTimestamp; }
 export interface NotificationDeliveryTable { id:string; eventId:string; alertId:string; subscriptionId:string; payloadJson:unknown; status:"pending"|"succeeded"|"invalid"|"dead_letter"; attemptCount:number; nextAttemptAt:NullableTimestamp; lastError:string|null; createdAt:Timestamp; completedAt:NullableTimestamp; }
 export interface NotificationDeliveryAttemptTable { id:string; deliveryId:string; attemptNumber:number; outcome:"succeeded"|"retry"|"invalid"|"failed"; statusCode:number|null; error:string|null; attemptedAt:Timestamp; }
+type Decimal = ColumnType<string, string | number, string | number>;
+type NullableDecimal = ColumnType<string | null, string | number | null, string | number | null>;
+export interface BrokerAccountTable { id:string; status:string; currency:string; createdAt:Timestamp; updatedAt:Timestamp; }
+export interface BrokerAccountSnapshotTable { id:string; accountId:string; cash:Decimal; buyingPower:Decimal; equity:Decimal; portfolioValue:Decimal; tradingBlocked:boolean; accountBlocked:boolean; observedAt:Timestamp; }
+export interface BrokerOrderPreviewAuditTable { id:string; inputHash:string; normalizedOrderJson:unknown; expiresAt:Timestamp; createdAt:Timestamp; }
+export interface BrokerOrderIntentTable { id:string; previewId:string; clientOrderId:string; symbol:string; side:"buy"|"sell"; quantity:Decimal; orderType:"market"|"limit"; timeInForce:"day"|"gtc"; limitPrice:NullableDecimal; confirmedAt:Timestamp; }
+export interface BrokerCancelIntentTable { id:string; orderIntentId:string; createdAt:Timestamp; }
+export interface BrokerRemoteOrderTable { remoteOrderId:string; orderIntentId:string; rawJson:unknown; firstObservedAt:Timestamp; lastObservedAt:Timestamp; }
+export interface BrokerOrderEventTable { id:string; orderIntentId:string; remoteEventId:string|null; event:string; payloadJson:unknown; occurredAt:Timestamp; createdAt:Timestamp; }
+export interface BrokerOrderProjectionTable { orderIntentId:string; state:string; version:number; updatedAt:Timestamp; }
+export interface BrokerFillTable { remoteFillId:string; remoteOrderId:string; symbol:string; side:"buy"|"sell"; quantity:Decimal; price:Decimal; occurredAt:Timestamp; rawJson:unknown; }
+export interface BrokerActivityTable { remoteActivityId:string; activityType:string; symbol:string|null; amount:NullableDecimal; quantity:NullableDecimal; price:NullableDecimal; occurredAt:Timestamp; rawJson:unknown; }
+export interface BrokerLedgerEventTable { id:string; remoteSourceId:string; eventType:string; symbol:string|null; quantity:NullableDecimal; price:NullableDecimal; amount:NullableDecimal; occurredAt:Timestamp; provenanceJson:unknown; }
+export interface BrokerReconciliationRunTable { id:string; status:"running"|"succeeded"|"failed"; diagnosticsJson:unknown; startedAt:Timestamp; finishedAt:NullableTimestamp; }
+export interface BrokerDriftTable { id:string; reconciliationRunId:string; cashDifference:NullableDecimal; symbolDifferencesJson:unknown; detectedAt:Timestamp; clearedAt:NullableTimestamp; }
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -148,4 +163,17 @@ export interface Database {
   "notification.push_subscription":PushSubscriptionTable;
   "notification.delivery":NotificationDeliveryTable;
   "notification.delivery_attempt":NotificationDeliveryAttemptTable;
+  "broker.account":BrokerAccountTable;
+  "broker.account_snapshot":BrokerAccountSnapshotTable;
+  "broker.order_preview_audit":BrokerOrderPreviewAuditTable;
+  "broker.order_intent":BrokerOrderIntentTable;
+  "broker.cancel_intent":BrokerCancelIntentTable;
+  "broker.remote_order":BrokerRemoteOrderTable;
+  "broker.order_event":BrokerOrderEventTable;
+  "broker.order_projection":BrokerOrderProjectionTable;
+  "broker.fill":BrokerFillTable;
+  "broker.activity":BrokerActivityTable;
+  "broker.ledger_event":BrokerLedgerEventTable;
+  "broker.reconciliation_run":BrokerReconciliationRunTable;
+  "broker.drift":BrokerDriftTable;
 }

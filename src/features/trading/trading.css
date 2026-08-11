@@ -1,0 +1,10 @@
+.paper-order-ticket { margin-top: 1rem; }
+.paper-order-ticket form, .paper-order-confirmation { display: grid; gap: .75rem; padding: 1rem; border: 1px solid var(--divider); border-radius: .75rem; background: var(--surface); }
+.paper-order-ticket label { display: grid; gap: .35rem; }
+.paper-order-ticket input, .paper-order-ticket select { min-height: 2.5rem; }
+.paper-order-confirmation dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; margin: 0; }
+.paper-order-confirmation dl div { display: grid; gap: .2rem; }
+.paper-order-confirmation dt { color: var(--text-secondary); font-size: .8rem; }
+.paper-order-confirmation dd { margin: 0; font-weight: 600; }
+.paper-order-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.paper-trading-state { color: var(--text-secondary); }

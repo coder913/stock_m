@@ -14,11 +14,13 @@ import { PriceHistory } from "./PriceHistory";
 import { ResearchDataSection, useResearchRequest } from "./ResearchDataSection";
 import "./research.css";
 import { useRepositories } from "../../app/repositories";
+import { OrderTicket } from "../trading/OrderTicket";
+import type { PaperTradingApi } from "../trading/paperTradingApiClient";
 
 const defaultMarketClient = new MarketApiClient();
 type ResearchClient = Pick<MarketApiClient, "getCompany" | "getQuotes" | "getBars" | "getFinancials" | "getFilings" | "getNews" | "getEvents" | "getUniverse">;
 
-export function ResearchPage({ marketClient = defaultMarketClient, thesisService, monitorState }: { marketClient?: ResearchClient; thesisService?: ThesisStateService; monitorState?: MonitorStateService }) {
+export function ResearchPage({ marketClient = defaultMarketClient, thesisService, monitorState, tradingApi }: { marketClient?: ResearchClient; thesisService?: ThesisStateService; monitorState?: MonitorStateService; tradingApi?: PaperTradingApi }) {
   const repositories = useRepositories();
   const activeThesisService = thesisService ?? repositories.theses;
   const activeMonitorState = monitorState ?? repositories.monitoring;
@@ -68,6 +70,7 @@ export function ResearchPage({ marketClient = defaultMarketClient, thesisService
           <p>{core.quote?.price === undefined ? "当前报价不可用" : `${core.quote.price} USD`}</p>
           {core.quote?.changePercent !== undefined && <p>{core.quote.changePercent}%</p>}
         </header>
+        {tradingApi && <OrderTicket symbol={symbol} api={tradingApi} />}
         <PriceHistory symbol={symbol} marketClient={marketClient} />
         <FinancialTrends symbol={symbol} marketClient={marketClient} />
         <FilingsList symbol={symbol} marketClient={marketClient} />

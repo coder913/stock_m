@@ -2,6 +2,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, test } from "vitest";
 import { ResearchPage } from "./ResearchPage";
+import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 
 const envelope = <T,>(data: T, source: "alpaca" | "sec" | "finnhub" = "alpaca") => ({
   data,
@@ -61,4 +63,17 @@ test("renders price history while financial facts fail independently", async () 
   expect(screen.getByRole("cell", { name: "167.32" })).toBeVisible();
   expect(screen.getByRole("alert")).toHaveTextContent("财务数据暂时不可用");
   expect(screen.getByRole("link", { name: "查看 10-K 原文" })).toHaveAttribute("href", "https://example.test/sec/nvda-10k");
+});
+
+test("opens a blank Alpaca Paper ticket scoped only to the research symbol", async () => {
+  const user = userEvent.setup();
+  const tradingApi = {
+    getStatus: vi.fn(async () => ({ enabled: true, configured: true, ready: true })),
+    createPreview: vi.fn(),
+    createIntent: vi.fn(),
+  };
+  render(<MemoryRouter initialEntries={["/stocks/NVDA"]}><Routes><Route path="/stocks/:symbol" element={<ResearchPage marketClient={baseClient as never} tradingApi={tradingApi as never} />} /></Routes></MemoryRouter>);
+  await user.click(await screen.findByRole("button", { name: "创建 Alpaca Paper 订单" }));
+  expect(screen.getByLabelText("股票代码")).toHaveValue("NVDA");
+  expect(screen.getByLabelText("数量")).toHaveValue("");
 });

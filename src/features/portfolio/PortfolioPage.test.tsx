@@ -74,3 +74,16 @@ test("shows the performance tab and deposit and withdrawal fields", async () => 
   await user.selectOptions(screen.getByLabelText("事件类型"), "withdrawal");
   expect(screen.getByLabelText("金额")).toBeVisible();
 });
+
+test("offers the explicit Alpaca Paper ticket without replacing manual ledger actions", async () => {
+  const user = userEvent.setup();
+  const tradingApi = {
+    getStatus: vi.fn(async () => ({ enabled: true, configured: true, ready: true })),
+    createPreview: vi.fn(),
+    createIntent: vi.fn(),
+  };
+  render(<PortfolioPage portfolioState={portfolioState() as never} tradingApi={tradingApi as never} />);
+  expect(await screen.findByRole("button", { name: "创建 Alpaca Paper 订单" })).toBeVisible();
+  await user.click(screen.getByRole("tab", { name: "持仓与交易" }));
+  expect(screen.getByRole("button", { name: "记录交易" })).toBeVisible();
+});

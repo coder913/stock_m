@@ -40,6 +40,7 @@ function harness() {
     })),
   };
   const dependencies = {
+    status: { enabled: true, configured: true },
     database: { transaction: () => ({
       execute: (callback: (value: Transaction<Database>) => Promise<unknown>) => callback(transaction),
     }) },
@@ -51,6 +52,16 @@ function harness() {
   } as unknown as PaperTradingRouteDependencies;
   return { dependencies, repository, outbox, preview, transaction };
 }
+
+test("reports Paper readiness without exposing credentials", async () => {
+  const context = harness();
+  const app = buildApp({ config, cache: { health: async () => ({ writable: true, entries: 0 }) }, paperTrading: context.dependencies });
+  const response = await app.inject({ method: "GET", url: "/api/v1/broker/alpaca-paper/status" });
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual({ enabled: true, configured: true, ready: true });
+  expect(response.body).not.toContain("paper-secret");
+  await app.close();
+});
 
 test("stores a preview audit without persisting its reusable token", async () => {
   const context = harness();

@@ -22,6 +22,7 @@ const orderDraftSchema = z.object({
 const confirmationSchema = z.object({ previewToken: z.string().min(1) });
 
 export interface PaperTradingRouteDependencies {
+  status: { enabled: boolean; configured: boolean };
   database: Kysely<Database>;
   idempotency: IdempotencyStore;
   outbox: Pick<OutboxRepository, "append">;
@@ -60,6 +61,11 @@ async function idempotent(
 }
 
 export function registerPaperTradingRoutes(app: FastifyInstance, dependencies: PaperTradingRouteDependencies): void {
+  app.get("/api/v1/broker/alpaca-paper/status", () => ({
+    ...dependencies.status,
+    ready: dependencies.status.enabled && dependencies.status.configured,
+  }));
+
   app.post("/api/v1/broker/alpaca-paper/order-previews", async (request, reply) => {
     const body = parse(orderDraftSchema, request.body);
     return idempotent(dependencies, request, reply, "POST /api/v1/broker/alpaca-paper/order-previews", body, async (transaction) => {

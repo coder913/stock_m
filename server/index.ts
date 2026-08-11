@@ -121,6 +121,7 @@ const app = buildApp({
   },
   notifications: { configured: config.notifications.configured, publicKey: config.notifications.publicKey, database, idempotency, outbox, repository: pushSubscriptions },
   paperTrading: orderPreview && previewTokens ? {
+    status: { enabled: config.paperTrading.enabled, configured: config.paperTrading.configured },
     database,
     idempotency,
     outbox,

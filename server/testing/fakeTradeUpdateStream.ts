@@ -1,0 +1,1 @@
+import type{BrokerOrder}from"../../shared/broker";export class FakeTradeUpdateStream{private listeners=new Set<(order:BrokerOrder)=>Promise<unknown>>();subscribe(listener:(order:BrokerOrder)=>Promise<unknown>){this.listeners.add(listener);return()=>this.listeners.delete(listener);}async emit(order:BrokerOrder){for(const listener of this.listeners)await listener(order);}}

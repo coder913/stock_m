@@ -32,6 +32,14 @@ import { createFixtureProviders } from "./createFixtureProviders";
 import { DeterministicWorkerClock } from "./deterministicWorkerClock";
 import { FakePushProvider } from "./fakePushProvider";
 import { resetTestDatabase } from "./resetTestDatabase";
+import{BrokerRepository}from"../broker/brokerRepository";
+import{OrderPreviewService}from"../broker/orderPreviewService";
+import{createOrderPreviewTokenService}from"../broker/orderPreviewToken";
+import{OrderCommandService}from"../broker/orderCommandService";
+import{CancelCommandService}from"../broker/cancelCommandService";
+import{PostgresBrokerReconciliationRepository}from"../broker/brokerReconciliationRepository";
+import{ReconciliationService}from"../broker/reconciliationService";
+import{PostgresPaperPortfolioStore}from"../broker/paperPortfolioRepository";
 
 const connectionString = process.env.TEST_DATABASE_URL ?? "postgresql://stock_m:stock_m@127.0.0.1:55432/stock_m_test";
 const port = Number(process.env.E2E_PORT ?? 4174);
@@ -61,6 +69,14 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
   const outbox = new OutboxRepository();
   const idempotency = new IdempotencyRepository(clock.now);
   const repositoryNow = clock.now;
+  const broker=new BrokerRepository(database,repositoryNow);
+  const reconciliationRepository=new PostgresBrokerReconciliationRepository(database,repositoryNow);
+  const reconciliation=new ReconciliationService(fixtures.trading,reconciliationRepository,repositoryNow);
+  const previewTokens=createOrderPreviewTokenService(Buffer.alloc(32,9),repositoryNow);
+  const orderPreview=new OrderPreviewService({enabled:true,now:repositoryNow,loadAccount:async()=>{const account=await fixtures.trading.getAccount();return{buyingPower:account.buyingPower,equity:account.equity};},loadAsset:symbol=>fixtures.trading.getAsset(symbol),loadQuote:async symbol=>{const result=await fixtures.alpaca.getQuotes([symbol]);return{price:String(result.data[0]?.price??0),source:"fixture",asOf:result.asOf,state:"fresh"};},loadPosition:async symbol=>({quantity:(await fixtures.trading.getPosition(symbol))?.quantity??"0"}),hasActiveDrift:()=>broker.hasActiveDrift(),tokens:previewTokens});
+  const scheduler={reconcileOrder:async()=>undefined};
+  const submitCommands=new OrderCommandService(broker,fixtures.trading,scheduler,repositoryNow);
+  const cancelCommands=new CancelCommandService(broker,fixtures.trading,scheduler,repositoryNow);
   const theses = new PostgresThesisRepository(database, repositoryNow);
   const monitoring = new PostgresMonitorStateRepository(database, repositoryNow);
   const schedules = new MonitorScheduleRepository(database, repositoryNow);
@@ -141,6 +157,8 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
     },
     browserMigration: { service: new BrowserMigrationService(database, repositoryNow) },
     notifications: { configured: true, publicKey: "AQIDBA", database, idempotency, outbox, repository: pushSubscriptions },
+    paperTrading:{status:{enabled:true,configured:true},database,idempotency,outbox,repository:broker,preview:{preview:input=>orderPreview.preview(input),verify:token=>previewTokens.verify(token)},now:repositoryNow},
+    paperPortfolio:{store:new PostgresPaperPortfolioStore(database),database,idempotency,outbox,now:repositoryNow},
     staticDir: "dist",
   });
   app.addHook("onClose", async () => { await monitorQueue.close(); if (redis.status !== "end") await redis.quit(); });
@@ -219,6 +237,14 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
     fixtures.setQuote(body.symbol, body.price!, body.previousClose);
     return { ok: true, now: clock.iso() };
   });
+
+  const processTrading=async()=>{const events=await database.selectFrom("platform.outbox_event").selectAll().where("publishedAt","is",null).where("topic","like","broker.%").orderBy("occurredAt").execute();for(const event of events){const body=typeof event.payloadJson==="string"?JSON.parse(event.payloadJson):event.payloadJson as Record<string,unknown>;if(event.topic==="broker.order.submit.requested")await submitCommands.submit({eventId:event.id,intentId:String(body.id)});else if(event.topic==="broker.order.cancel.requested")await cancelCommands.cancel({eventId:event.id,intentId:String(body.intentId),cancelIntentId:String(body.cancelIntentId)});else if(event.topic==="broker.reconciliation.requested")await reconciliation.reconcileAll();await database.updateTable("platform.outbox_event").set({publishedAt:repositoryNow()}).where("id","=",event.id).execute();}const pending=await database.selectFrom("broker.order_projection").select("orderIntentId").where("state","=","reconciling").execute();for(const item of pending)await submitCommands.submit({eventId:`fixture-reconcile-${item.orderIntentId}`,intentId:item.orderIntentId});await reconciliation.reconcileAll();return{processed:events.length};};
+  app.post("/api/testing/trading/process",processTrading);
+  app.post("/api/testing/trading/lost-response",()=>{fixtures.trading.failNextSubmitAsLostResponse();return{ok:true};});
+  app.post<{Params:{id:string}}>("/api/testing/trading/orders/:id/partial-fill",async request=>{const order=fixtures.trading.partialFill(request.params.id,String((request.body as {quantity?:string}).quantity??"0.5"),String((request.body as {price?:string}).price??"100"));await reconciliationRepository.observeOrder(order);await reconciliation.reconcileAll();return order;});
+  app.post<{Params:{id:string}}>("/api/testing/trading/orders/:id/fill",async request=>{const order=fixtures.trading.fill(request.params.id,String((request.body as {quantity?:string}).quantity??"1"),String((request.body as {price?:string}).price??"100"));await reconciliationRepository.observeOrder(order);await reconciliation.reconcileAll();return order;});
+  app.post<{Params:{id:string}}>("/api/testing/trading/orders/:id/cancel-ack",async request=>{const order=fixtures.trading.acknowledgeCancel(request.params.id);await reconciliationRepository.observeOrder(order);return order;});
+  app.post("/api/testing/trading/drift",async request=>{fixtures.trading.setCash(Number((request.body as{cash?:number}).cash??9999));return reconciliation.reconcileAll();});
 
   await monitorScheduler.start();
   return app;

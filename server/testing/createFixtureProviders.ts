@@ -13,6 +13,8 @@ import type {
 } from "../../src/features/market/apiDomain";
 import { ProviderRateLimitError, ProviderTimeoutError } from "../core/errors";
 import type { ProviderResult } from "../core/providerTypes";
+import{FakeAlpacaTradingProvider}from"./fakeAlpacaTradingProvider";
+import{FakeTradeUpdateStream}from"./fakeTradeUpdateStream";
 
 type Source = "alpaca" | "sec" | "finnhub" | "fred";
 type FailureCode = 429 | 503;
@@ -20,6 +22,8 @@ const asOf = "2026-08-07T14:00:00Z";
 const value = <T>(source: Source, data: T): ProviderResult<T> => ({ source, asOf, data });
 
 export function createFixtureProviders() {
+  const trading=new FakeAlpacaTradingProvider();
+  const tradeUpdates=new FakeTradeUpdateStream();
   const failures = new Map<Source, FailureCode>();
   const maybeFail = (source: Source) => {
     const code = failures.get(source);
@@ -113,12 +117,15 @@ export function createFixtureProviders() {
     finnhub,
     sec,
     fred,
+    trading,
+    tradeUpdates,
     failNext(source: Source, code: FailureCode) { failures.set(source, code); },
     setQuote(symbol: string, price: number, previousClose = price) { quoteState[symbol.toUpperCase()] = { price, previousClose }; },
     reset() {
       failures.clear();
       for (const symbol of Object.keys(quoteState)) delete quoteState[symbol];
       Object.assign(quoteState, defaultQuoteState());
+      trading.reset();
     },
   };
 }

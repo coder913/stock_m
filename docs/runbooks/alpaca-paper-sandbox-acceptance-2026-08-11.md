@@ -25,6 +25,29 @@
 - 需要外部供应商访问的 Worker 同时连接 outbound 与 backend 网络。
 - Trade Updates 收到合法 `listening` 确认后保持健康状态。
 
-## 尚未观测
+## 真实部分成交验收（已通过）
 
-两次真实成交都从 `new` 直接进入 `fill`，未产生 `partial_fill`。Alpaca Paper 文档说明，可成交订单只有约 10% 会随机获得一次部分成交，因此该状态无法由沙盒 API 确定性触发。确定性的部分成交、撤单竞态、账本和绩效联动已由 fixture-backed E2E 覆盖；真实沙盒部分成交仍需在后续自然发生时补充证据，不能标记为已通过。
+2026-08-11 15:40 UTC 使用真实 Alpaca Paper 账户完成一次受控 AAPL 往返。验收暂停交易 Worker，通过应用预览和确认接口生成订单意图，再以相同 `client_order_id` 提交 Paper 扩展时段限价单；独立连接真实 `trade_updates` WebSocket 捕获逐笔状态。订单完成并清仓后重启 Worker，由 Worker 绑定既有远端订单并执行 REST 全量对账，没有重复提交。
+
+### WebSocket 证据
+
+- 买单应用意图：`8b3f31c0-1b54-4b7c-a037-dfb1150f0341`。
+- 买单远端订单：`85ce92f6-1b89-4463-bdd8-a22dc5982526`，数量 10 股。
+- 买单状态序列：`pending_new → new → partial_fill → partial_fill → partial_fill → fill`。
+- 买单累计成交序列：`3/10 → 6/10 → 8/10 → 10/10`。
+- 首次部分成交时间：`2026-08-11T15:40:48.633646826Z`。
+- 卖单应用意图：`64bdca91-7cc2-42c7-b7b9-f4e3bc93cf0a`。
+- 卖单远端订单：`8a39a3cf-59d3-4a28-9a52-84e0c06c2919`，数量 10 股。
+- 卖单累计成交序列：`7/10 → 8/10 → 10/10`，其中前两次为 `partial_fill`。
+
+### REST、账本与恢复证据
+
+- Alpaca REST 活动返回买单 4 条独立 FILL 活动，其中 3 条原始类型为 `partial_fill`；卖单返回 3 条独立 FILL 活动，其中 2 条原始类型为 `partial_fill`。
+- Worker 重启后两个应用订单均绑定对应远端订单，最终投影状态均为 `filled`。
+- Paper 活动已进入隔离账本；当前未清除对账漂移数量为 `0`。
+- 最终 AAPL 持仓：`0`。
+- 未完成订单：`0`。
+- 交易 Worker：`healthy`。
+- 验收后真实供应商检查：`live-smoke: ok=4 skipped=0`。
+
+由此，真实账户读取、应用意图、远端提交、WebSocket 部分成交、最终成交、反向清仓、Worker 恢复绑定、REST 活动回放和账本对账均已有真实 Paper 证据。fixture-backed E2E 继续负责可重复验证部分成交与撤单竞态。

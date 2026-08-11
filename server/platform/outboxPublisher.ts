@@ -2,6 +2,8 @@ import type { Kysely } from "kysely";
 import type { Database } from "../db/types";
 import type { OutboxRepository } from "./outboxRepository";
 
+type PublishableOutbox = Pick<OutboxRepository, "listUnpublishedForUpdate" | "markPublished" | "recordFailure">;
+
 export interface EventQueue {
   add(name: string, data: unknown, options: { jobId: string }): Promise<unknown>;
 }
@@ -11,7 +13,7 @@ export class OutboxPublisher {
   private activePublish?: Promise<number>;
 
   constructor(
-    private readonly database: Kysely<Database>, private readonly outbox: OutboxRepository,
+    private readonly database: Kysely<Database>, private readonly outbox: PublishableOutbox,
     private readonly queue: EventQueue, private readonly now: () => Date = () => new Date(),
   ) {}
 

@@ -32,7 +32,7 @@
 - Consumes: `PaperLedgerEventView` values returned by `/portfolio/alpaca-paper/ledger`.
 - Produces: `PaperPortfolioApi.listLedger(): Promise<PaperLedgerEventView[]>` and `adaptBrokerPerformance(input): BrokerPerformanceAdaptation` with validated `LedgerEvent[]`, notices, and inception date.
 
-- [ ] **Step 1: Write failing API-client and adapter tests**
+- [x] **Step 1: Write failing API-client and adapter tests**
 
 Add an API-client assertion for:
 
@@ -59,7 +59,7 @@ expect(result.inceptionDate).toBe("2026-08-04");
 
 Also assert that drift returns no events, unknown events create a notice, invalid Decimal values identify the event ID, and trading events without a preceding deposit return `cashHistoryComplete: false`.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
@@ -69,7 +69,7 @@ npx vitest run src/features/trading/paperPortfolioApiClient.test.ts src/features
 
 Expected: FAIL because `listLedger`, the typed view, and the richer adaptation result do not exist.
 
-- [ ] **Step 3: Implement the typed API and adapter**
+- [x] **Step 3: Implement the typed API and adapter**
 
 Define:
 
@@ -102,11 +102,11 @@ interface BrokerPerformanceAdaptation {
 }
 ```
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run the Step 2 command. Expected: all focused tests pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 Stage only the four Task 1 files plus `server/broker/paperPortfolioRepository.ts` if its response shape changed, then commit:
 

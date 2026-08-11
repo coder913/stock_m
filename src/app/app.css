@@ -29,6 +29,22 @@ a { color: inherit; text-decoration: none; }
 .monitor-alert-card.is-selected { border-color: var(--brand); }
 .monitor-alert-select { display: grid; gap: 4px; width: 100%; text-align: left; border: 0; background: transparent; }
 .condition-timeline { display: grid; gap: 8px; padding-left: 24px; }
+.paper-orders { display: grid; gap: 12px; }
+.paper-orders-heading, .paper-orders-error, .paper-order-actions { display: flex; align-items: center; gap: 8px; }
+.paper-orders-heading { justify-content: space-between; }
+.paper-orders-heading span { color: var(--text-secondary); font-size: 12px; }
+.paper-orders table { width: 100%; border-collapse: collapse; }
+.paper-orders th, .paper-orders td { padding: 10px; border-bottom: 1px solid var(--divider); text-align: left; vertical-align: top; }
+.paper-orders-error { justify-content: space-between; padding: 12px; border: 1px solid #c73737; border-radius: 8px; }
+.paper-order-actions { flex-wrap: wrap; }
+.paper-order-detail { display: grid; gap: 12px; padding: 8px 0; }
+.paper-order-detail dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.paper-order-detail dl div { min-width: 0; }
+.paper-order-detail dt { color: var(--text-secondary); font-size: 12px; }
+.paper-order-detail dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.paper-order-timeline { display: grid; gap: 10px; margin: 0; padding-left: 22px; }
+.paper-order-timeline li { display: grid; grid-template-columns: minmax(150px, auto) minmax(110px, auto) 1fr; gap: 10px; }
+.paper-order-timeline time, .paper-order-timeline span { color: var(--text-secondary); }
 
 @media (max-width: 1023px) {
   .app-shell { grid-template-columns: 72px minmax(0, 1fr); }
@@ -38,4 +54,7 @@ a { color: inherit; text-decoration: none; }
   .brand strong::after { content: "sm"; font-size: 20px; }
   .primary-nav a::first-letter { font-size: 16px; }
   .main-content { padding: 20px; }
+  .paper-orders { overflow-x: auto; }
+  .paper-order-detail dl { grid-template-columns: 1fr; }
+  .paper-order-timeline li { grid-template-columns: 1fr; gap: 2px; }
 }

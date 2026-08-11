@@ -9,6 +9,7 @@ const api = () => ({
   getOverview: vi.fn().mockResolvedValue({ source: "alpaca-paper", account: { cash: "100", buyingPower: "200", equity: "300", portfolioValue: "300", observedAt: "2026-08-11" }, positions: [{ symbol: "AAPL", quantity: "2", marketValue: "400", averageEntryPrice: "100", observedAt: "2026-08-11" }], asOf: "2026-08-11" }),
   listOrders: vi.fn().mockResolvedValue([]),
   getTimeline: vi.fn(),
+  cancelOrder: vi.fn(),
   listLedger: vi.fn().mockResolvedValue([]),
   reconcile: vi.fn(),
 });

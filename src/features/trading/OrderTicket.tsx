@@ -7,7 +7,7 @@ import "./trading.css";
 const defaultApi = new PaperTradingApiClient();
 const newKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 
-export function OrderTicket({ symbol, api = defaultApi, now = () => new Date() }: { symbol: string; api?: PaperTradingApi; now?: () => Date }) {
+export function OrderTicket({ symbol, api = defaultApi, now = () => new Date(), disabledReason }: { symbol: string; api?: PaperTradingApi; now?: () => Date; disabledReason?: string }) {
   const normalizedSymbol = symbol.toUpperCase();
   const [status, setStatus] = useState<PaperTradingStatus>();
   const [open, setOpen] = useState(false);
@@ -30,6 +30,7 @@ export function OrderTicket({ symbol, api = defaultApi, now = () => new Date() }
   const expired = useMemo(() => preview ? Date.parse(preview.expiresAt) <= now().getTime() : false, [now, preview]);
   if (!status) return <p className="paper-trading-state">正在检查 Alpaca Paper 状态</p>;
   if (!status.ready) return <p className="paper-trading-state">Alpaca Paper 尚未连接</p>;
+  if (disabledReason) return <p role="alert" className="paper-trading-state">{disabledReason}</p>;
 
   const requestPreview = async () => {
     setBusy(true); setMessage("");

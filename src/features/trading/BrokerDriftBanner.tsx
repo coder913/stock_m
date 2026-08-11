@@ -1,0 +1,2 @@
+export interface BrokerDrift{cashDifference:string;symbolDifferences:{symbol:string;difference:string}[]}
+export function BrokerDriftBanner({drift}:{drift?:BrokerDrift}){if(!drift)return null;return <section role="alert" className="broker-drift"><strong>Paper 对账不一致，交易与绩效暂不可用</strong><p>现金差额 ${drift.cashDifference}</p>{drift.symbolDifferences.map(item=><p key={item.symbol}>{item.symbol} {item.difference}</p>)}</section>}

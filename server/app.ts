@@ -23,6 +23,7 @@ import type { HealthService } from "./platform/healthService";
 import { registerInternalSnapshotRoutes, type InternalSnapshotRouteDependencies } from "./routes/internalSnapshotRoutes";
 import { registerNotificationRoutes, type NotificationRouteDependencies } from "./routes/notificationRoutes";
 import { registerPaperTradingRoutes, type PaperTradingRouteDependencies } from "./routes/paperTradingRoutes";
+import{registerPaperPortfolioRoutes,type PaperPortfolioRouteDependencies}from"./routes/paperPortfolioRoutes";
 
 export interface AppDependencies {
   config: Pick<ServerConfig, "host" | "port" | "providers"> & { publicStatus: { providers: Record<string, { configured: boolean }>; notifications?: ServerConfig["notifications"]; paperTrading?: { enabled: boolean; configured: boolean } } };
@@ -42,6 +43,7 @@ export interface AppDependencies {
   internalSnapshots?: InternalSnapshotRouteDependencies;
   notifications?: NotificationRouteDependencies;
   paperTrading?: PaperTradingRouteDependencies;
+  paperPortfolio?:PaperPortfolioRouteDependencies;
   staticDir?: string;
 }
 
@@ -81,6 +83,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.browserMigration) registerBrowserMigrationRoutes(app, dependencies.browserMigration);
   if (dependencies.notifications) registerNotificationRoutes(app, dependencies.notifications);
   if (dependencies.paperTrading) registerPaperTradingRoutes(app, dependencies.paperTrading);
+  if(dependencies.paperPortfolio)registerPaperPortfolioRoutes(app,dependencies.paperPortfolio);
   registerCacheRoutes(app, refreshRegistry);
   if (dependencies.staticDir) {
     void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false });

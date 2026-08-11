@@ -36,6 +36,7 @@ import { AlpacaTradingProvider } from "./broker/alpacaTradingProvider";
 import { BrokerRepository } from "./broker/brokerRepository";
 import { OrderPreviewService } from "./broker/orderPreviewService";
 import { createOrderPreviewTokenService } from "./broker/orderPreviewToken";
+import{PostgresPaperPortfolioStore}from"./broker/paperPortfolioRepository";
 
 const config = loadServerConfig(process.env);
 const database = createDatabase(config.databaseUrl);
@@ -48,7 +49,7 @@ const tradingQueue = new Queue(queueNames.tradingCommands, { connection: redis }
 const outbox = new OutboxRepository();
 const idempotency = new IdempotencyRepository();
 const outboxPublisher = new OutboxPublisher(database, outbox, {
-  add: (name, data, options) => name.startsWith("broker.order.")
+  add: (name, data, options) => name.startsWith("broker.")
     ? tradingQueue.add(name,data,options)
     : name === "monitor.alert.created" || name === "notification.test.requested"
       ? notificationEventQueue.add(name, data, options)
@@ -131,6 +132,7 @@ const app = buildApp({
     repository: broker,
     preview: { preview: (input) => orderPreview.preview(input), verify: (token) => previewTokens.verify(token) },
   } : undefined,
+  paperPortfolio:config.paperTrading.enabled?{store:new PostgresPaperPortfolioStore(database),database,idempotency,outbox}:undefined,
 });
 
 await app.listen({ host: config.host, port: config.port });

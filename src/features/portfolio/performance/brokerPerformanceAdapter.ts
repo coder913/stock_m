@@ -1,0 +1,2 @@
+export interface BrokerPerformanceEvent{source:"alpaca-paper";occurredAt:string;type:string;symbol?:string;quantity?:string;price?:string;amount?:string;}
+export function adaptBrokerPerformance(input:{activeDrift:boolean;events:BrokerPerformanceEvent[]}){if(input.events.some(event=>event.source!=="alpaca-paper"))throw new Error("PAPER_LEDGER_SOURCE_REQUIRED");if(input.activeDrift)return{dataState:"unavailable" as const,events:[],notices:["Paper 对账不一致"]};return{dataState:"fresh" as const,events:input.events,notices:[]};}

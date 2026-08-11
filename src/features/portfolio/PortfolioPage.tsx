@@ -17,6 +17,8 @@ import "./portfolio.css";
 import { useRepositories } from "../../app/repositories";
 import { OrderTicket } from "../trading/OrderTicket";
 import type { PaperTradingApi } from "../trading/paperTradingApiClient";
+import { PaperPortfolioOverview } from "../trading/PaperPortfolioOverview";
+import { loadPortfolioSelection, savePortfolioSelection, type PortfolioSelection } from "./portfolioSelection";
 
 const fallbackQuotes = { NVDA: { price: 167.32, previousClose: 162.58 }, AMD: { price: 158.11, previousClose: 153.2 }, MSFT: { price: 505.41, previousClose: 500 } };
 const sectors = { NVDA: "半导体", AMD: "半导体", MSFT: "软件" };
@@ -24,7 +26,14 @@ const defaultMarketClient = new MarketApiClient();
 type PortfolioMarketClient = Pick<MarketApiClient, "getQuotes" | "getUniverse" | "getEvents" | "getBatchBars">;
 type PortfolioTab = "overview" | "ledger" | "performance" | "review";
 
-export function PortfolioPage({ marketClient = defaultMarketClient, portfolioState: injectedPortfolioState, monitorState: injectedMonitorState, tradingApi }: { marketClient?: PortfolioMarketClient; portfolioState?: PortfolioStateService; monitorState?: MonitorStateService; tradingApi?: PaperTradingApi }) {
+type PortfolioPageProps = { marketClient?: PortfolioMarketClient; portfolioState?: PortfolioStateService; monitorState?: MonitorStateService; tradingApi?: PaperTradingApi };
+export function PortfolioPage(props: PortfolioPageProps) {
+  const [selection, setSelection] = useState<PortfolioSelection>(() => loadPortfolioSelection(Boolean(props.tradingApi)));
+  const select = (value: PortfolioSelection) => { savePortfolioSelection(value); setSelection(value); };
+  return <section className="portfolio-page"><div className="portfolio-selector"><button type="button" aria-pressed={selection === "manual"} onClick={() => select("manual")}>手工组合</button>{props.tradingApi && <button type="button" aria-pressed={selection === "alpaca-paper"} onClick={() => select("alpaca-paper")}>Alpaca Paper</button>}</div>{selection === "alpaca-paper" ? <PaperPortfolioOverview tradingApi={props.tradingApi} /> : <ManualPortfolioPage {...props} />}</section>;
+}
+
+function ManualPortfolioPage({ marketClient = defaultMarketClient, portfolioState: injectedPortfolioState, monitorState: injectedMonitorState, tradingApi }: PortfolioPageProps) {
   const repositories = useRepositories();
   const portfolioState = useMemo(() => injectedPortfolioState ?? repositories.portfolio, [injectedPortfolioState, repositories.portfolio]);
   const monitorState = useMemo(() => injectedMonitorState ?? repositories.monitoring, [injectedMonitorState, repositories.monitoring]);

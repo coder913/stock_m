@@ -8,3 +8,6 @@
 .paper-order-confirmation dd { margin: 0; font-weight: 600; }
 .paper-order-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .paper-trading-state { color: var(--text-secondary); }
+.portfolio-selector { display: flex; gap: .5rem; margin-bottom: 1rem; }
+.portfolio-selector button[aria-pressed="true"] { color: var(--brand); border-color: var(--brand); }
+.broker-drift { border: 1px solid #b42318; background: #fff1f0; color: #8a1c13; padding: .875rem; border-radius: .5rem; margin-bottom: 1rem; }

@@ -1,0 +1,1 @@
+export type PortfolioSelection="manual"|"alpaca-paper";const key="stockm.portfolio.selection";export function loadPortfolioSelection(paperEnabled:boolean):PortfolioSelection{const value=localStorage.getItem(key);return paperEnabled&&value==="alpaca-paper"?"alpaca-paper":"manual";}export function savePortfolioSelection(value:PortfolioSelection){localStorage.setItem(key,value);}

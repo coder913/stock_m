@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "kysely";
 import { randomUUID } from "node:crypto";
-import { Queue } from "bullmq";
+import { Queue, Worker } from "bullmq";
 import type { MonitorSnapshot, MonitorSnapshotRequest } from "../../shared/monitoring";
 import { buildApp } from "../app";
 import { PostgresMarketDataCache } from "../cache/postgresMarketDataCache";
@@ -21,6 +21,7 @@ import { NotificationService } from "../notifications/notificationService";
 import { PushSubscriptionRepository } from "../notifications/pushSubscriptionRepository";
 import { IdempotencyRepository } from "../platform/idempotencyRepository";
 import { OutboxRepository } from "../platform/outboxRepository";
+import { OutboxPublisher } from "../platform/outboxPublisher";
 import { PostgresManualPortfolioRepository } from "../portfolio/manualPortfolioRepository";
 import { PostgresPortfolioReviewRepository } from "../portfolio/portfolioReviewRepository";
 import { PostgresThesisRepository } from "../thesis/thesisRepository";
@@ -40,6 +41,7 @@ import{CancelCommandService}from"../broker/cancelCommandService";
 import{PostgresBrokerReconciliationRepository}from"../broker/brokerReconciliationRepository";
 import{ReconciliationService}from"../broker/reconciliationService";
 import{PostgresPaperPortfolioStore}from"../broker/paperPortfolioRepository";
+import{createTradingJobProcessor,PostgresTradingInbox}from"../workers/tradingWorker";
 
 const connectionString = process.env.TEST_DATABASE_URL ?? "postgresql://stock_m:stock_m@127.0.0.1:55432/stock_m_test";
 const port = Number(process.env.E2E_PORT ?? 4174);
@@ -74,9 +76,6 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
   const reconciliation=new ReconciliationService(fixtures.trading,reconciliationRepository,repositoryNow);
   const previewTokens=createOrderPreviewTokenService(Buffer.alloc(32,9),repositoryNow);
   const orderPreview=new OrderPreviewService({enabled:true,now:repositoryNow,loadAccount:async()=>{const account=await fixtures.trading.getAccount();return{buyingPower:account.buyingPower,equity:account.equity};},loadAsset:symbol=>fixtures.trading.getAsset(symbol),loadQuote:async symbol=>{const result=await fixtures.alpaca.getQuotes([symbol]);return{price:String(result.data[0]?.price??0),source:"fixture",asOf:result.asOf,state:"fresh"};},loadPosition:async symbol=>({quantity:(await fixtures.trading.getPosition(symbol))?.quantity??"0"}),hasActiveDrift:()=>broker.hasActiveDrift(),tokens:previewTokens});
-  const scheduler={reconcileOrder:async()=>undefined};
-  const submitCommands=new OrderCommandService(broker,fixtures.trading,scheduler,repositoryNow);
-  const cancelCommands=new CancelCommandService(broker,fixtures.trading,scheduler,repositoryNow);
   const theses = new PostgresThesisRepository(database, repositoryNow);
   const monitoring = new PostgresMonitorStateRepository(database, repositoryNow);
   const schedules = new MonitorScheduleRepository(database, repositoryNow);
@@ -86,6 +85,27 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
   const notificationService = new NotificationService({ repository: notificationRepository, subscriptions: pushSubscriptions, provider: fakePush, scheduler: { retry: async () => undefined } });
   const redis = createRedisConnection(redisUrl);
   const monitorQueue = new Queue(queueNames.monitorRuns, { connection: redis });
+  const tradingQueueConnection = createRedisConnection(redisUrl);
+  const tradingQueue = new Queue(queueNames.tradingCommands, { connection: tradingQueueConnection });
+  const tradingOutbox: Pick<OutboxRepository,"listUnpublishedForUpdate"|"markPublished"|"recordFailure"> = {
+    listUnpublishedForUpdate: (transaction, limit) => transaction.selectFrom("platform.outbox_event").selectAll()
+      .where("publishedAt", "is", null).where("topic", "like", "broker.%")
+      .orderBy("occurredAt", "asc").orderBy("id", "asc").limit(limit).forUpdate().skipLocked().execute(),
+    markPublished: (transaction, id, at) => outbox.markPublished(transaction, id, at),
+    recordFailure: (transaction, id) => outbox.recordFailure(transaction, id),
+  };
+  const tradingPublisher = new OutboxPublisher(database, tradingOutbox, tradingQueue, repositoryNow);
+  let tradingWorkerConnection: ReturnType<typeof createRedisConnection> | undefined;
+  let tradingWorker: Worker | undefined;
+  let workerGeneration = 0;
+  let reconcileSequence = 0;
+  const scheduler = { reconcileOrder: (intentId:string) => tradingQueue.add("broker.order.reconcile.requested", { intentId }, { jobId: `e2e-reconcile-${intentId}-${++reconcileSequence}` }) };
+  const submitCommands=new OrderCommandService(broker,fixtures.trading,scheduler,repositoryNow);
+  const cancelCommands=new CancelCommandService(broker,fixtures.trading,scheduler,repositoryNow);
+  const tradingProcessor=createTradingJobProcessor({submit:event=>submitCommands.submit(event),cancel:event=>cancelCommands.cancel(event),reconcileFull:()=>reconciliation.reconcileAll().then(()=>undefined)},new PostgresTradingInbox(database));
+  const stopTradingWorker=async()=>{const worker=tradingWorker;const connection=tradingWorkerConnection;tradingWorker=undefined;tradingWorkerConnection=undefined;if(worker)await worker.close();if(connection&&connection.status!=="end")await connection.quit();};
+  const startTradingWorker=async()=>{tradingWorkerConnection=createRedisConnection(redisUrl);tradingWorker=new Worker(queueNames.tradingCommands,tradingProcessor,{connection:tradingWorkerConnection,concurrency:1});await tradingWorker.waitUntilReady();workerGeneration+=1;};
+  const waitForTradingIdle=async()=>{const deadline=Date.now()+10_000;while(Date.now()<deadline){const counts=await tradingQueue.getJobCounts("waiting","active","delayed");if((counts.waiting??0)+(counts.active??0)+(counts.delayed??0)===0){const failed=await tradingQueue.getFailed(0,9);if(failed.length)throw new Error(`Trading queue failed: ${failed.map(job=>`${job.name}: ${job.failedReason}`).join("; ")}`);return counts;}await new Promise(resolve=>setTimeout(resolve,20));}throw new Error(`Trading queue did not become idle: ${JSON.stringify(await tradingQueue.getJobCounts())}`);};
   const monitorScheduler = new MonitorScheduler({ repository: schedules, queue: monitorQueue, calendar: createUsEquityMarketCalendar(), now: repositoryNow });
   const snapshotClient = {
     async load(input: MonitorSnapshotRequest) {
@@ -161,13 +181,17 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
     paperPortfolio:{store:new PostgresPaperPortfolioStore(database),database,idempotency,outbox,now:repositoryNow},
     staticDir: "dist",
   });
-  app.addHook("onClose", async () => { await monitorQueue.close(); if (redis.status !== "end") await redis.quit(); });
+  app.addHook("onClose", async () => { await tradingPublisher.stop();await stopTradingWorker();await tradingQueue.close();if(tradingQueueConnection.status!=="end")await tradingQueueConnection.quit();await monitorQueue.close(); if (redis.status !== "end") await redis.quit(); });
   app.post("/api/testing/reset", async () => {
+    await stopTradingWorker();
     await resetTestDatabase(database);
     clock.reset();
     fixtures.reset();
     fakePush.clear();
     await redis.flushdb();
+    workerGeneration=0;
+    reconcileSequence=0;
+    await startTradingWorker();
     await monitorScheduler.start();
     return { ok: true };
   });
@@ -238,14 +262,19 @@ async function createServer(database: Kysely<Database>): Promise<FastifyInstance
     return { ok: true, now: clock.iso() };
   });
 
-  const processTrading=async()=>{const events=await database.selectFrom("platform.outbox_event").selectAll().where("publishedAt","is",null).where("topic","like","broker.%").orderBy("occurredAt").execute();for(const event of events){const body=typeof event.payloadJson==="string"?JSON.parse(event.payloadJson):event.payloadJson as Record<string,unknown>;if(event.topic==="broker.order.submit.requested")await submitCommands.submit({eventId:event.id,intentId:String(body.id)});else if(event.topic==="broker.order.cancel.requested")await cancelCommands.cancel({eventId:event.id,intentId:String(body.intentId),cancelIntentId:String(body.cancelIntentId)});else if(event.topic==="broker.reconciliation.requested")await reconciliation.reconcileAll();await database.updateTable("platform.outbox_event").set({publishedAt:repositoryNow()}).where("id","=",event.id).execute();}const pending=await database.selectFrom("broker.order_projection").select("orderIntentId").where("state","=","reconciling").execute();for(const item of pending)await submitCommands.submit({eventId:`fixture-reconcile-${item.orderIntentId}`,intentId:item.orderIntentId});await reconciliation.reconcileAll();return{processed:events.length};};
+  const submissionEvent=async(intentId:string)=>database.selectFrom("platform.outbox_event").selectAll().where("aggregateId","=",intentId).where("topic","=","broker.order.submit.requested").executeTakeFirst();
+  const processTrading=async()=>{const published=await tradingPublisher.publishBatch(100);const counts=await waitForTradingIdle();await reconciliation.reconcileAll();return{published,counts};};
   app.post("/api/testing/trading/process",processTrading);
+  app.post("/api/testing/trading/worker/restart",async()=>{await stopTradingWorker();await startTradingWorker();return{ok:true,workerGeneration};});
+  app.get<{Params:{id:string}}>("/api/testing/trading/state/:id",async(request,reply)=>{const event=await submissionEvent(request.params.id);if(!event)return reply.status(404).send({code:"TEST_SUBMISSION_EVENT_NOT_FOUND"});const [inbox,eventCount]=await Promise.all([database.selectFrom("platform.inbox_event").select(({fn})=>fn.countAll<string>().as("count")).where("consumer","=","trading-worker").where("eventId","=",event.id).executeTakeFirstOrThrow(),broker.countOrderEvents(request.params.id)]);return{workerGeneration,submissionCount:fixtures.trading.getSubmissionCount(),inboxCount:Number(inbox.count),eventCount};});
+  app.post<{Params:{id:string}}>("/api/testing/trading/redeliver/:id",async(request,reply)=>{const event=await submissionEvent(request.params.id);if(!event)return reply.status(404).send({code:"TEST_SUBMISSION_EVENT_NOT_FOUND"});const job=await tradingQueue.getJob(event.id);if(!job)return reply.status(409).send({code:"TEST_TRADING_JOB_NOT_FOUND"});const name=job.name;const data=job.data;await job.remove();await tradingQueue.add(name,data,{jobId:event.id});await waitForTradingIdle();return{ok:true,eventId:event.id};});
   app.post("/api/testing/trading/lost-response",()=>{fixtures.trading.failNextSubmitAsLostResponse();return{ok:true};});
   app.post<{Params:{id:string}}>("/api/testing/trading/orders/:id/partial-fill",async request=>{const order=fixtures.trading.partialFill(request.params.id,String((request.body as {quantity?:string}).quantity??"0.5"),String((request.body as {price?:string}).price??"100"));await reconciliationRepository.observeOrder(order);await reconciliation.reconcileAll();return order;});
   app.post<{Params:{id:string}}>("/api/testing/trading/orders/:id/fill",async request=>{const order=fixtures.trading.fill(request.params.id,String((request.body as {quantity?:string}).quantity??"1"),String((request.body as {price?:string}).price??"100"));await reconciliationRepository.observeOrder(order);await reconciliation.reconcileAll();return order;});
   app.post<{Params:{id:string}}>("/api/testing/trading/orders/:id/cancel-ack",async request=>{const order=fixtures.trading.acknowledgeCancel(request.params.id);await reconciliationRepository.observeOrder(order);return order;});
   app.post("/api/testing/trading/drift",async request=>{fixtures.trading.setCash(Number((request.body as{cash?:number}).cash??9999));return reconciliation.reconcileAll();});
 
+  await startTradingWorker();
   await monitorScheduler.start();
   return app;
 }

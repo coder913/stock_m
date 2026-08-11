@@ -1,5 +1,20 @@
 # stock_m
 
+## Alpaca Paper 模拟交易
+
+本项目只允许连接 `https://paper-api.alpaca.markets`，不会接受 Live Trading 地址。启用前配置 `ALPACA_PAPER_TRADING_ENABLED=true`、Paper API 凭据和 32 字节 Base64 的 `ALPACA_ORDER_PREVIEW_SIGNING_KEY`，然后用 `docker compose --profile paper-trading up -d --build` 启动独立的 `trading-worker`。
+
+当前支持美股市价单、限价单、`DAY`/`GTC` 和分数股数量。每笔订单必须先生成短期预览，再由用户在确认框中明确提交；监控提醒、研究逻辑和组合规则都不能自动下单。手工组合与 Alpaca Paper 账户、订单、账本和绩效严格隔离。
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+docker compose --profile paper-trading up -d --build
+docker compose exec trading-worker npm run worker:health -- trading
+npm run test:data:smoke
+```
+
+`test:data:smoke` 对 Paper 账户、SPY 资产、未完成订单与账户活动执行只读检查，不提交或撤销订单。发现对账漂移时，页面会隐藏可信绩效并禁止下单；处理方法见 `docs/runbooks/alpaca-paper-reconciliation.md`。
+
 面向美股研究与模拟决策的本地工作台。生产页面统一通过本机 Fastify 网关读取行情、公司资料、财务数据、新闻和事件；浏览器不会接触供应商密钥，也不会发送真实订单。
 
 ## 快速开始

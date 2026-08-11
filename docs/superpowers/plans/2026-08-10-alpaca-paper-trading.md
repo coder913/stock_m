@@ -45,7 +45,7 @@
 - Produces: `AlpacaTradingProvider` for account, asset, order, cancel, activities and order-by-client-ID operations.
 - Produces: normalized `shared/broker.ts` domain types used by server and browser tasks.
 
-- [ ] **Step 1: Add failing configuration safety tests**
+- [x] **Step 1: Add failing configuration safety tests**
 
 ```ts
 test("rejects the production trading origin", () => {
@@ -57,16 +57,16 @@ test("keeps paper trading disabled by default", () => {
 });
 ```
 
-- [ ] **Step 2: Write failing provider contract tests**
+- [x] **Step 2: Write failing provider contract tests**
 
 Cover Paper account normalization, asset fractional/tradable flags, paginated orders/activities, submit payload mapping, cancel, lookup by `client_order_id`, `401`, `429`, `5xx` and timeout classification.
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 Run: `npm test -- server/config.test.ts server/broker/alpacaTradingProvider.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 4: Define normalized broker contracts**
+- [x] **Step 4: Define normalized broker contracts**
 
 ```ts
 export type BrokerOrderStatus = "accepted" | "new" | "partially_filled" | "filled" | "canceled" | "rejected" | "expired";
@@ -96,11 +96,11 @@ export interface AlpacaTradingPort {
 
 Add `ws` to dependencies and `@types/ws` to devDependencies for the later Trade Updates consumer; do not rely on a runtime-global WebSocket. All normalized broker types live in `shared/broker.ts`.
 
-- [ ] **Step 5: Implement Paper provider and strict origin gate**
+- [x] **Step 5: Implement Paper provider and strict origin gate**
 
 Use the Paper REST origin from validated config, explicit request timeouts, provider error mapping and pagination. A production or non-allowlisted origin prevents readiness even when credentials are valid.
 
-- [ ] **Step 6: Run tests/build and commit**
+- [x] **Step 6: Run tests/build and commit**
 
 Run: `npm test -- server/config.test.ts server/broker/alpacaTradingProvider.test.ts`  
 Run: `npm run build`  
@@ -126,7 +126,7 @@ git commit -m "feat: add paper trading provider contracts"
 - Produces: immutable order/cancel intents, remote order events, fills/activities, account snapshots, ledger events and drift records.
 - Produces: deterministic `clientOrderIdFor(intentId)`.
 
-- [ ] **Step 1: Write failing state-transition tests**
+- [x] **Step 1: Write failing state-transition tests**
 
 ```ts
 expect(transition("pending_submission", "remote.accepted")).toBe("accepted");
@@ -137,25 +137,25 @@ expect(transition("cancel_pending", "remote.filled")).toBe("filled");
 
 Cover every allowed terminal/non-terminal transition and duplicate remote event no-op.
 
-- [ ] **Step 2: Write failing repository/id tests**
+- [x] **Step 2: Write failing repository/id tests**
 
 Assert stable client IDs fit Alpaca length/character rules, duplicate remote order/fill/activity IDs insert once, order projections rebuild from events, and numeric strings round-trip exactly.
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 Run: `npm test -- server/broker/orderStateMachine.test.ts server/broker/clientOrderId.test.ts`  
 Run: `npm run test:integration -- server/broker/brokerRepository.integration.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 4: Create broker tables and constraints**
+- [x] **Step 4: Create broker tables and constraints**
 
 Migration creates `broker.account`, `account_snapshot`, `order_preview_audit`, `order_intent`, `cancel_intent`, `remote_order`, `order_event`, `order_projection`, `fill`, `activity`, `ledger_event`, `reconciliation_run` and `drift`. Unique keys include local intent ID, client order ID, remote order ID, fill ID and activity ID.
 
-- [ ] **Step 5: Implement pure state machine and repositories**
+- [x] **Step 5: Implement pure state machine and repositories**
 
 Append an `order_event` and update `order_projection` in one transaction. Never update/delete immutable intent, event, fill, activity or ledger rows. Store quantities/money as decimal strings at boundaries and `numeric(28,8)` in PostgreSQL.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- server/broker/orderStateMachine.test.ts server/broker/clientOrderId.test.ts`  
 Run: `npm run test:integration -- server/broker/brokerRepository.integration.test.ts`  
@@ -183,7 +183,7 @@ git commit -m "feat: persist paper order lifecycle"
 - Produces: 60-second signed preview and confirmed `order_intent` + Outbox command.
 - Consumes: fresh market quote, account, asset and current Paper position.
 
-- [ ] **Step 1: Add failing preflight table tests**
+- [x] **Step 1: Add failing preflight table tests**
 
 Test long-only rules for market/limit, DAY/GTC, integer/fractional assets, stale quote, stale account, insufficient buying power, over-sell, invalid price, disabled trading and active drift.
 
@@ -192,12 +192,12 @@ await expect(service.preview({ side: "sell", quantity: "2", position: "1", ...ba
 await expect(service.preview({ type: "market", quoteState: "stale", ...base })).rejects.toMatchObject({ code: "FRESH_QUOTE_REQUIRED" });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm test -- server/broker/orderPreviewService.test.ts server/broker/orderPreviewToken.test.ts server/routes/paperTradingRoutes.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement preview validation and signed token**
+- [x] **Step 3: Implement preview validation and signed token**
 
 ```ts
 export interface OrderPreview {
@@ -218,17 +218,17 @@ export interface OrderPreview {
 
 Sign canonical preview claims with HMAC-SHA256 and a separate server key. Verify signature, expiry and exact economic fields during confirmation. Store only preview audit metadata, never a reusable token.
 
-- [ ] **Step 4: Implement preview and intent routes**
+- [x] **Step 4: Implement preview and intent routes**
 
 `POST /api/v1/broker/alpaca-paper/order-previews` performs fresh reads and returns the preview. `POST /order-intents` requires preview token plus `Idempotency-Key`, revalidates enabled/drift status, and writes confirmed intent + `broker.order.submit.requested` Outbox in one transaction.
 
 Register the route group in `buildApp`; `server/index.ts` constructs the Paper provider, preview service and broker repository only from validated server configuration.
 
-- [ ] **Step 5: Verify monitor API cannot create an intent**
+- [x] **Step 5: Verify monitor API cannot create an intent**
 
 Add a route surface test enumerating all monitor routes and asserting none accepts order economic fields or imports the broker repository.
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- server/broker/orderPreview* server/routes/paperTradingRoutes.test.ts`  
 Run: `npm run test:integration -- server/broker/brokerRepository.integration.test.ts`  
@@ -257,37 +257,37 @@ git commit -m "feat: preview and confirm paper orders"
 - Consumes: Task 3 preview/intent endpoints.
 - Produces: explicit user-only order workflow; no direct provider call.
 
-- [ ] **Step 1: Write failing interaction tests**
+- [x] **Step 1: Write failing interaction tests**
 
 ```tsx
-await user.type(screen.getByLabelText("数量"), "1.5");
-await user.click(screen.getByRole("button", { name: "预览订单" }));
-expect(await screen.findByText("Alpaca Paper 订单确认")).toBeVisible();
+await user.type(screen.getByLabelText("鏁伴噺"), "1.5");
+await user.click(screen.getByRole("button", { name: "棰勮璁㈠崟" }));
+expect(await screen.findByText("Alpaca Paper 璁㈠崟纭")).toBeVisible();
 expect(api.createIntent).not.toHaveBeenCalled();
-await user.click(screen.getByRole("button", { name: "提交到 Alpaca Paper" }));
+await user.click(screen.getByRole("button", { name: "鎻愪氦鍒?Alpaca Paper" }));
 expect(api.createIntent).toHaveBeenCalledWith(expect.objectContaining({ previewToken: "signed" }), expect.any(String));
 ```
 
 Cover disabled/disconnected, drift, stale quote, fractional invalid, market/limit fields, DAY/GTC, expired preview, duplicate click and rejected submission.
 
-- [ ] **Step 2: Run UI tests and verify RED**
+- [x] **Step 2: Run UI tests and verify RED**
 
 Run: `npm test -- src/features/trading`  
 Expected: FAIL.
 
-- [ ] **Step 3: Implement API client and form validation**
+- [x] **Step 3: Implement API client and form validation**
 
 The client imports request/response contracts from `shared/broker.ts` and uses shared API error mapping. The form normalizes symbols uppercase and quantities/prices as decimal strings; client validation is convenience only and server errors remain authoritative.
 
-- [ ] **Step 4: Implement confirmation dialog safety copy**
+- [x] **Step 4: Implement confirmation dialog safety copy**
 
-Repeat side, symbol, quantity, type, limit price, TIF, estimated notional, quote provenance, buying power and concentration change. Title and primary action both contain “Alpaca Paper”. Disable confirmation after preview expiry or first click.
+Repeat side, symbol, quantity, type, limit price, TIF, estimated notional, quote provenance, buying power and concentration change. Title and primary action both contain 鈥淎lpaca Paper鈥? Disable confirmation after preview expiry or first click.
 
-- [ ] **Step 5: Add Research/Portfolio entry points**
+- [x] **Step 5: Add Research/Portfolio entry points**
 
 Research opens a blank-economics ticket scoped only to the current symbol. Paper Portfolio provides buy/sell buttons. Manual Portfolio renders no order action. Monitor links may navigate to `?tradeSymbol=NVDA` but cannot set side/quantity/type.
 
-- [ ] **Step 6: Run UI regression/build and commit**
+- [x] **Step 6: Run UI regression/build and commit**
 
 Run: `npm test -- src/features/trading src/features/research src/features/portfolio src/features/monitoring`  
 Run: `npm run build`  
@@ -316,7 +316,7 @@ git commit -m "feat: add explicit paper order ticket"
 - Consumes: submit/cancel Outbox events through Inbox dedupe.
 - Produces: safe remote order binding and local lifecycle events.
 
-- [ ] **Step 1: Write failing lost-response tests**
+- [x] **Step 1: Write failing lost-response tests**
 
 ```ts
 provider.submitOrder.mockRejectedValueOnce(new BrokerAmbiguousError("timeout"));
@@ -329,28 +329,28 @@ expect((await repository.getProjection(intent.id)).remoteOrderId).toBe(remoteAcc
 
 Also test remote order found before submit, explicit not-found then one submit, ambiguous lookup remains reconciling, `429/5xx`, rejection and duplicate BullMQ delivery.
 
-- [ ] **Step 2: Write failing cancel race tests**
+- [x] **Step 2: Write failing cancel race tests**
 
 Cover cancel accepted, duplicate cancel, fill winning while cancel pending, already terminal order and ambiguous cancel timeout.
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 Run: `npm test -- server/broker/orderCommandService.test.ts server/broker/cancelCommandService.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 4: Implement submission reconciliation algorithm**
+- [x] **Step 4: Implement submission reconciliation algorithm**
 
 Before submit, load projection and query deterministic client ID. Submit only after an explicit not-found result. On timeout write `reconciling`, schedule a lookup job and never call submit in the same ambiguous branch. Bind/create remote order and append mapped events transactionally.
 
-- [ ] **Step 5: Implement durable cancellation intents**
+- [x] **Step 5: Implement durable cancellation intents**
 
 Route creates immutable cancel intent + Outbox under idempotency. Worker sends cancel for eligible remote states and always follows with reconciliation; final fill/cancel status comes from Alpaca.
 
-- [ ] **Step 6: Add trading-worker Compose service**
+- [x] **Step 6: Add trading-worker Compose service**
 
 Add `"worker:trading": "tsx server/workers/tradingWorker.ts"` to `package.json`. Compose runs it with one worker concurrency, no published port, and readiness false unless Paper config passes and PostgreSQL/Redis are healthy. Disabled trading consumes no broker command.
 
-- [ ] **Step 7: Run unit/integration tests and commit**
+- [x] **Step 7: Run unit/integration tests and commit**
 
 Run: `npm test -- server/broker/orderCommandService.test.ts server/broker/cancelCommandService.test.ts server/routes/paperTradingRoutes.test.ts`  
 Run: `npm run test:integration -- server/broker/orderCommandService.integration.test.ts`  
@@ -378,7 +378,7 @@ git commit -m "feat: submit and cancel paper orders safely"
 **Interfaces:**
 - Produces: stream plus REST convergence, broker ledger and account/position drift records.
 
-- [ ] **Step 1: Write failing stream and activity mapping tests**
+- [x] **Step 1: Write failing stream and activity mapping tests**
 
 Cover authenticated stream reconnect, duplicate sequence/events, accepted/new/partial/fill/cancel/reject mapping, dividends, fees, splits and unknown activities retained as provenance without fabricating ledger semantics.
 
@@ -387,28 +387,28 @@ expect(mapActivity(dividend)).toMatchObject({ type: "dividend", amount: "12.34",
 expect(mapActivity(split)).toMatchObject({ type: "split", quantityMultiplier: "4" });
 ```
 
-- [ ] **Step 2: Write failing reconciliation/drift tests**
+- [x] **Step 2: Write failing reconciliation/drift tests**
 
 Rebuild cash/positions from fills/activities, compare exact decimal totals with remote account, create drift on cash/symbol mismatch, and clear only after a later full successful reconciliation.
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 Run: `npm test -- server/broker/alpacaTradeUpdates.test.ts server/broker/brokerActivityMapper.test.ts server/broker/brokerLedger.test.ts server/broker/reconciliationService.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 4: Implement Trade Updates consumer**
+- [x] **Step 4: Implement Trade Updates consumer**
 
 Authenticate, subscribe, heartbeat, reconnect with bounded exponential backoff, and write each remote event through unique remote event/order IDs. Stream degradation updates worker health but does not stop REST reconciliation.
 
-- [ ] **Step 5: Implement scheduled REST reconciliation**
+- [x] **Step 5: Implement scheduled REST reconciliation**
 
 On startup and every 30 seconds reconcile non-terminal orders; every five minutes load account, positions and activities since the last cursor. Store a reconciliation run with source as-of and exact differences.
 
-- [ ] **Step 6: Implement immutable broker ledger replay**
+- [x] **Step 6: Implement immutable broker ledger replay**
 
 Map fills and supported activities to broker ledger events keyed by remote IDs. Do not mutate history to resolve drift. Provide `replayBrokerPortfolio(events)` returning cash, positions and provenance for UI/performance adapters.
 
-- [ ] **Step 7: Run unit/integration tests and commit**
+- [x] **Step 7: Run unit/integration tests and commit**
 
 Run: `npm test -- server/broker`  
 Run: `npm run test:integration -- server/broker/reconciliationService.integration.test.ts`  
@@ -443,39 +443,39 @@ git commit -m "feat: reconcile paper account activity"
 - Consumes: broker account/order/ledger projections.
 - Produces: isolated manual/Paper portfolio routing and compatible performance input.
 
-- [ ] **Step 1: Add failing selection and isolation tests**
+- [x] **Step 1: Add failing selection and isolation tests**
 
 Assert manual is default when Paper disabled, selection persists as a non-business UI preference, Paper data never appears in manual totals/history, and manual ledger events never enter Paper analytics.
 
-- [ ] **Step 2: Add failing drift/performance tests**
+- [x] **Step 2: Add failing drift/performance tests**
 
 ```ts
 render(<BrokerDriftBanner drift={cashDrift} />);
-expect(screen.getByRole("alert")).toHaveTextContent("对账不一致");
-expect(screen.getByRole("button", { name: "提交到 Alpaca Paper" })).toBeDisabled();
+expect(screen.getByRole("alert")).toHaveTextContent("瀵硅处涓嶄竴鑷?);
+expect(screen.getByRole("button", { name: "鎻愪氦鍒?Alpaca Paper" })).toBeDisabled();
 expect(adaptBrokerPerformance(driftedPortfolio).dataState).toBe("unavailable");
 ```
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 Run: `npm test -- src/features/trading src/features/portfolio/portfolioSelection.test.ts src/features/portfolio/performance/brokerPerformanceAdapter.test.ts`  
 Expected: FAIL.
 
-- [ ] **Step 4: Implement Paper portfolio API views**
+- [x] **Step 4: Implement Paper portfolio API views**
 
 Expose health, latest account, positions, open/history orders, activities, immutable timeline, ledger and reconciliation/drift. Responses include remote source/as-of and streaming/reconciliation health.
 
 Register the Paper portfolio read/action routes with broker repository and reconciliation command dependencies in `buildApp` and `server/index.ts`.
 
-- [ ] **Step 5: Implement portfolio selector and Paper tabs**
+- [x] **Step 5: Implement portfolio selector and Paper tabs**
 
 Portfolio route selects `manual` or `alpaca-paper`. Paper Overview shows cash, buying power, positions and provenance; Orders shows status/timeline/cancel; Performance uses broker ledger plus market bars. Manual tabs retain current behavior.
 
-- [ ] **Step 6: Block unsafe views/actions during drift**
+- [x] **Step 6: Block unsafe views/actions during drift**
 
-When active drift exists, show exact cash/symbol differences, hide trustworthy performance metrics behind unavailable state, disable preview/confirmation, and provide a manual reconciliation command that enqueues—not directly executes—a full run.
+When active drift exists, show exact cash/symbol differences, hide trustworthy performance metrics behind unavailable state, disable preview/confirmation, and provide a manual reconciliation command that enqueues鈥攏ot directly executes鈥攁 full run.
 
-- [ ] **Step 7: Run frontend/route tests and commit**
+- [x] **Step 7: Run frontend/route tests and commit**
 
 Run: `npm test -- src/features/trading src/features/portfolio server/routes/paperPortfolioRoutes.test.ts`  
 Run: `npm run build`  
@@ -500,32 +500,32 @@ git commit -m "feat: add isolated paper portfolio"
 **Interfaces:**
 - Produces: deterministic account, order, fill, timeout, cancellation race and drift controls for Chrome E2E only.
 
-- [ ] **Step 1: Write failing happy-path and partial-fill E2E**
+- [x] **Step 1: Write failing happy-path and partial-fill E2E**
 
 Connect fixture Paper account, switch portfolio, create a market preview, verify confirmation details, submit, observe accepted then partial fill then final fill, and assert positions/ledger/performance update.
 
-- [ ] **Step 2: Add limit/cancel race flow**
+- [x] **Step 2: Add limit/cancel race flow**
 
 Submit a GTC limit order, request cancel, inject a fill before cancel acknowledgment, and assert final filled status with both cancel intent and fill retained in timeline.
 
-- [ ] **Step 3: Add ambiguous submit and queue redelivery flow**
+- [x] **Step 3: Add ambiguous submit and queue redelivery flow**
 
 Fixture accepts the order but drops the response. Redeliver the BullMQ event. Assert one remote order exists for the deterministic client order ID and local state reconciles to accepted.
 
-- [ ] **Step 4: Add drift and safety flow**
+- [x] **Step 4: Add drift and safety flow**
 
 Change remote fixture cash/position outside the local ledger, run reconciliation, assert drift banner, unavailable performance and disabled submit. Verify a production Alpaca base URL makes worker readiness fail.
 
-- [ ] **Step 5: Implement test-only broker controls**
+- [x] **Step 5: Implement test-only broker controls**
 
 Controls advance order state, inject fills/activities, drop one response and mutate remote account. Register them only in the fixture E2E server; production provider has no mutation/testing methods.
 
-- [ ] **Step 6: Run E2E**
+- [x] **Step 6: Run E2E**
 
 Run: `npm run test:e2e -- tests/e2e/alpaca-paper-trading.spec.ts`  
 Expected: PASS for happy path, cancel race, ambiguous submit and drift.
 
-- [ ] **Step 7: Commit Task 8**
+- [x] **Step 7: Commit Task 8**
 
 ```bash
 git add server/testing tests/e2e/alpaca-paper-trading.spec.ts docker-compose.test.yml playwright.config.ts
@@ -544,15 +544,15 @@ git commit -m "test: cover paper order lifecycle"
 **Interfaces:**
 - Produces: safe operator guidance and final verification evidence.
 
-- [ ] **Step 1: Add read-only Paper smoke checks**
+- [x] **Step 1: Add read-only Paper smoke checks**
 
 When Paper config is enabled, smoke reads account shape, one asset, open-order list and activity list. It contains no call to submit/cancel endpoints and fails a static guard if those provider methods are referenced.
 
-- [ ] **Step 2: Document configuration and reconciliation operations**
+- [x] **Step 2: Document configuration and reconciliation operations**
 
 README documents Paper-only base URL, enable flag, supported orders, manual confirmation, portfolio isolation and read-only smoke. Runbook documents worker health, reconciling commands, stream degradation, drift inspection and the rule against editing ledger rows.
 
-- [ ] **Step 3: Run complete fresh validation**
+- [x] **Step 3: Run complete fresh validation**
 
 Run: `npm test`  
 Run: `npm run test:integration`  
@@ -561,7 +561,7 @@ Run: `npm run test:e2e`
 Run: `npm run test:data:smoke`  
 Expected: all commands exit 0.
 
-- [ ] **Step 4: Run trading safety scans**
+- [x] **Step 4: Run trading safety scans**
 
 Assert:
 
@@ -574,11 +574,11 @@ monitor-to-order-intent imports/calls = 0
 submitOrder or cancelOrder references in liveSmoke.ts = 0
 ```
 
-- [ ] **Step 5: Mark all plan checkboxes complete**
+- [x] **Step 5: Mark all plan checkboxes complete**
 
 Only update checkboxes after fresh validation and scans pass. Record the exact commands and counts in the final implementation commit message/body or handoff.
 
-- [ ] **Step 6: Commit Task 9**
+- [x] **Step 6: Commit Task 9**
 
 ```bash
 git add server/testing/liveSmoke.ts README.md .env.example docs/runbooks/alpaca-paper-reconciliation.md docs/superpowers/plans/2026-08-10-alpaca-paper-trading.md

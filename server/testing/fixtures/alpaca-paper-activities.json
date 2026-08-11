@@ -1,0 +1,24 @@
+[
+  {
+    "activity_type": "FILL",
+    "id": "fill-1",
+    "cum_qty": "0.5",
+    "leaves_qty": "1.0",
+    "price": "165.10",
+    "qty": "0.5",
+    "side": "buy",
+    "symbol": "NVDA",
+    "transaction_time": "2026-08-11T13:31:00Z",
+    "order_id": "order-1",
+    "type": "partial_fill"
+  },
+  {
+    "activity_type": "DIV",
+    "id": "dividend-1",
+    "date": "2026-08-11",
+    "net_amount": "1.25",
+    "symbol": "NVDA",
+    "qty": "0.5",
+    "per_share_amount": "2.50"
+  }
+]

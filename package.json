@@ -37,6 +37,7 @@
     "react-router-dom": "latest",
     "recharts": "latest",
     "web-push": "^3.6.7",
+    "ws": "^8.21.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -49,6 +50,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/web-push": "^3.6.4",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "latest",
     "concurrently": "^10.0.4",
     "jsdom": "latest",

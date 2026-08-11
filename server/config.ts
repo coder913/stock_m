@@ -12,10 +12,20 @@ export interface ServerConfig {
   workers: {
     monitorConcurrency: number;
     notificationConcurrency: number;
+    tradingConcurrency: number;
+  };
+  paperTrading: {
+    enabled: boolean;
+    configured: boolean;
+    baseUrl: "https://paper-api.alpaca.markets";
   };
   providers: Record<"alpaca" | "sec" | "finnhub" | "fred", ProviderConfiguration>;
   notifications: { configured: boolean; publicKey?: string; subject?: string };
-  publicStatus: { providers: Record<string, ProviderConfiguration>; notifications: { configured: boolean; publicKey?: string; subject?: string } };
+  publicStatus: {
+    providers: Record<string, ProviderConfiguration>;
+    notifications: { configured: boolean; publicKey?: string; subject?: string };
+    paperTrading: { enabled: boolean; configured: boolean };
+  };
   secrets: {
     alpaca?: { keyId: string; secretKey: string };
     finnhub?: { apiKey: string };
@@ -45,6 +55,9 @@ const environmentSchema = z.object({
   INTERNAL_API_BASE_URL: z.string().url().optional(),
   MONITOR_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
   NOTIFICATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
+  TRADING_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
+  ALPACA_PAPER_TRADING_ENABLED: z.enum(["true", "false"]).optional(),
+  ALPACA_TRADING_BASE_URL: z.string().url().optional(),
   VAPID_PUBLIC_KEY: optionalNonEmptyString,
   VAPID_PRIVATE_KEY: optionalNonEmptyString,
   VAPID_SUBJECT: optionalNonEmptyString,
@@ -69,6 +82,20 @@ export function loadServerConfig(environment: Record<string, string | undefined>
     finnhub: { configured: Boolean(parsed.FINNHUB_API_KEY) },
     fred: { configured: Boolean(parsed.FRED_API_KEY) },
   };
+  const paperTradingEnabled = parsed.ALPACA_PAPER_TRADING_ENABLED === "true";
+  const paperTradingConfigured = Boolean(parsed.ALPACA_API_KEY_ID && parsed.ALPACA_API_SECRET_KEY);
+  const paperTradingBaseUrl = parsed.ALPACA_TRADING_BASE_URL ?? "https://paper-api.alpaca.markets";
+  if (paperTradingEnabled && paperTradingBaseUrl !== "https://paper-api.alpaca.markets") {
+    throw new Error("Alpaca Paper trading requires the exact Paper API origin");
+  }
+  if (paperTradingEnabled && !paperTradingConfigured) {
+    throw new Error("Alpaca Paper trading credentials are required when trading is enabled");
+  }
+  const paperTrading = {
+    enabled: paperTradingEnabled,
+    configured: paperTradingConfigured,
+    baseUrl: "https://paper-api.alpaca.markets" as const,
+  };
   const pushValues = [parsed.VAPID_PUBLIC_KEY, parsed.VAPID_PRIVATE_KEY, parsed.VAPID_SUBJECT, parsed.PUSH_SUBSCRIPTION_ENCRYPTION_KEY];
   const hasAnyPushValue = pushValues.some(Boolean);
   const hasAllPushValues = pushValues.every(Boolean);
@@ -89,10 +116,16 @@ export function loadServerConfig(environment: Record<string, string | undefined>
     workers: {
       monitorConcurrency: parsed.MONITOR_WORKER_CONCURRENCY ?? 1,
       notificationConcurrency: parsed.NOTIFICATION_WORKER_CONCURRENCY ?? 1,
+      tradingConcurrency: parsed.TRADING_WORKER_CONCURRENCY ?? 1,
     },
+    paperTrading,
     providers,
     notifications,
-    publicStatus: { providers, notifications },
+    publicStatus: {
+      providers,
+      notifications,
+      paperTrading: { enabled: paperTrading.enabled, configured: paperTrading.configured },
+    },
     secrets: {
       alpaca: providers.alpaca.configured ? { keyId: parsed.ALPACA_API_KEY_ID!, secretKey: parsed.ALPACA_API_SECRET_KEY! } : undefined,
       finnhub: parsed.FINNHUB_API_KEY ? { apiKey: parsed.FINNHUB_API_KEY } : undefined,

@@ -37,15 +37,16 @@ test("treats blank optional provider variables from Compose as unconfigured", ()
 
 test("uses independent worker concurrency defaults and overrides", () => {
   const defaults = loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com" });
-  expect(defaults.workers).toEqual({ monitorConcurrency: 1, notificationConcurrency: 1 });
+  expect(defaults.workers).toEqual({ monitorConcurrency: 1, notificationConcurrency: 1, tradingConcurrency: 1 });
 
   const configured = loadServerConfig({
     ...serviceEnvironment,
     SEC_USER_AGENT: "stock_m test@example.com",
     MONITOR_WORKER_CONCURRENCY: "3",
     NOTIFICATION_WORKER_CONCURRENCY: "5",
+    TRADING_WORKER_CONCURRENCY: "7",
   });
-  expect(configured.workers).toEqual({ monitorConcurrency: 3, notificationConcurrency: 5 });
+  expect(configured.workers).toEqual({ monitorConcurrency: 3, notificationConcurrency: 5, tradingConcurrency: 7 });
 });
 
 test("rejects non-positive worker concurrency", () => {
@@ -73,4 +74,61 @@ test("enables Push only with a complete valid VAPID and 32-byte encryption confi
 
 test("rejects invalid Push subjects and encryption key lengths", () => {
   expect(() => loadServerConfig({ ...serviceEnvironment, SEC_USER_AGENT: "stock_m test@example.com", VAPID_PUBLIC_KEY: "public", VAPID_PRIVATE_KEY: "private", VAPID_SUBJECT: "owner@example.com", PUSH_SUBSCRIPTION_ENCRYPTION_KEY: Buffer.alloc(16).toString("base64") })).toThrow();
+});
+
+test("keeps Alpaca Paper trading disabled by default", () => {
+  const config = loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+  });
+
+  expect(config.paperTrading).toMatchObject({
+    enabled: false,
+    configured: false,
+    baseUrl: "https://paper-api.alpaca.markets",
+  });
+  expect(config.workers.tradingConcurrency).toBe(1);
+});
+
+test("enables only the exact Alpaca Paper trading origin", () => {
+  const config = loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+    ALPACA_API_KEY_ID: "paper-id",
+    ALPACA_API_SECRET_KEY: "paper-secret",
+    ALPACA_PAPER_TRADING_ENABLED: "true",
+    ALPACA_TRADING_BASE_URL: "https://paper-api.alpaca.markets",
+    TRADING_WORKER_CONCURRENCY: "2",
+  });
+
+  expect(config.paperTrading).toEqual({
+    enabled: true,
+    configured: true,
+    baseUrl: "https://paper-api.alpaca.markets",
+  });
+  expect(config.workers.tradingConcurrency).toBe(2);
+  expect(JSON.stringify(config.publicStatus)).not.toContain("paper-secret");
+});
+
+test.each([
+  "https://api.alpaca.markets",
+  "https://paper-api.alpaca.markets.example.com",
+  "http://paper-api.alpaca.markets",
+])("rejects non-Paper Alpaca trading origin %s", (baseUrl) => {
+  expect(() => loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+    ALPACA_API_KEY_ID: "paper-id",
+    ALPACA_API_SECRET_KEY: "paper-secret",
+    ALPACA_PAPER_TRADING_ENABLED: "true",
+    ALPACA_TRADING_BASE_URL: baseUrl,
+  })).toThrow("Alpaca Paper");
+});
+
+test("requires credentials when Alpaca Paper trading is enabled", () => {
+  expect(() => loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+    ALPACA_PAPER_TRADING_ENABLED: "true",
+  })).toThrow("credentials");
 });

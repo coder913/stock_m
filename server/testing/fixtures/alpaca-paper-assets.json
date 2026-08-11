@@ -1,0 +1,20 @@
+[
+  {
+    "id": "asset-nvda",
+    "class": "us_equity",
+    "exchange": "NASDAQ",
+    "symbol": "NVDA",
+    "status": "active",
+    "tradable": true,
+    "fractionable": true
+  },
+  {
+    "id": "asset-brk-a",
+    "class": "us_equity",
+    "exchange": "NYSE",
+    "symbol": "BRK.A",
+    "status": "active",
+    "tradable": true,
+    "fractionable": false
+  }
+]

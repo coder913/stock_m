@@ -172,6 +172,8 @@ export class AlpacaTradingProvider implements AlpacaTradingPort {
     };
   }
 
+  async listPositions():Promise<BrokerPosition[]>{const response=await this.request("/v2/positions",{method:"GET"});return this.parse(z.array(positionSchema),await response.json()).map(value=>({symbol:value.symbol,quantity:value.qty,marketValue:value.market_value,averageEntryPrice:value.avg_entry_price}));}
+
   async submitOrder(input: PaperOrderRequest): Promise<BrokerOrder> {
     const response = await this.request("/v2/orders", {
       method: "POST",

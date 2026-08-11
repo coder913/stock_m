@@ -104,6 +104,7 @@ export interface AlpacaTradingPort {
   getAccount(): Promise<BrokerAccountSnapshot>;
   getAsset(symbol: string): Promise<BrokerAsset>;
   getPosition(symbol: string): Promise<BrokerPosition | undefined>;
+  listPositions(): Promise<BrokerPosition[]>;
   submitOrder(input: PaperOrderRequest): Promise<BrokerOrder>;
   cancelOrder(remoteOrderId: string): Promise<void>;
   getOrderByClientOrderId(clientOrderId: string): Promise<BrokerOrder | undefined>;

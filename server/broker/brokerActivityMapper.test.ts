@@ -1,0 +1,4 @@
+import {expect,test} from "vitest";import {mapBrokerActivity} from "./brokerActivityMapper";
+const base={occurredAt:"2026-08-11T00:00:00Z",raw:{}};
+test("maps dividends, fees, and splits without losing provenance",()=>{expect(mapBrokerActivity({remoteActivityId:"d1",type:"DIV",amount:"12.34",symbol:"AAPL",...base})).toMatchObject({eventType:"dividend",amount:"12.34",remoteSourceId:"activity:d1"});expect(mapBrokerActivity({remoteActivityId:"f1",type:"FEE",amount:"-1.25",...base})).toMatchObject({eventType:"fee",amount:"-1.25"});expect(mapBrokerActivity({remoteActivityId:"s1",type:"SPLIT",symbol:"AAPL",quantity:"4",...base})).toMatchObject({eventType:"split",quantityMultiplier:"4"});});
+test("retains unsupported activity as provenance without inventing ledger semantics",()=>{expect(mapBrokerActivity({remoteActivityId:"x1",type:"UNKNOWN",...base})).toMatchObject({eventType:"unknown",remoteSourceId:"activity:x1"});});

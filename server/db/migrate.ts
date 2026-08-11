@@ -14,6 +14,7 @@ import * as pushSubscriptionsMigration from "./migrations/009_push_subscriptions
 import * as notificationDeliveriesMigration from "./migrations/010_notification_deliveries";
 import * as brokerMigration from "./migrations/011_broker";
 import * as tradingWorkerMigration from "./migrations/012_trading_worker";
+import * as brokerPositionsMigration from "./migrations/013_broker_positions";
 
 interface Migration {
   up(database: Kysely<unknown>): Promise<void>;
@@ -32,6 +33,7 @@ const migrations: ReadonlyArray<readonly [string, Migration]> = [
   ["010_notification_deliveries", notificationDeliveriesMigration],
   ["011_broker", brokerMigration],
   ["012_trading_worker", tradingWorkerMigration],
+  ["013_broker_positions", brokerPositionsMigration],
 ];
 export const latestMigrationName = migrations.at(-1)![0];
 

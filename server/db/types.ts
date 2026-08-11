@@ -125,6 +125,7 @@ export interface BrokerActivityTable { remoteActivityId:string; activityType:str
 export interface BrokerLedgerEventTable { id:string; remoteSourceId:string; eventType:string; symbol:string|null; quantity:NullableDecimal; price:NullableDecimal; amount:NullableDecimal; occurredAt:Timestamp; provenanceJson:unknown; }
 export interface BrokerReconciliationRunTable { id:string; status:"running"|"succeeded"|"failed"; diagnosticsJson:unknown; startedAt:Timestamp; finishedAt:NullableTimestamp; }
 export interface BrokerDriftTable { id:string; reconciliationRunId:string; cashDifference:NullableDecimal; symbolDifferencesJson:unknown; detectedAt:Timestamp; clearedAt:NullableTimestamp; }
+export interface BrokerPositionSnapshotTable{symbol:string;quantity:Decimal;marketValue:Decimal;averageEntryPrice:Decimal;observedAt:Timestamp;}
 
 export interface Database {
   "platform.schema_migration": SchemaMigrationTable;
@@ -176,4 +177,5 @@ export interface Database {
   "broker.ledger_event":BrokerLedgerEventTable;
   "broker.reconciliation_run":BrokerReconciliationRunTable;
   "broker.drift":BrokerDriftTable;
+  "broker.position_snapshot":BrokerPositionSnapshotTable;
 }

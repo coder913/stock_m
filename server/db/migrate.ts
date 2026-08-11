@@ -13,6 +13,7 @@ import * as monitorSchedulesMigration from "./migrations/008_monitor_schedules";
 import * as pushSubscriptionsMigration from "./migrations/009_push_subscriptions";
 import * as notificationDeliveriesMigration from "./migrations/010_notification_deliveries";
 import * as brokerMigration from "./migrations/011_broker";
+import * as tradingWorkerMigration from "./migrations/012_trading_worker";
 
 interface Migration {
   up(database: Kysely<unknown>): Promise<void>;
@@ -30,6 +31,7 @@ const migrations: ReadonlyArray<readonly [string, Migration]> = [
   ["009_push_subscriptions", pushSubscriptionsMigration],
   ["010_notification_deliveries", notificationDeliveriesMigration],
   ["011_broker", brokerMigration],
+  ["012_trading_worker", tradingWorkerMigration],
 ];
 export const latestMigrationName = migrations.at(-1)![0];
 

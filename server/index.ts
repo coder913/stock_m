@@ -44,12 +44,15 @@ const redis = createRedisConnection(config.redisUrl);
 const platformEventQueue = new Queue("platform-events", { connection: redis });
 const notificationEventQueue = new Queue(queueNames.notifications, { connection: redis });
 const monitorQueue = new Queue(queueNames.monitorRuns, { connection: redis });
+const tradingQueue = new Queue(queueNames.tradingCommands, { connection: redis });
 const outbox = new OutboxRepository();
 const idempotency = new IdempotencyRepository();
 const outboxPublisher = new OutboxPublisher(database, outbox, {
-  add: (name, data, options) => name === "monitor.alert.created" || name === "notification.test.requested"
-    ? notificationEventQueue.add(name, data, options)
-    : platformEventQueue.add(name, data, options),
+  add: (name, data, options) => name.startsWith("broker.order.")
+    ? tradingQueue.add(name,data,options)
+    : name === "monitor.alert.created" || name === "notification.test.requested"
+      ? notificationEventQueue.add(name, data, options)
+      : platformEventQueue.add(name, data, options),
 });
 const monitorSchedules = new MonitorScheduleRepository(database);
 const monitorScheduler = new MonitorScheduler({ repository: monitorSchedules, queue: monitorQueue, calendar: createUsEquityMarketCalendar() });
@@ -136,7 +139,7 @@ outboxPublisher.start();
 const shutdown = createGracefulShutdown({
   closeServer: () => app.close(),
   stopPublisher: () => outboxPublisher.stop(),
-  closeQueue: async () => { await Promise.all([platformEventQueue.close(), notificationEventQueue.close(), monitorQueue.close()]); },
+  closeQueue: async () => { await Promise.all([platformEventQueue.close(), notificationEventQueue.close(), monitorQueue.close(),tradingQueue.close()]); },
   closeRedis: async () => { await redis.quit(); },
   closeDatabase: () => database.destroy(),
 });

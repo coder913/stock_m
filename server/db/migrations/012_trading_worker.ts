@@ -1,0 +1,3 @@
+import { sql,type Kysely } from "kysely";
+export async function up(database:Kysely<unknown>):Promise<void>{await sql`alter table platform.worker_heartbeat drop constraint if exists worker_heartbeat_worker_check; alter table platform.worker_heartbeat add constraint worker_heartbeat_worker_check check (worker in ('monitor','notifications','trading'))`.execute(database);}
+export async function down(database:Kysely<unknown>):Promise<void>{await sql`delete from platform.worker_heartbeat where worker='trading'; alter table platform.worker_heartbeat drop constraint if exists worker_heartbeat_worker_check; alter table platform.worker_heartbeat add constraint worker_heartbeat_worker_check check (worker in ('monitor','notifications'))`.execute(database);}

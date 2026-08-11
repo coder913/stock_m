@@ -20,6 +20,7 @@
     "compose:down": "docker compose down",
     "worker:monitor": "tsx server/workers/monitorWorker.ts",
     "worker:notifications": "tsx server/workers/notificationWorker.ts",
+    "worker:trading": "tsx server/workers/tradingWorker.ts",
     "worker:health": "tsx server/workers/workerHealthcheck.ts",
     "start": "tsx server/index.ts"
   },

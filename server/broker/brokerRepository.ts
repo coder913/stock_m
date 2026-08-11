@@ -22,6 +22,8 @@ export interface OrderIntentView extends NewOrderIntent {
   confirmedAt: string;
 }
 
+export interface CancelIntentView { id:string; orderIntentId:string; createdAt:string; }
+
 export interface OrderProjectionView extends OrderIntentView {
   state: LocalOrderState;
   version: number;
@@ -57,6 +59,12 @@ export class BrokerRepository {
     if (executor) await persist(executor);
     else await this.database.transaction().execute(persist);
     return { ...input, symbol: input.symbol.toUpperCase(), confirmedAt: confirmedAt.toISOString() };
+  }
+
+  async createCancelIntent(input:{id:string;orderIntentId:string},executor:Executor=this.database):Promise<CancelIntentView>{
+    const createdAt=this.now();
+    await executor.insertInto("broker.cancel_intent").values({id:input.id,orderIntentId:input.orderIntentId,createdAt}).execute();
+    return {...input,createdAt:createdAt.toISOString()};
   }
 
   async recordPreviewAudit(input: {

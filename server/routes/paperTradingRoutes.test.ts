@@ -17,6 +17,7 @@ function harness() {
   const repository = {
     recordPreviewAudit: vi.fn(async () => undefined),
     createOrderIntent: vi.fn(async (input) => ({ ...input, confirmedAt: "2026-08-11T14:00:00Z" })),
+    createCancelIntent: vi.fn(async (input) => ({ ...input, createdAt: "2026-08-11T14:00:00Z" })),
     hasActiveDrift: vi.fn(async () => false),
   };
   const outbox = { append: vi.fn(async () => undefined) };
@@ -103,5 +104,15 @@ test("does not expose an order-intent route under the monitor namespace", async 
   const context = harness();
   const app = buildApp({ config, cache: { health: async () => ({ writable: true, entries: 0 }) }, paperTrading: context.dependencies });
   expect(app.hasRoute({ method: "POST", url: "/api/v1/monitor/order-intents" })).toBe(false);
+  await app.close();
+});
+
+test("persists a cancel intent and Outbox command atomically",async()=>{
+  const context=harness();const app=buildApp({config,cache:{health:async()=>({writable:true,entries:0})},paperTrading:context.dependencies});
+  const orderIntentId="00000000-0000-4000-8000-000000000201";
+  const response=await app.inject({method:"POST",url:"/api/v1/broker/alpaca-paper/cancel-intents",headers:{"idempotency-key":"cancel-key"},payload:{orderIntentId}});
+  expect(response.statusCode).toBe(201);
+  expect(context.repository.createCancelIntent).toHaveBeenCalledWith(expect.objectContaining({orderIntentId}),context.transaction);
+  expect(context.outbox.append).toHaveBeenCalledWith(context.transaction,expect.objectContaining({topic:"broker.order.cancel.requested",aggregateId:orderIntentId}));
   await app.close();
 });

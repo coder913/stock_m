@@ -1,7 +1,7 @@
 import type { Kysely } from "kysely";
 import type { Database } from "../db/types";
 
-export type WorkerName = "monitor" | "notifications";
+export type WorkerName = "monitor" | "notifications" | "trading";
 export type WorkerState = "starting" | "ready" | "degraded" | "stopping";
 
 export interface WorkerHeartbeatInput {

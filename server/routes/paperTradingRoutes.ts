@@ -20,13 +20,14 @@ const orderDraftSchema = z.object({
   limitPrice: z.string().min(1).optional(),
 });
 const confirmationSchema = z.object({ previewToken: z.string().min(1) });
+const cancelSchema = z.object({ orderIntentId:z.string().uuid() });
 
 export interface PaperTradingRouteDependencies {
   status: { enabled: boolean; configured: boolean };
   database: Kysely<Database>;
   idempotency: IdempotencyStore;
   outbox: Pick<OutboxRepository, "append">;
-  repository: Pick<BrokerRepository, "recordPreviewAudit" | "createOrderIntent" | "hasActiveDrift">;
+  repository: Pick<BrokerRepository, "recordPreviewAudit" | "createOrderIntent" | "createCancelIntent" | "hasActiveDrift">;
   preview: {
     preview(input: PaperOrderDraft): Promise<OrderPreview>;
     verify(token: string): OrderPreviewClaims;
@@ -104,6 +105,15 @@ export function registerPaperTradingRoutes(app: FastifyInstance, dependencies: P
         occurredAt: dependencies.now?.() ?? new Date(),
       });
       return { statusCode: 201, body: result };
+    });
+  });
+
+  app.post("/api/v1/broker/alpaca-paper/cancel-intents",async(request,reply)=>{
+    const body=parse(cancelSchema,request.body);
+    return idempotent(dependencies,request,reply,"POST /api/v1/broker/alpaca-paper/cancel-intents",body,async(transaction)=>{
+      const cancel=await dependencies.repository.createCancelIntent({id:randomUUID(),orderIntentId:body.orderIntentId},transaction);
+      await dependencies.outbox.append(transaction,{id:randomUUID(),topic:"broker.order.cancel.requested",aggregateId:body.orderIntentId,payloadJson:{eventId:cancel.id,intentId:body.orderIntentId,cancelIntentId:cancel.id},occurredAt:dependencies.now?.()??new Date()});
+      return {statusCode:201,body:{...cancel,status:"cancel_pending"}};
     });
   });
 }

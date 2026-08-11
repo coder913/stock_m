@@ -104,7 +104,7 @@ export interface BrowserMigrationRecordTable{category:string;ordinal:number;payl
 export interface MarketCacheEntryTable { cacheKey:string; source:string; payloadJson:unknown; asOf:Timestamp; fetchedAt:Timestamp; expiresAt:Timestamp; delayMinutes:number|null; noticesJson:unknown; }
 export interface MarketProviderStateTable { source:string; cooldownUntil:NullableTimestamp; lastSuccessAt:NullableTimestamp; lastErrorCode:string|null; }
 export interface MarketRefreshAttemptTable { id:Generated<number>; cacheKey:string; source:string; status:"success"|"error"; errorCode:string|null; attemptedAt:Timestamp; }
-export interface WorkerHeartbeatTable { worker:"monitor"|"notifications"; state:"starting"|"ready"|"degraded"|"stopping"; queueLag:number; heartbeatAt:Timestamp; }
+export interface WorkerHeartbeatTable { worker:"monitor"|"notifications"|"trading"; state:"starting"|"ready"|"degraded"|"stopping"; queueLag:number; heartbeatAt:Timestamp; }
 export interface MonitorScheduleStateTable { runType:"price"|"financial"|"event"; lastSuccessNaturalPeriod:string; lastSuccessAt:Timestamp; updatedAt:Timestamp; }
 export interface MonitorRunTable { id:string; runType:"price"|"financial"|"event"; naturalPeriod:string; scheduledFor:Timestamp; catchUp:boolean; status:"claimed"|"running"|"succeeded"|"failed"; dataState:"fresh"|"stale"|"unavailable"|null; diagnosticsJson:unknown; createdAt:Timestamp; startedAt:NullableTimestamp; finishedAt:NullableTimestamp; }
 export interface PushSubscriptionTable { id:string; endpointHash:string; ciphertext:string; iv:string; authTag:string; userAgent:string; createdAt:Timestamp; lastSeenAt:Timestamp; revokedAt:NullableTimestamp; invalidAt:NullableTimestamp; }

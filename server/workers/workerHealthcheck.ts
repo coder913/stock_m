@@ -3,7 +3,7 @@ import { createDatabase } from "../db/database";
 import { WorkerHeartbeatRepository, type WorkerName } from "../queue/workerHeartbeatRepository";
 
 const worker = process.argv[2] as WorkerName | undefined;
-if (worker !== "monitor" && worker !== "notifications") throw new Error("worker must be monitor or notifications");
+if (worker !== "monitor" && worker !== "notifications" && worker !== "trading") throw new Error("worker must be monitor, notifications, or trading");
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
 

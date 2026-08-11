@@ -10,6 +10,10 @@ x-worker-environment: &worker-environment
   FRED_API_KEY: ${FRED_API_KEY:-}
   MONITOR_WORKER_CONCURRENCY: ${MONITOR_WORKER_CONCURRENCY:-1}
   NOTIFICATION_WORKER_CONCURRENCY: ${NOTIFICATION_WORKER_CONCURRENCY:-1}
+  TRADING_WORKER_CONCURRENCY: ${TRADING_WORKER_CONCURRENCY:-1}
+  ALPACA_PAPER_TRADING_ENABLED: ${ALPACA_PAPER_TRADING_ENABLED:-false}
+  ALPACA_TRADING_BASE_URL: https://paper-api.alpaca.markets
+  ALPACA_ORDER_PREVIEW_SIGNING_KEY: ${ALPACA_ORDER_PREVIEW_SIGNING_KEY:-}
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-}
@@ -34,6 +38,9 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
       PUSH_SUBSCRIPTION_ENCRYPTION_KEY: ${PUSH_SUBSCRIPTION_ENCRYPTION_KEY:-}
+      ALPACA_PAPER_TRADING_ENABLED: ${ALPACA_PAPER_TRADING_ENABLED:-false}
+      ALPACA_TRADING_BASE_URL: https://paper-api.alpaca.markets
+      ALPACA_ORDER_PREVIEW_SIGNING_KEY: ${ALPACA_ORDER_PREVIEW_SIGNING_KEY:-}
     ports:
       - "127.0.0.1:${PORT:-8787}:8787"
     depends_on:
@@ -88,6 +95,27 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "npm", "run", "worker:health", "--", "notifications"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    networks:
+      - backend
+    stop_grace_period: 25s
+
+  trading-worker:
+    profiles: ["paper-trading"]
+    build: .
+    restart: unless-stopped
+    command: ["npm", "run", "worker:trading"]
+    environment: *worker-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "npm", "run", "worker:health", "--", "trading"]
       interval: 15s
       timeout: 5s
       retries: 4

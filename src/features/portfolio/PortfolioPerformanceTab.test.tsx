@@ -62,6 +62,18 @@ test("renders annualized return, current drawdown, and interval cash flows", () 
   expect(screen.getByRole("table", { name: "绩效现金流" })).toHaveTextContent("1000.00");
 });
 
+test("keeps Paper performance read-only while retaining range and refresh controls", () => {
+  render(<PortfolioPerformanceTab {...props()} mode="paper-readonly" />);
+
+  expect(screen.getByText("比较基准 SPY")).toBeVisible();
+  expect(screen.getByRole("button", { name: "成立以来" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "刷新绩效" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "配置组合" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "应用基准" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("拆股确认")).not.toBeInTheDocument();
+  expect(screen.queryByText("手动补录拆股")).not.toBeInTheDocument();
+});
+
 test("keeps the saved benchmark when a custom symbol has no usable history", async () => {
   const user = userEvent.setup();
   const values = props();

@@ -126,7 +126,7 @@ feat: adapt paper broker ledger for performance
 - Consumes: the existing `PerformanceViewModel`, range callbacks, and a new optional `mode`.
 - Produces: `mode?: "editable" | "paper-readonly"`; default `editable` preserves all manual controls.
 
-- [ ] **Step 1: Write failing read-only presentation tests**
+- [x] **Step 1: Write failing read-only presentation tests**
 
 Render a complete performance model with `mode="paper-readonly"` and assert:
 
@@ -140,7 +140,7 @@ expect(screen.queryByText("拆股确认")).not.toBeInTheDocument();
 
 Keep the existing editable-mode tests unchanged to prove backward compatibility.
 
-- [ ] **Step 2: Run the focused component test and verify RED**
+- [x] **Step 2: Run the focused component test and verify RED**
 
 Run:
 
@@ -150,7 +150,7 @@ npx vitest run src/features/portfolio/PortfolioPerformanceTab.test.tsx
 
 Expected: FAIL because `mode` and the read-only controls do not exist.
 
-- [ ] **Step 3: Implement read-only capabilities**
+- [x] **Step 3: Implement read-only capabilities**
 
 Add `mode = "editable"`. In `paper-readonly` mode:
 
@@ -161,11 +161,11 @@ Add `mode = "editable"`. In `paper-readonly` mode:
 
 Make editable-only callbacks optional in the prop type and guard their use so the Paper controller has no no-op business mutations.
 
-- [ ] **Step 4: Run the focused component test and verify GREEN**
+- [x] **Step 4: Run the focused component test and verify GREEN**
 
 Run the Step 2 command. Expected: all tests pass.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 Commit the component and its test with:
 

@@ -188,7 +188,7 @@ feat: add read-only performance presentation
 - Consumes: `PaperPortfolioApi`, `PaperPortfolioOverviewView`, `PortfolioMarketClient`, `adaptBrokerPerformance`, `usePortfolioPerformance`, and read-only `PortfolioPerformanceTab`.
 - Produces: a lazily mounted Paper performance controller and three accessible Paper tabs: overview, performance, orders.
 
-- [ ] **Step 1: Write failing controller tests**
+- [x] **Step 1: Write failing controller tests**
 
 Inject a fake Paper API and market client, then assert:
 
@@ -201,7 +201,7 @@ expect(paperApi.listLedger).toHaveBeenCalledTimes(1);
 
 Add separate cases for empty ledger, trading without a cash origin, request failure, and active drift. The drift case must assert that `getBatchBars` is not called and no trustworthy summary is shown.
 
-- [ ] **Step 2: Write failing Paper tab tests**
+- [x] **Step 2: Write failing Paper tab tests**
 
 Update `PaperPortfolioOverview.test.tsx` to assert:
 
@@ -213,7 +213,7 @@ await user.click(screen.getByRole("tab", { name: "订单" }));
 expect(screen.getByText("订单记录")).toBeInTheDocument();
 ```
 
-- [ ] **Step 3: Run controller and page tests and verify RED**
+- [x] **Step 3: Run controller and page tests and verify RED**
 
 Run:
 
@@ -223,7 +223,7 @@ npx vitest run src/features/trading/PaperPortfolioPerformance.test.tsx src/featu
 
 Expected: FAIL because the controller and Paper tabs do not exist.
 
-- [ ] **Step 4: Implement the controller**
+- [x] **Step 4: Implement the controller**
 
 `PaperPortfolioPerformance` must:
 
@@ -235,15 +235,15 @@ Expected: FAIL because the controller and Paper tabs do not exist.
 - On refresh, reload the ledger first and then increment the performance revision.
 - Pass `mode="paper-readonly"` to `PortfolioPerformanceTab`.
 
-- [ ] **Step 5: Integrate accessible Paper tabs**
+- [x] **Step 5: Integrate accessible Paper tabs**
 
 Refactor `PaperPortfolioOverview` into readable multi-line JSX with local `"overview" | "performance" | "orders"` state. Pass the same injected `marketClient` from `PortfolioPage` to `PaperPortfolioPerformance`. Keep Order Ticket and reconciliation on overview; mount `PaperOrderHistory` only on orders.
 
-- [ ] **Step 6: Run controller and page tests and verify GREEN**
+- [x] **Step 6: Run controller and page tests and verify GREEN**
 
 Run the Step 3 command. Expected: all tests pass.
 
-- [ ] **Step 7: Run adjacent portfolio tests**
+- [x] **Step 7: Run adjacent portfolio tests**
 
 Run:
 
@@ -253,7 +253,7 @@ npx vitest run src/features/portfolio/PortfolioPage.test.tsx src/features/portfo
 
 Expected: all manual and Paper-adjacent tests pass.
 
-- [ ] **Step 8: Commit Task 3**
+- [x] **Step 8: Commit Task 3**
 
 Commit the five Task 3 files with:
 

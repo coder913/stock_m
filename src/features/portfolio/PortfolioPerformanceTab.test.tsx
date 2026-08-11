@@ -6,6 +6,8 @@ import type { PerformanceViewModel } from "./performance/domain";
 import { PortfolioPerformanceTab } from "./PortfolioPerformanceTab";
 import { SplitReviewPanel } from "./SplitReviewPanel";
 
+vi.mock("./PerformanceChart", () => ({ PerformanceChart: () => null }));
+
 afterEach(cleanup);
 
 const model = (overrides: Partial<PerformanceViewModel> = {}): PerformanceViewModel => ({

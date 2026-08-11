@@ -4,6 +4,8 @@ import type { DataEnvelope, MarketEvent, PriceBar } from "../market/apiDomain";
 import type { PaperLedgerEventView, PaperPortfolioApi } from "./paperPortfolioApiClient";
 import { PaperPortfolioPerformance } from "./PaperPortfolioPerformance";
 
+vi.mock("../portfolio/PerformanceChart", () => ({ PerformanceChart: () => null }));
+
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
@@ -21,14 +23,17 @@ test("calculates Paper returns, SPY comparison, and attribution from the broker 
     ledger(),
     ledger({ id: "buy", remoteSourceId: "activity:buy", eventType: "buy", symbol: "NVDA", quantity: "2", price: "100", amount: "-200", occurredAt: "2026-08-04T14:00:00Z" }),
   ]);
+  const market = marketClient();
 
-  render(<PaperPortfolioPerformance api={api} marketClient={marketClient()} activeDrift={false} />);
+  render(<PaperPortfolioPerformance api={api} marketClient={market} activeDrift={false} />);
 
   expect(await screen.findByText("比较基准 SPY")).toBeVisible();
   expect(await screen.findByText("贡献已对账")).toBeVisible();
   expect(screen.getByText("时间加权收益").parentElement).toHaveTextContent("2.00%");
   expect(screen.getByText("比较基准", { exact: true }).parentElement).toHaveTextContent("1.00%");
   expect(screen.getByRole("table", { name: "绩效贡献" })).toHaveTextContent("NVDA");
+  expect(market.getBatchBars).toHaveBeenCalledTimes(2);
+  expect(market.getEvents).toHaveBeenCalledTimes(1);
 });
 
 test("does not request market data while Paper drift is active", async () => {

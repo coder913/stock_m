@@ -275,7 +275,7 @@ feat: display alpaca paper portfolio performance
 - Consumes: the complete Paper fixture lifecycle and browser-visible Paper performance page.
 - Produces: browser proof that broker fills affect performance and drift blocks it.
 
-- [ ] **Step 1: Extend the E2E test and verify RED**
+- [x] **Step 1: Extend the E2E test and verify RED**
 
 After the fixture fill and reconciliation, use browser interactions to select `Alpaca Paper`, open the `绩效` tab, and assert the SPY label, performance chart, and `贡献已对账`. Inject drift and assert the specifically named drift banner using `page.getByText(/Paper 对账不一致/).first()` instead of the ambiguous global alert locator.
 
@@ -287,19 +287,19 @@ npx playwright test tests/e2e/alpaca-paper-trading.spec.ts
 
 Expected: FAIL before the Paper performance UI exists or before fixture cash history is complete.
 
-- [ ] **Step 2: Complete fixture data and focused styling**
+- [x] **Step 2: Complete fixture data and focused styling**
 
 If the E2E fixture lacks a cash-origin activity, add a deterministic Paper deposit activity to the existing fixture setup. Add only layout rules needed for Paper tabs and the performance workspace; reuse current portfolio typography, tables, and charts.
 
-- [ ] **Step 3: Run the focused E2E and verify GREEN**
+- [x] **Step 3: Run the focused E2E and verify GREEN**
 
 Run the Step 1 command. Expected: the Paper performance lifecycle passes.
 
-- [ ] **Step 4: Document the Paper performance boundary**
+- [x] **Step 4: Document the Paper performance boundary**
 
 Update README to state that Paper performance is broker-ledger-backed, fixed to SPY in this phase, blocked by active drift, and separate from the manual portfolio.
 
-- [ ] **Step 5: Run full verification**
+- [x] **Step 5: Run full verification**
 
 Run each command independently and require exit code 0:
 
@@ -311,7 +311,7 @@ npm run test:e2e
 
 Expected: 0 failed tests and a successful production build.
 
-- [ ] **Step 6: Mark this plan complete and commit**
+- [x] **Step 6: Mark this plan complete and commit**
 
 Change every completed checkbox in this plan to `[x]`, verify `git diff --check`, then commit the E2E, style, README, and plan updates with:
 

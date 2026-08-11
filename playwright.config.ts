@@ -7,7 +7,9 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: `http://127.0.0.1:${port}`, channel: "chrome" },
   webServer: {
-    command: "npm run build && npm run test:e2e:server",
+    command: "npm run test:e2e:server",
     port,
+    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
   },
 });

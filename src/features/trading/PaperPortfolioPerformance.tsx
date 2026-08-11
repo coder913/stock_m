@@ -10,6 +10,7 @@ import type { PaperPortfolioApi } from "./paperPortfolioApiClient";
 type PerformanceMarketClient = Pick<MarketApiClient, "getBatchBars" | "getEvents">;
 type LedgerState = { status: "loading" } | { status: "ready"; adaptation: BrokerPerformanceAdaptation } | { status: "error" };
 const defaultMarketClient = new MarketApiClient();
+const noIgnoredSplitIds: string[] = [];
 
 export function PaperPortfolioPerformance({ api, marketClient = defaultMarketClient, activeDrift }: { api: PaperPortfolioApi; marketClient?: PerformanceMarketClient; activeDrift: boolean }) {
   const [state, setState] = useState<LedgerState>({ status: "loading" });
@@ -53,7 +54,7 @@ function ReadyPaperPerformance({ adaptation, marketClient, revision, onRefresh }
     baseCurrency: "USD",
     updatedAt: adaptation.events.at(-1)?.occurredAt ?? new Date(0).toISOString(),
   }), [adaptation.events, adaptation.inceptionDate]);
-  const performance = usePortfolioPerformance({ enabled: true, client: marketClient, settings, events: adaptation.events, ignoredSplitIds: [], range, revision, recoveryNotice: adaptation.notices.join("；") || undefined });
+  const performance = usePortfolioPerformance({ enabled: true, client: marketClient, settings, events: adaptation.events, ignoredSplitIds: noIgnoredSplitIds, range, revision, recoveryNotice: adaptation.notices.join("；") || undefined });
   const cached = performance.state.status === "loading" || performance.state.status === "error" ? performance.state.cached : undefined;
   const model: PerformanceViewModel = performance.state.status === "ready"
     ? performance.state.model

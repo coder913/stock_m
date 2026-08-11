@@ -11,6 +11,7 @@
     "build": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pretest:e2e": "npm run build",
     "test:e2e": "playwright test",
     "test:e2e:server": "tsx server/testing/e2eServer.ts",
     "test:data:smoke": "tsx server/testing/liveSmoke.ts",

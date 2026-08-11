@@ -14,8 +14,55 @@ interface WorkerRuntimeOptions {
   queueName: string;
   concurrency: number;
   process?: (job: Job) => Promise<unknown>;
-  initialize?: (context: { config: ServerConfig; database: Kysely<Database>; queue: Queue }) => Promise<(job: Job) => Promise<unknown>>;
+  initialize?: (context: { config: ServerConfig; database: Kysely<Database>; queue: Queue }) => Promise<WorkerProcessor | WorkerLifecycle>;
   heartbeatIntervalMs?: number;
+}
+
+type WorkerProcessor = (job: Job) => Promise<unknown>;
+
+export interface WorkerLifecycle {
+  process: WorkerProcessor;
+  healthy?(): boolean;
+  close?(): Promise<void>;
+}
+
+export function workerHeartbeatState(workerHealthy: boolean, componentHealthy: boolean): WorkerState {
+  return workerHealthy && componentHealthy ? "ready" : "degraded";
+}
+
+interface WorkerShutdownHooks {
+  stopHeartbeat(): void;
+  waitForHeartbeat(): Promise<void>;
+  recordStopping(): Promise<void>;
+  closeLifecycle(): Promise<void>;
+  closeWorker(): Promise<void>;
+  closeQueue(): Promise<void>;
+  disconnect(): Promise<void>;
+  destroyDatabase(): Promise<void>;
+}
+
+export function createWorkerShutdown(hooks: WorkerShutdownHooks): () => Promise<void> {
+  let shutdownPromise: Promise<void> | undefined;
+  return () => {
+    if (shutdownPromise) return shutdownPromise;
+    shutdownPromise = (async () => {
+      let firstError: unknown;
+      const run = async (operation: () => void | Promise<void>) => {
+        try { await operation(); }
+        catch (error) { firstError ??= error; }
+      };
+      await run(hooks.stopHeartbeat);
+      await run(hooks.waitForHeartbeat);
+      await run(hooks.recordStopping);
+      await run(hooks.closeLifecycle);
+      await run(hooks.closeWorker);
+      await run(hooks.closeQueue);
+      await run(hooks.disconnect);
+      await run(hooks.destroyDatabase);
+      if (firstError) throw firstError;
+    })();
+    return shutdownPromise;
+  };
 }
 
 async function disconnect(connection: IORedis): Promise<void> {
@@ -34,10 +81,14 @@ export async function runWorker(options: WorkerRuntimeOptions): Promise<void> {
   const queue = new Queue(options.queueName, { connection: queueConnection });
   let state: WorkerState = "starting";
   let stopping = false;
+  let workerHealthy = true;
   let activeHeartbeat: Promise<void> | undefined;
+  let lifecycle: WorkerLifecycle | undefined;
 
   const recordHeartbeat = async (nextState = state): Promise<void> => {
-    state = nextState;
+    state = nextState === "starting" || nextState === "stopping"
+      ? nextState
+      : workerHeartbeatState(workerHealthy, lifecycle?.healthy?.() ?? true);
     const queueLag = await queue.getWaitingCount();
     await heartbeats.record({ worker: options.worker, state, queueLag, at: new Date() });
   };
@@ -45,14 +96,16 @@ export async function runWorker(options: WorkerRuntimeOptions): Promise<void> {
   await heartbeats.record({ worker: options.worker, state, queueLag: 0, at: new Date() });
   await Promise.all([queueConnection.ping(), workerConnection.ping()]);
 
-  const processor = options.initialize ? await options.initialize({ config, database, queue }) : options.process;
-  if (!processor) throw new Error(`Worker ${options.worker} has no processor`);
+  const initialized = options.initialize ? await options.initialize({ config, database, queue }) : options.process;
+  if (!initialized) throw new Error(`Worker ${options.worker} has no processor`);
+  lifecycle = typeof initialized === "function" ? { process: initialized } : initialized;
 
-  const worker = new Worker(options.queueName, processor, {
+  const worker = new Worker(options.queueName, lifecycle.process, {
     connection: workerConnection,
     concurrency: options.concurrency,
   });
-  worker.on("error", () => { state = "degraded"; });
+  worker.on("error", () => { workerHealthy = false; state = "degraded"; });
+  worker.on("ready", () => { workerHealthy = true; });
   await worker.waitUntilReady();
   await recordHeartbeat("ready");
 
@@ -65,21 +118,16 @@ export async function runWorker(options: WorkerRuntimeOptions): Promise<void> {
   }, options.heartbeatIntervalMs ?? 15_000);
   heartbeatTimer.unref?.();
 
-  let shutdownPromise: Promise<void> | undefined;
-  const shutdown = (): Promise<void> => {
-    if (shutdownPromise) return shutdownPromise;
-    shutdownPromise = (async () => {
-      stopping = true;
-      clearInterval(heartbeatTimer);
-      await activeHeartbeat;
-      await recordHeartbeat("stopping").catch(() => undefined);
-      await worker.close();
-      await queue.close();
-      await Promise.all([disconnect(workerConnection), disconnect(queueConnection)]);
-      await database.destroy();
-    })();
-    return shutdownPromise;
-  };
+  const shutdown = createWorkerShutdown({
+    stopHeartbeat: () => { stopping = true; clearInterval(heartbeatTimer); },
+    waitForHeartbeat: async () => { await activeHeartbeat; },
+    recordStopping: () => recordHeartbeat("stopping").catch(() => undefined),
+    closeLifecycle: async () => { await lifecycle?.close?.(); },
+    closeWorker: () => worker.close(),
+    closeQueue: () => queue.close(),
+    disconnect: async () => { await Promise.all([disconnect(workerConnection), disconnect(queueConnection)]); },
+    destroyDatabase: () => database.destroy(),
+  });
 
   process.once("SIGINT", () => { void shutdown(); });
   process.once("SIGTERM", () => { void shutdown(); });

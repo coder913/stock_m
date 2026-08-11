@@ -12,7 +12,7 @@ afterEach(cleanup);
 const envelope = <T,>(data: T): DataEnvelope<T> => ({ data, source: "alpaca", asOf: "2026-08-05T20:00:00Z", fetchedAt: "2026-08-05T20:00:00Z", expiresAt: "2026-08-05T21:00:00Z", stale: false, notices: [] });
 const bars = (symbol: string, closes: number[]): PriceBar[] => closes.map((close, index) => ({ symbol, startedAt: `2026-08-0${index + 4}T13:30:00Z`, open: close, high: close, low: close, close, adjusted: symbol === "SPY" }));
 const ledger = (overrides: Partial<PaperLedgerEventView> = {}): PaperLedgerEventView => ({ id: "deposit", remoteSourceId: "activity:deposit", source: "alpaca-paper", eventType: "deposit", amount: "1000.00000000", occurredAt: "2026-08-04T13:00:00Z", provenanceJson: {}, ...overrides });
-const paperApi = (events: PaperLedgerEventView[]): PaperPortfolioApi => ({ getOverview: vi.fn(), listOrders: vi.fn(), getTimeline: vi.fn(), listLedger: vi.fn().mockResolvedValue(events), reconcile: vi.fn() });
+const paperApi = (events: PaperLedgerEventView[]): PaperPortfolioApi => ({ getOverview: vi.fn(), listOrders: vi.fn(), getTimeline: vi.fn(), cancelOrder: vi.fn(), listLedger: vi.fn().mockResolvedValue(events), reconcile: vi.fn() });
 const marketClient = () => ({
   getBatchBars: vi.fn(async (symbols: string[]) => envelope({ symbols: Object.fromEntries(symbols.map((symbol) => [symbol, bars(symbol, symbol === "SPY" ? [100, 101] : [100, 110])])), missingSymbols: [] })),
   getEvents: vi.fn(async (): Promise<DataEnvelope<MarketEvent[]>> => envelope([])),

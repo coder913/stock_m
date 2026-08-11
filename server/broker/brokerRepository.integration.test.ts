@@ -20,7 +20,7 @@ test("persists immutable intent and rebuilds its current projection from unique 
     clientOrderId: "stockm-intent-1",
     symbol: "NVDA",
     side: "buy",
-    quantity: "1.50000000",
+    quantity: "1.500000001",
     type: "limit",
     timeInForce: "day",
     limitPrice: "165.25000000",
@@ -31,7 +31,7 @@ test("persists immutable intent and rebuilds its current projection from unique 
 
   expect(await repository.getOrderProjection(intent.id)).toMatchObject({
     state: "accepted",
-    quantity: "1.50000000",
+    quantity: "1.500000001",
     limitPrice: "165.25000000",
     version: 1,
   });
@@ -52,13 +52,13 @@ test("deduplicates remote orders, fills, and activities by immutable broker ids"
 
   expect(await repository.bindRemoteOrder({ intentId: "00000000-0000-4000-8000-000000000002", remoteOrderId: "alpaca-order-2", raw: { status: "new" } })).toBe(true);
   expect(await repository.bindRemoteOrder({ intentId: "00000000-0000-4000-8000-000000000002", remoteOrderId: "alpaca-order-2", raw: { status: "new" } })).toBe(false);
-  expect(await repository.insertFill({ remoteFillId: "fill-2", remoteOrderId: "alpaca-order-2", symbol: "NVDA", side: "buy", quantity: "0.25000000", price: "166.12500000", occurredAt: now(), raw: {} })).toBe(true);
-  expect(await repository.insertFill({ remoteFillId: "fill-2", remoteOrderId: "alpaca-order-2", symbol: "NVDA", side: "buy", quantity: "0.25000000", price: "166.12500000", occurredAt: now(), raw: {} })).toBe(false);
-  expect(await repository.insertActivity({ remoteActivityId: "activity-2", type: "DIV", symbol: "NVDA", amount: "1.25000000", occurredAt: now(), raw: {} })).toBe(true);
-  expect(await repository.insertActivity({ remoteActivityId: "activity-2", type: "DIV", symbol: "NVDA", amount: "1.25000000", occurredAt: now(), raw: {} })).toBe(false);
+  expect(await repository.insertFill({ remoteFillId: "fill-2", remoteOrderId: "alpaca-order-2", symbol: "NVDA", side: "buy", quantity: "0.250000001", price: "166.12500000", occurredAt: now(), raw: {} })).toBe(true);
+  expect(await repository.insertFill({ remoteFillId: "fill-2", remoteOrderId: "alpaca-order-2", symbol: "NVDA", side: "buy", quantity: "0.250000001", price: "166.12500000", occurredAt: now(), raw: {} })).toBe(false);
+  expect(await repository.insertActivity({ remoteActivityId: "activity-2", type: "DIV", symbol: "NVDA", amount: "1.25000000", quantity: "0.000000001", occurredAt: now(), raw: {} })).toBe(true);
+  expect(await repository.insertActivity({ remoteActivityId: "activity-2", type: "DIV", symbol: "NVDA", amount: "1.25000000", quantity: "0.000000001", occurredAt: now(), raw: {} })).toBe(false);
 
-  expect(await repository.getFill("fill-2")).toMatchObject({ quantity: "0.25000000", price: "166.12500000" });
-  expect(await repository.getActivity("activity-2")).toMatchObject({ amount: "1.25000000" });
+  expect(await repository.getFill("fill-2")).toMatchObject({ quantity: "0.250000001", price: "166.12500000" });
+  expect(await repository.getActivity("activity-2")).toMatchObject({ amount: "1.25000000", quantity: "0.000000001" });
 });
 
 test("stores preview audit metadata without a token and reports active reconciliation drift", async () => {

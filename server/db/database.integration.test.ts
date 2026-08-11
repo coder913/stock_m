@@ -20,7 +20,21 @@ test("migrates the platform schema against postgres", async () => {
   `.execute(database);
 
   expect(schemas.rows.map((row) => row.schemaName)).toEqual(
-    expect.arrayContaining(["platform", "core", "monitor", "market"]),
+    expect.arrayContaining(["platform", "core", "monitor", "market", "broker"]),
   );
+  const quantityColumns = await sql<{ tableName: string; numericScale: number }>`
+    select table_name, numeric_scale
+    from information_schema.columns
+    where table_schema = 'broker'
+      and column_name = 'quantity'
+    order by table_name
+  `.execute(database);
+  expect(quantityColumns.rows).toEqual([
+    { tableName: "activity", numericScale: 9 },
+    { tableName: "fill", numericScale: 9 },
+    { tableName: "ledger_event", numericScale: 9 },
+    { tableName: "order_intent", numericScale: 9 },
+    { tableName: "position_snapshot", numericScale: 9 },
+  ]);
   expect(await checkMigrations(database)).toEqual({ current: latestMigrationName, latest: latestMigrationName, upToDate: true });
 });

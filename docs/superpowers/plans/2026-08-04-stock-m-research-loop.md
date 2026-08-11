@@ -1,6 +1,30 @@
 # stock_m Research Loop MVP Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: Archived and superseded (audited 2026-08-11).** This document is historical evidence, not an executable plan. Its original instructions, code samples, commands, and completion criteria must not be used as current implementation guidance.
+>
+> **Historical unchecked steps audited: 46. Current development gaps represented by this plan: 0.** The former checkboxes have been converted to plain `Historical Step` headings so backlog searches cannot mistake them for active work. This conversion records disposition; it does not claim that obsolete implementation details were executed verbatim.
+
+## Audit Disposition
+
+| Original task | Disposition | Current evidence / successor |
+| --- | --- | --- |
+| 1. Application Shell and Design Tokens | Completed, then evolved | The current router and shell remain in [`src/app/App.tsx`](../../../src/app/App.tsx) and [`src/app/AppShell.tsx`](../../../src/app/AppShell.tsx); the product now contains additional production routes and server-readiness gating. |
+| 2. Typed Mock Market Repository | Superseded | Deterministic browser mocks were replaced by normalized server-backed providers and controlled E2E fixtures. See [`2026-08-07-live-market-data.md`](2026-08-07-live-market-data.md). |
+| 3. Today Dashboard | Completed, then evolved | [`src/features/today/TodayPage.tsx`](../../../src/features/today/TodayPage.tsx) and its tests implement the dashboard using the current market and monitoring services. |
+| 4. Stock Research Route | Completed, then evolved | [`src/features/research/ResearchPage.tsx`](../../../src/features/research/ResearchPage.tsx) and its tests implement `/stocks/:symbol`, now including monitoring and Alpaca Paper entry points. |
+| 5. Versioned Investment Thesis | Migrated | The feature remains, but production persistence moved from browser `localStorage` to PostgreSQL-backed APIs. Browser repositories are retained only for tests and explicit legacy migration. See [`2026-08-09-thesis-monitoring.md`](2026-08-09-thesis-monitoring.md) and [`2026-08-10-server-persistence.md`](2026-08-10-server-persistence.md). |
+| 6. Thesis-Linked Paper Portfolio | Superseded and expanded | The old local transaction model was replaced by an immutable manual ledger plus a separate Alpaca Paper portfolio, order lifecycle, reconciliation, and performance flow. See [`2026-08-10-portfolio-performance.md`](2026-08-10-portfolio-performance.md), [`2026-08-10-alpaca-paper-trading.md`](2026-08-10-alpaca-paper-trading.md), and the 2026-08-11 Paper plans. |
+| 7. E2E, Accessibility, and Visual Validation | Completed, then expanded | Playwright coverage, accessibility semantics, responsive UI, build checks, server-persistence migration coverage, and Paper lifecycle tests now exceed the original mock-only flow. Current setup and product boundaries are documented in [`README.md`](../../../README.md). |
+
+### Backlog accounting
+
+- Active backlog items created by this audit: **0**.
+- Historical steps removed from checkbox accounting: **46** (Tasks 1–7: 6, 6, 6, 6, 7, 7, 8).
+- Any future gap must be recorded in a current plan or issue and validated against the present server-backed architecture.
+
+## Archived Original Plan
+
+> **Historical instruction (inactive):** The original plan asked agentic workers to execute the steps below task-by-task. It is retained only for provenance.
 
 **Goal:** Build a desktop-first, mock-data MVP that completes the verified flow “today signal → stock research → investment thesis → paper portfolio.”
 
@@ -102,7 +126,7 @@ Separate follow-up plans will cover:
 - Consumes: none.
 - Produces: `App(): JSX.Element` and `AppShell(): JSX.Element`; later tasks render feature routes inside the shell.
 
-- [ ] **Step 1: Create package and tool configuration**
+**Historical Step 1: Create package and tool configuration**
 
 Create `package.json` with:
 
@@ -166,7 +190,7 @@ npm install
 
 Expected: dependencies install and `npm run build` reaches TypeScript compilation once source files exist.
 
-- [ ] **Step 2: Write the failing shell test**
+**Historical Step 2: Write the failing shell test**
 
 Create `src/app/AppShell.test.tsx`:
 
@@ -189,7 +213,7 @@ test("renders the five approved primary navigation items", () => {
 });
 ```
 
-- [ ] **Step 3: Run the shell test and verify failure**
+**Historical Step 3: Run the shell test and verify failure**
 
 Run:
 
@@ -199,7 +223,7 @@ npm test -- src/app/AppShell.test.tsx
 
 Expected: FAIL because `AppShell` does not exist.
 
-- [ ] **Step 4: Implement the minimal shell**
+**Historical Step 4: Implement the minimal shell**
 
 Implement `AppShell.tsx` with:
 
@@ -235,7 +259,7 @@ Implement `App.tsx` with a browser router, `AppShell` as the parent route, and t
 
 Implement `tokens.css` using the exact global colors and typography constraints. Implement `app.css` with a 176 px sidebar at 1440 px, a visible focus ring, the skip link, and a full-width white application surface.
 
-- [ ] **Step 5: Verify shell tests and build**
+**Historical Step 5: Verify shell tests and build**
 
 Run:
 
@@ -246,7 +270,7 @@ npm run build
 
 Expected: PASS and successful production build.
 
-- [ ] **Step 6: Commit**
+**Historical Step 6: Commit**
 
 ```bash
 git add package.json package-lock.json index.html tsconfig.json vite.config.ts src
@@ -270,7 +294,7 @@ git commit -m "feat: add stock_m application shell"
   - `MarketRepository.getInstrument(symbol: string): Promise<InstrumentResearch>`
   - `mockMarketRepository: MarketRepository`
 
-- [ ] **Step 1: Write the repository contract and failing tests**
+**Historical Step 1: Write the repository contract and failing tests**
 
 Define the expected contract in the test:
 
@@ -295,7 +319,7 @@ test("rejects unknown instruments", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the repository test and verify failure**
+**Historical Step 2: Run the repository test and verify failure**
 
 Run:
 
@@ -305,7 +329,7 @@ npm test -- src/features/market/mockMarketRepository.test.ts
 
 Expected: FAIL because the repository module does not exist.
 
-- [ ] **Step 3: Implement domain types**
+**Historical Step 3: Implement domain types**
 
 Create `domain.ts`:
 
@@ -371,7 +395,7 @@ export interface InstrumentResearch {
 }
 ```
 
-- [ ] **Step 4: Implement the repository**
+**Historical Step 4: Implement the repository**
 
 Create `marketRepository.ts`:
 
@@ -401,7 +425,7 @@ export const mockMarketRepository: MarketRepository = {
 };
 ```
 
-- [ ] **Step 5: Verify repository tests**
+**Historical Step 5: Verify repository tests**
 
 Run:
 
@@ -411,7 +435,7 @@ npm test -- src/features/market/mockMarketRepository.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+**Historical Step 6: Commit**
 
 ```bash
 git add src/features/market
@@ -438,7 +462,7 @@ git commit -m "feat: add typed mock market repository"
 - Consumes: `mockMarketRepository.getToday()` and `Signal`.
 - Produces: `/` route with a selected signal and a link `/stocks/:symbol`.
 
-- [ ] **Step 1: Write the failing Today-page interaction test**
+**Historical Step 1: Write the failing Today-page interaction test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -460,7 +484,7 @@ test("changes the expanded signal and keeps research action contextual", async (
 });
 ```
 
-- [ ] **Step 2: Run the test and verify failure**
+**Historical Step 2: Run the test and verify failure**
 
 Run:
 
@@ -470,7 +494,7 @@ npm test -- src/features/today/TodayPage.test.tsx
 
 Expected: FAIL because `TodayPage` does not exist.
 
-- [ ] **Step 3: Implement loading, success, and error states**
+**Historical Step 3: Implement loading, success, and error states**
 
 `TodayPage` owns loading and selected-symbol state:
 
@@ -543,7 +567,7 @@ export function PriceSeriesChart({
 
 Use height `44` for market-pulse sparklines and the default height for selected-signal and research charts. Do not handcraft brand icons or company logos.
 
-- [ ] **Step 4: Implement the approved layout**
+**Historical Step 4: Implement the approved layout**
 
 Implement:
 
@@ -575,7 +599,7 @@ Use `today.css` to match the reference:
 }
 ```
 
-- [ ] **Step 5: Verify Today-page tests and build**
+**Historical Step 5: Verify Today-page tests and build**
 
 Run:
 
@@ -586,7 +610,7 @@ npm run build
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+**Historical Step 6: Commit**
 
 ```bash
 git add src/app/App.tsx src/features/today
@@ -607,7 +631,7 @@ git commit -m "feat: build the today decision dashboard"
 - Consumes: `mockMarketRepository.getInstrument(symbol)`.
 - Produces: `/stocks/:symbol` research route; Task 5 adds thesis editing to this route.
 
-- [ ] **Step 1: Write the failing route test**
+**Historical Step 1: Write the failing route test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -628,7 +652,7 @@ test("renders research evidence and freshness for the requested symbol", async (
 });
 ```
 
-- [ ] **Step 2: Run the test and verify failure**
+**Historical Step 2: Run the test and verify failure**
 
 Run:
 
@@ -638,7 +662,7 @@ npm test -- src/features/research/ResearchPage.test.tsx
 
 Expected: FAIL because `ResearchPage` does not exist.
 
-- [ ] **Step 3: Implement the research canvas**
+**Historical Step 3: Implement the research canvas**
 
 Load the symbol from `useParams`, call the repository, and render:
 
@@ -652,7 +676,7 @@ Load the symbol from `useParams`, call the repository, and render:
 
 The page must remain usable if the chart section fails; keep the research facts and thesis region visible.
 
-- [ ] **Step 4: Wire the route**
+**Historical Step 4: Wire the route**
 
 Replace the temporary route in `App.tsx`:
 
@@ -660,7 +684,7 @@ Replace the temporary route in `App.tsx`:
 <Route path="stocks/:symbol" element={<ResearchPage />} />
 ```
 
-- [ ] **Step 5: Verify research tests**
+**Historical Step 5: Verify research tests**
 
 Run:
 
@@ -671,7 +695,7 @@ npm run build
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+**Historical Step 6: Commit**
 
 ```bash
 git add src/app/App.tsx src/features/research
@@ -698,7 +722,7 @@ git commit -m "feat: add stock research workspace"
   - `ThesisRepository.save(draft: ThesisDraft): ThesisVersion`
   - `ThesisEditor({ symbol, repository, onSaved })`
 
-- [ ] **Step 1: Define the thesis types and failing repository test**
+**Historical Step 1: Define the thesis types and failing repository test**
 
 Create `domain.ts`:
 
@@ -753,7 +777,7 @@ test("creates a new immutable version for every save", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+**Historical Step 2: Run tests and verify failure**
 
 Run:
 
@@ -763,7 +787,7 @@ npm test -- src/features/thesis/localThesisRepository.test.ts
 
 Expected: FAIL because the repository does not exist.
 
-- [ ] **Step 3: Implement validation and versioned persistence**
+**Historical Step 3: Implement validation and versioned persistence**
 
 `ThesisRepository` must expose:
 
@@ -785,7 +809,7 @@ export interface ThesisRepository {
 
 Store all versions under `stock_m:theses:v1`; never overwrite an earlier version.
 
-- [ ] **Step 4: Write the failing editor test**
+**Historical Step 4: Write the failing editor test**
 
 ```tsx
 test("requires all four thesis sections before saving", async () => {
@@ -805,13 +829,13 @@ test("requires all four thesis sections before saving", async () => {
 });
 ```
 
-- [ ] **Step 5: Implement and connect `ThesisEditor`**
+**Historical Step 5: Implement and connect `ThesisEditor`**
 
 Use a modal or right-side editor opened by “更新投资逻辑.” Preserve unsaved draft state if persistence throws, show `保存失败，草稿已保留`, and allow retry.
 
 After saving, refresh the right-side thesis summary and announce success through an `aria-live="polite"` region.
 
-- [ ] **Step 6: Verify thesis tests**
+**Historical Step 6: Verify thesis tests**
 
 Run:
 
@@ -822,7 +846,7 @@ npm test -- src/features/research/ResearchPage.test.tsx
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+**Historical Step 7: Commit**
 
 ```bash
 git add src/features/thesis src/features/research/ResearchPage.tsx
@@ -852,7 +876,7 @@ git commit -m "feat: add versioned investment theses"
   - `PortfolioRepository.getPositions(marketPrices: Record<string, number>): PaperPosition[]`
   - `/portfolio` holdings view.
 
-- [ ] **Step 1: Define portfolio types and failing calculation test**
+**Historical Step 1: Define portfolio types and failing calculation test**
 
 ```ts
 export interface PaperTransactionInput {
@@ -902,7 +926,7 @@ test("calculates weighted average cost and unrealized pnl", () => {
 });
 ```
 
-- [ ] **Step 2: Run the repository test and verify failure**
+**Historical Step 2: Run the repository test and verify failure**
 
 Run:
 
@@ -912,7 +936,7 @@ npm test -- src/features/portfolio/localPortfolioRepository.test.ts
 
 Expected: FAIL because the repository does not exist.
 
-- [ ] **Step 3: Implement paper-portfolio persistence**
+**Historical Step 3: Implement paper-portfolio persistence**
 
 Store transactions under `stock_m:paper-transactions:v1`. Validate:
 
@@ -922,7 +946,7 @@ Store transactions under `stock_m:paper-transactions:v1`. Validate:
 
 Compute positions from immutable transactions rather than storing derived totals.
 
-- [ ] **Step 4: Write the failing dialog test**
+**Historical Step 4: Write the failing dialog test**
 
 ```tsx
 test("blocks paper position creation until a thesis exists", async () => {
@@ -946,7 +970,7 @@ test("blocks paper position creation until a thesis exists", async () => {
 });
 ```
 
-- [ ] **Step 5: Implement dialog and Portfolio page**
+**Historical Step 5: Implement dialog and Portfolio page**
 
 The confirmation dialog must display symbol, side, quantity, simulated price, total, thesis version, and the label `模拟交易，不会发送真实订单`.
 
@@ -954,7 +978,7 @@ On confirmation, save the transaction, close the dialog, and show `已加入模�
 
 `PortfolioPage` displays total simulated market value, unrealized P/L, and a holdings table with thesis-version links. Empty state links back to Today.
 
-- [ ] **Step 6: Verify portfolio tests**
+**Historical Step 6: Verify portfolio tests**
 
 Run:
 
@@ -965,7 +989,7 @@ npm run build
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+**Historical Step 7: Commit**
 
 ```bash
 git add src/app/App.tsx src/features/portfolio src/features/research/ResearchPage.tsx
@@ -989,7 +1013,7 @@ git commit -m "feat: add thesis-linked paper portfolio"
 - Consumes: all routes and repositories from Tasks 1–6.
 - Produces: a validated browser flow and documented local commands.
 
-- [ ] **Step 1: Add the failing end-to-end test**
+**Historical Step 1: Add the failing end-to-end test**
 
 Create `playwright.config.ts` with `baseURL: "http://127.0.0.1:4173"` and a web server command `npm run build && npm run preview -- --host 127.0.0.1`.
 
@@ -1022,7 +1046,7 @@ test("completes the research loop", async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Run the end-to-end test and verify failure**
+**Historical Step 2: Run the end-to-end test and verify failure**
 
 Run:
 
@@ -1033,7 +1057,7 @@ npm run test:e2e
 
 Expected: FAIL at the first missing or mismatched interaction.
 
-- [ ] **Step 3: Fix semantics and keyboard behavior**
+**Historical Step 3: Fix semantics and keyboard behavior**
 
 Without changing the approved layout:
 
@@ -1044,7 +1068,7 @@ Without changing the approved layout:
 - Add a text summary for each chart.
 - Verify skip-link and logical tab order.
 
-- [ ] **Step 4: Match the approved visual reference**
+**Historical Step 4: Match the approved visual reference**
 
 At 1440 × 1024, capture the Today page and compare it side-by-side with `docs/design/stock-m-dashboard-reference.png`. Correct:
 
@@ -1056,7 +1080,7 @@ At 1440 × 1024, capture the Today page and compare it side-by-side with `docs/d
 
 Repeat the capture after fixes. Do not claim visual parity from a screenshot alone; inspect the combined reference/implementation comparison.
 
-- [ ] **Step 5: Verify responsive desktop states**
+**Historical Step 5: Verify responsive desktop states**
 
 Run manual browser checks at:
 
@@ -1066,7 +1090,7 @@ Run manual browser checks at:
 
 Record failures as test assertions or targeted CSS fixes, then rerun.
 
-- [ ] **Step 6: Document setup and product status**
+**Historical Step 6: Document setup and product status**
 
 Replace the one-line `README.md` with:
 
@@ -1076,7 +1100,7 @@ Replace the one-line `README.md` with:
 - Explanation that all market data is deterministic mock data.
 - Links to the approved design spec and visual reference.
 
-- [ ] **Step 7: Run the complete validation suite**
+**Historical Step 7: Run the complete validation suite**
 
 Run:
 
@@ -1088,7 +1112,7 @@ npm run test:e2e
 
 Expected: all unit/integration tests pass, production build succeeds, and the research-loop browser test passes.
 
-- [ ] **Step 8: Commit**
+**Historical Step 8: Commit**
 
 ```bash
 git add playwright.config.ts tests README.md src docs/design/stock-m-dashboard-reference.png

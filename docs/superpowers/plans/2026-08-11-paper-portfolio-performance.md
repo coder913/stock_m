@@ -32,7 +32,7 @@
 - Consumes: `PaperLedgerEventView` values returned by `/portfolio/alpaca-paper/ledger`.
 - Produces: `PaperPortfolioApi.listLedger(): Promise<PaperLedgerEventView[]>` and `adaptBrokerPerformance(input): BrokerPerformanceAdaptation` with validated `LedgerEvent[]`, notices, and inception date.
 
-- [ ] **Step 1: Write failing API-client and adapter tests**
+- [x] **Step 1: Write failing API-client and adapter tests**
 
 Add an API-client assertion for:
 
@@ -59,7 +59,7 @@ expect(result.inceptionDate).toBe("2026-08-04");
 
 Also assert that drift returns no events, unknown events create a notice, invalid Decimal values identify the event ID, and trading events without a preceding deposit return `cashHistoryComplete: false`.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
@@ -69,7 +69,7 @@ npx vitest run src/features/trading/paperPortfolioApiClient.test.ts src/features
 
 Expected: FAIL because `listLedger`, the typed view, and the richer adaptation result do not exist.
 
-- [ ] **Step 3: Implement the typed API and adapter**
+- [x] **Step 3: Implement the typed API and adapter**
 
 Define:
 
@@ -102,11 +102,11 @@ interface BrokerPerformanceAdaptation {
 }
 ```
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run the Step 2 command. Expected: all focused tests pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 Stage only the four Task 1 files plus `server/broker/paperPortfolioRepository.ts` if its response shape changed, then commit:
 
@@ -126,7 +126,7 @@ feat: adapt paper broker ledger for performance
 - Consumes: the existing `PerformanceViewModel`, range callbacks, and a new optional `mode`.
 - Produces: `mode?: "editable" | "paper-readonly"`; default `editable` preserves all manual controls.
 
-- [ ] **Step 1: Write failing read-only presentation tests**
+- [x] **Step 1: Write failing read-only presentation tests**
 
 Render a complete performance model with `mode="paper-readonly"` and assert:
 
@@ -140,7 +140,7 @@ expect(screen.queryByText("拆股确认")).not.toBeInTheDocument();
 
 Keep the existing editable-mode tests unchanged to prove backward compatibility.
 
-- [ ] **Step 2: Run the focused component test and verify RED**
+- [x] **Step 2: Run the focused component test and verify RED**
 
 Run:
 
@@ -150,7 +150,7 @@ npx vitest run src/features/portfolio/PortfolioPerformanceTab.test.tsx
 
 Expected: FAIL because `mode` and the read-only controls do not exist.
 
-- [ ] **Step 3: Implement read-only capabilities**
+- [x] **Step 3: Implement read-only capabilities**
 
 Add `mode = "editable"`. In `paper-readonly` mode:
 
@@ -161,11 +161,11 @@ Add `mode = "editable"`. In `paper-readonly` mode:
 
 Make editable-only callbacks optional in the prop type and guard their use so the Paper controller has no no-op business mutations.
 
-- [ ] **Step 4: Run the focused component test and verify GREEN**
+- [x] **Step 4: Run the focused component test and verify GREEN**
 
 Run the Step 2 command. Expected: all tests pass.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 Commit the component and its test with:
 
@@ -188,7 +188,7 @@ feat: add read-only performance presentation
 - Consumes: `PaperPortfolioApi`, `PaperPortfolioOverviewView`, `PortfolioMarketClient`, `adaptBrokerPerformance`, `usePortfolioPerformance`, and read-only `PortfolioPerformanceTab`.
 - Produces: a lazily mounted Paper performance controller and three accessible Paper tabs: overview, performance, orders.
 
-- [ ] **Step 1: Write failing controller tests**
+- [x] **Step 1: Write failing controller tests**
 
 Inject a fake Paper API and market client, then assert:
 
@@ -201,7 +201,7 @@ expect(paperApi.listLedger).toHaveBeenCalledTimes(1);
 
 Add separate cases for empty ledger, trading without a cash origin, request failure, and active drift. The drift case must assert that `getBatchBars` is not called and no trustworthy summary is shown.
 
-- [ ] **Step 2: Write failing Paper tab tests**
+- [x] **Step 2: Write failing Paper tab tests**
 
 Update `PaperPortfolioOverview.test.tsx` to assert:
 
@@ -213,7 +213,7 @@ await user.click(screen.getByRole("tab", { name: "订单" }));
 expect(screen.getByText("订单记录")).toBeInTheDocument();
 ```
 
-- [ ] **Step 3: Run controller and page tests and verify RED**
+- [x] **Step 3: Run controller and page tests and verify RED**
 
 Run:
 
@@ -223,7 +223,7 @@ npx vitest run src/features/trading/PaperPortfolioPerformance.test.tsx src/featu
 
 Expected: FAIL because the controller and Paper tabs do not exist.
 
-- [ ] **Step 4: Implement the controller**
+- [x] **Step 4: Implement the controller**
 
 `PaperPortfolioPerformance` must:
 
@@ -235,15 +235,15 @@ Expected: FAIL because the controller and Paper tabs do not exist.
 - On refresh, reload the ledger first and then increment the performance revision.
 - Pass `mode="paper-readonly"` to `PortfolioPerformanceTab`.
 
-- [ ] **Step 5: Integrate accessible Paper tabs**
+- [x] **Step 5: Integrate accessible Paper tabs**
 
 Refactor `PaperPortfolioOverview` into readable multi-line JSX with local `"overview" | "performance" | "orders"` state. Pass the same injected `marketClient` from `PortfolioPage` to `PaperPortfolioPerformance`. Keep Order Ticket and reconciliation on overview; mount `PaperOrderHistory` only on orders.
 
-- [ ] **Step 6: Run controller and page tests and verify GREEN**
+- [x] **Step 6: Run controller and page tests and verify GREEN**
 
 Run the Step 3 command. Expected: all tests pass.
 
-- [ ] **Step 7: Run adjacent portfolio tests**
+- [x] **Step 7: Run adjacent portfolio tests**
 
 Run:
 
@@ -253,7 +253,7 @@ npx vitest run src/features/portfolio/PortfolioPage.test.tsx src/features/portfo
 
 Expected: all manual and Paper-adjacent tests pass.
 
-- [ ] **Step 8: Commit Task 3**
+- [x] **Step 8: Commit Task 3**
 
 Commit the five Task 3 files with:
 
@@ -275,7 +275,7 @@ feat: display alpaca paper portfolio performance
 - Consumes: the complete Paper fixture lifecycle and browser-visible Paper performance page.
 - Produces: browser proof that broker fills affect performance and drift blocks it.
 
-- [ ] **Step 1: Extend the E2E test and verify RED**
+- [x] **Step 1: Extend the E2E test and verify RED**
 
 After the fixture fill and reconciliation, use browser interactions to select `Alpaca Paper`, open the `绩效` tab, and assert the SPY label, performance chart, and `贡献已对账`. Inject drift and assert the specifically named drift banner using `page.getByText(/Paper 对账不一致/).first()` instead of the ambiguous global alert locator.
 
@@ -287,19 +287,19 @@ npx playwright test tests/e2e/alpaca-paper-trading.spec.ts
 
 Expected: FAIL before the Paper performance UI exists or before fixture cash history is complete.
 
-- [ ] **Step 2: Complete fixture data and focused styling**
+- [x] **Step 2: Complete fixture data and focused styling**
 
 If the E2E fixture lacks a cash-origin activity, add a deterministic Paper deposit activity to the existing fixture setup. Add only layout rules needed for Paper tabs and the performance workspace; reuse current portfolio typography, tables, and charts.
 
-- [ ] **Step 3: Run the focused E2E and verify GREEN**
+- [x] **Step 3: Run the focused E2E and verify GREEN**
 
 Run the Step 1 command. Expected: the Paper performance lifecycle passes.
 
-- [ ] **Step 4: Document the Paper performance boundary**
+- [x] **Step 4: Document the Paper performance boundary**
 
 Update README to state that Paper performance is broker-ledger-backed, fixed to SPY in this phase, blocked by active drift, and separate from the manual portfolio.
 
-- [ ] **Step 5: Run full verification**
+- [x] **Step 5: Run full verification**
 
 Run each command independently and require exit code 0:
 
@@ -311,7 +311,7 @@ npm run test:e2e
 
 Expected: 0 failed tests and a successful production build.
 
-- [ ] **Step 6: Mark this plan complete and commit**
+- [x] **Step 6: Mark this plan complete and commit**
 
 Change every completed checkbox in this plan to `[x]`, verify `git diff --check`, then commit the E2E, style, README, and plan updates with:
 

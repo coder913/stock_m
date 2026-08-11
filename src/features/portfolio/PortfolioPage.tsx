@@ -30,7 +30,7 @@ type PortfolioPageProps = { marketClient?: PortfolioMarketClient; portfolioState
 export function PortfolioPage(props: PortfolioPageProps) {
   const [selection, setSelection] = useState<PortfolioSelection>(() => loadPortfolioSelection(Boolean(props.tradingApi)));
   const select = (value: PortfolioSelection) => { savePortfolioSelection(value); setSelection(value); };
-  return <section className="portfolio-page"><div className="portfolio-selector"><button type="button" aria-pressed={selection === "manual"} onClick={() => select("manual")}>手工组合</button>{props.tradingApi && <button type="button" aria-pressed={selection === "alpaca-paper"} onClick={() => select("alpaca-paper")}>Alpaca Paper</button>}</div>{selection === "alpaca-paper" ? <PaperPortfolioOverview tradingApi={props.tradingApi} /> : <ManualPortfolioPage {...props} />}</section>;
+  return <section className="portfolio-page"><div className="portfolio-selector"><button type="button" aria-pressed={selection === "manual"} onClick={() => select("manual")}>手工组合</button>{props.tradingApi && <button type="button" aria-pressed={selection === "alpaca-paper"} onClick={() => select("alpaca-paper")}>Alpaca Paper</button>}</div>{selection === "alpaca-paper" ? <PaperPortfolioOverview tradingApi={props.tradingApi} marketClient={props.marketClient ?? defaultMarketClient} /> : <ManualPortfolioPage {...props} />}</section>;
 }
 
 function ManualPortfolioPage({ marketClient = defaultMarketClient, portfolioState: injectedPortfolioState, monitorState: injectedMonitorState, tradingApi }: PortfolioPageProps) {

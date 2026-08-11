@@ -81,7 +81,7 @@ E2E 服务器还提供 `POST /api/testing/market-state`，可确定性修改某�
 
 每个 Playwright 用例开始前会调用 `POST /api/testing/reset`，清空应用自有表、保留 `platform.schema_migration`，并重新创建 installation、股票池版本和默认组合基准行。`POST /api/testing/restart` 会关闭并重建 Fastify 与数据库连接池，用于验证 PostgreSQL 持久化；`GET /api/testing/database-state` 只返回测试断言所需的服务实例 ID 与分类计数。所有 `/api/testing/*` 路由都只在 `server/testing/e2eServer.ts` 注册，生产 `buildApp` 不包含这些入口。
 
-`npm run test:data:smoke` 仅检查已配置真实供应商的认证、响应结构、来源和时间戳，不断言固定价格或事件数量。Playwright 使用本机安装的稳定版 Chrome。
+`npm run test:data:smoke` 会自动读取项目根目录 `.env`，已存在的系统环境变量优先；它仅检查已配置真实供应商的认证、响应结构、来源和时间戳，不断言固定价格或事件数量。末行 `live-smoke: ok=<数量> skipped=<数量>` 用于区分真实执行与未配置跳过。Playwright 使用本机安装的稳定版 Chrome。
 
 ## 缓存与失败降级
 

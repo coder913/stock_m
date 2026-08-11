@@ -1,6 +1,57 @@
-export interface ReplayEvent{remoteSourceId:string;eventType:"buy"|"sell"|"dividend"|"fee"|"deposit"|"withdrawal"|"split"|"unknown";symbol?:string;quantity?:string;price?:string;amount?:string;quantityMultiplier?:string;}
-const SCALE=100000000n;
-function decimal(value:string|undefined):bigint{if(!value)return 0n;const negative=value.startsWith("-");const [whole="0",fraction=""]=(negative?value.slice(1):value).split(".");const scaled=BigInt(whole||"0")*SCALE+BigInt((fraction+"00000000").slice(0,8));return negative?-scaled:scaled;}
-function format(value:bigint):string{const sign=value<0n?"-":"";const abs=value<0n?-value:value;return `${sign}${abs/SCALE}.${String(abs%SCALE).padStart(8,"0")}`;}
-export function replayBrokerPortfolio(events:ReplayEvent[]){let cash=0n;const positions=new Map<string,bigint>();for(const event of events){if(event.amount)cash+=decimal(event.amount);if(event.symbol&&(event.eventType==="buy"||event.eventType==="sell")){const delta=decimal(event.quantity)*(event.eventType==="buy"?1n:-1n);positions.set(event.symbol,(positions.get(event.symbol)??0n)+delta);}if(event.symbol&&event.eventType==="split")positions.set(event.symbol,(positions.get(event.symbol)??0n)*decimal(event.quantityMultiplier)/SCALE);}return{cash:format(cash),positions:[...positions].filter(([,q])=>q!==0n).sort(([a],[b])=>a.localeCompare(b)).map(([symbol,quantity])=>({symbol,quantity:format(quantity)})),provenance:events.map(event=>event.remoteSourceId)};}
-export function subtractDecimal(left:string,right:string):string{return format(decimal(left)-decimal(right));}
+import {
+  MONEY_DECIMAL_SCALE,
+  QUANTITY_DECIMAL_SCALE,
+  formatFixedDecimal,
+  multiplyFixedDecimalValues,
+  parseFixedDecimal,
+  subtractFixedDecimal,
+} from "./fixedDecimal";
+
+export interface ReplayEvent {
+  remoteSourceId: string;
+  eventType: "buy" | "sell" | "dividend" | "fee" | "deposit" | "withdrawal" | "split" | "unknown";
+  symbol?: string;
+  quantity?: string;
+  price?: string;
+  amount?: string;
+  quantityMultiplier?: string;
+}
+
+function quantity(value: string | undefined): bigint {
+  return value === undefined ? 0n : parseFixedDecimal(value, QUANTITY_DECIMAL_SCALE);
+}
+
+export function replayBrokerPortfolio(events: ReplayEvent[]) {
+  let cash = 0n;
+  const positions = new Map<string, bigint>();
+  for (const event of events) {
+    if (event.amount !== undefined) cash += parseFixedDecimal(event.amount);
+    if (event.symbol && (event.eventType === "buy" || event.eventType === "sell")) {
+      const delta = quantity(event.quantity) * (event.eventType === "buy" ? 1n : -1n);
+      positions.set(event.symbol, (positions.get(event.symbol) ?? 0n) + delta);
+    }
+    if (event.symbol && event.eventType === "split") {
+      positions.set(event.symbol, multiplyFixedDecimalValues(
+        positions.get(event.symbol) ?? 0n,
+        quantity(event.quantityMultiplier),
+        { leftScale: QUANTITY_DECIMAL_SCALE, rightScale: QUANTITY_DECIMAL_SCALE, resultScale: QUANTITY_DECIMAL_SCALE },
+      ));
+    }
+  }
+  return {
+    cash: formatFixedDecimal(cash),
+    positions: [...positions]
+      .filter(([, quantity]) => quantity !== 0n)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([symbol, value]) => ({ symbol, quantity: formatFixedDecimal(value, QUANTITY_DECIMAL_SCALE) })),
+    provenance: events.map((event) => event.remoteSourceId),
+  };
+}
+
+export function subtractDecimal(left: string, right: string): string {
+  return subtractFixedDecimal(left, right, MONEY_DECIMAL_SCALE);
+}
+
+export function subtractQuantity(left: string, right: string): string {
+  return subtractFixedDecimal(left, right, QUANTITY_DECIMAL_SCALE);
+}

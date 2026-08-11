@@ -3,6 +3,7 @@ dist
 .git
 .data
 .env
+readme_work.md
 chrome
 playwright-report
 test-results

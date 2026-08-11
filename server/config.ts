@@ -31,6 +31,7 @@ export interface ServerConfig {
     finnhub?: { apiKey: string };
     fred?: { apiKey: string };
     push?: { privateKey: string; subscriptionEncryptionKey: Buffer };
+    paperTrading?: { previewSigningKey: Buffer };
     secUserAgent: string;
   };
 }
@@ -58,6 +59,7 @@ const environmentSchema = z.object({
   TRADING_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional(),
   ALPACA_PAPER_TRADING_ENABLED: z.enum(["true", "false"]).optional(),
   ALPACA_TRADING_BASE_URL: z.string().url().optional(),
+  ALPACA_ORDER_PREVIEW_SIGNING_KEY: optionalNonEmptyString,
   VAPID_PUBLIC_KEY: optionalNonEmptyString,
   VAPID_PRIVATE_KEY: optionalNonEmptyString,
   VAPID_SUBJECT: optionalNonEmptyString,
@@ -68,6 +70,16 @@ function decodeEncryptionKey(value: string): Buffer {
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) throw new Error("PUSH_SUBSCRIPTION_ENCRYPTION_KEY must be valid base64");
   const key = Buffer.from(value, "base64");
   if (key.length !== 32) throw new Error("PUSH_SUBSCRIPTION_ENCRYPTION_KEY must decode to exactly 32 bytes");
+  return key;
+}
+
+function decodePreviewSigningKey(value: string | undefined): Buffer | undefined {
+  if (!value) return undefined;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) {
+    throw new Error("Alpaca Paper preview signing key must be valid base64");
+  }
+  const key = Buffer.from(value, "base64");
+  if (key.length !== 32) throw new Error("Alpaca Paper preview signing key must decode to exactly 32 bytes");
   return key;
 }
 
@@ -90,6 +102,10 @@ export function loadServerConfig(environment: Record<string, string | undefined>
   }
   if (paperTradingEnabled && !paperTradingConfigured) {
     throw new Error("Alpaca Paper trading credentials are required when trading is enabled");
+  }
+  const previewSigningKey = decodePreviewSigningKey(parsed.ALPACA_ORDER_PREVIEW_SIGNING_KEY);
+  if (paperTradingEnabled && !previewSigningKey) {
+    throw new Error("Alpaca Paper preview signing key is required when trading is enabled");
   }
   const paperTrading = {
     enabled: paperTradingEnabled,
@@ -131,6 +147,7 @@ export function loadServerConfig(environment: Record<string, string | undefined>
       finnhub: parsed.FINNHUB_API_KEY ? { apiKey: parsed.FINNHUB_API_KEY } : undefined,
       fred: parsed.FRED_API_KEY ? { apiKey: parsed.FRED_API_KEY } : undefined,
       push: hasAllPushValues ? { privateKey: parsed.VAPID_PRIVATE_KEY!, subscriptionEncryptionKey: subscriptionEncryptionKey! } : undefined,
+      paperTrading: previewSigningKey ? { previewSigningKey } : undefined,
       secUserAgent: parsed.SEC_USER_AGENT,
     },
   };

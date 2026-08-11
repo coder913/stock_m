@@ -60,3 +60,33 @@ test("deduplicates remote orders, fills, and activities by immutable broker ids"
   expect(await repository.getFill("fill-2")).toMatchObject({ quantity: "0.25000000", price: "166.12500000" });
   expect(await repository.getActivity("activity-2")).toMatchObject({ amount: "1.25000000" });
 });
+
+test("stores preview audit metadata without a token and reports active reconciliation drift", async () => {
+  await repository.recordPreviewAudit({
+    previewId: "00000000-0000-4000-8000-000000000021",
+    inputHash: "sha256:preview-21",
+    normalizedOrder: { symbol: "NVDA", side: "buy", quantity: "1.00000000", type: "market", timeInForce: "day" },
+    expiresAt: new Date("2026-08-11T14:01:00Z"),
+  });
+  const stored = await database.selectFrom("broker.order_preview_audit").selectAll().executeTakeFirstOrThrow();
+  expect(stored.normalizedOrderJson).toMatchObject({ symbol: "NVDA", quantity: "1.00000000" });
+  expect(JSON.stringify(stored)).not.toContain("signed-preview");
+  expect(await repository.hasActiveDrift()).toBe(false);
+
+  await database.insertInto("broker.reconciliation_run").values({
+    id: "00000000-0000-4000-8000-000000000031",
+    status: "succeeded",
+    diagnosticsJson: JSON.stringify({}),
+    startedAt: now(),
+    finishedAt: now(),
+  }).execute();
+  await database.insertInto("broker.drift").values({
+    id: "00000000-0000-4000-8000-000000000041",
+    reconciliationRunId: "00000000-0000-4000-8000-000000000031",
+    cashDifference: "1.00000000",
+    symbolDifferencesJson: JSON.stringify([]),
+    detectedAt: now(),
+    clearedAt: null,
+  }).execute();
+  expect(await repository.hasActiveDrift()).toBe(true);
+});

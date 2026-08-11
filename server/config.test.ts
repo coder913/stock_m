@@ -98,6 +98,7 @@ test("enables only the exact Alpaca Paper trading origin", () => {
     ALPACA_API_SECRET_KEY: "paper-secret",
     ALPACA_PAPER_TRADING_ENABLED: "true",
     ALPACA_TRADING_BASE_URL: "https://paper-api.alpaca.markets",
+    ALPACA_ORDER_PREVIEW_SIGNING_KEY: Buffer.alloc(32, 3).toString("base64"),
     TRADING_WORKER_CONCURRENCY: "2",
   });
 
@@ -122,6 +123,7 @@ test.each([
     ALPACA_API_SECRET_KEY: "paper-secret",
     ALPACA_PAPER_TRADING_ENABLED: "true",
     ALPACA_TRADING_BASE_URL: baseUrl,
+    ALPACA_ORDER_PREVIEW_SIGNING_KEY: Buffer.alloc(32, 3).toString("base64"),
   })).toThrow("Alpaca Paper");
 });
 
@@ -131,4 +133,15 @@ test("requires credentials when Alpaca Paper trading is enabled", () => {
     SEC_USER_AGENT: "stock_m test@example.com",
     ALPACA_PAPER_TRADING_ENABLED: "true",
   })).toThrow("credentials");
+});
+
+test("requires a separate 32-byte preview signing key when Paper trading is enabled", () => {
+  expect(() => loadServerConfig({
+    ...serviceEnvironment,
+    SEC_USER_AGENT: "stock_m test@example.com",
+    ALPACA_API_KEY_ID: "paper-id",
+    ALPACA_API_SECRET_KEY: "paper-secret",
+    ALPACA_PAPER_TRADING_ENABLED: "true",
+    ALPACA_ORDER_PREVIEW_SIGNING_KEY: Buffer.alloc(16).toString("base64"),
+  })).toThrow("preview signing key");
 });

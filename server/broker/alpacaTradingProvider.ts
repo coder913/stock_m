@@ -5,6 +5,7 @@ import type {
   BrokerActivity,
   BrokerAsset,
   BrokerOrder,
+  BrokerPosition,
   PaperOrderRequest,
 } from "../../shared/broker";
 
@@ -61,6 +62,13 @@ const orderSchema = z.object({
   submitted_at: z.string(),
   updated_at: z.string(),
   filled_avg_price: z.string().nullable().optional(),
+});
+
+const positionSchema = z.object({
+  symbol: z.string(),
+  qty: z.string(),
+  market_value: z.string(),
+  avg_entry_price: z.string(),
 });
 
 const activitySchema = z.object({
@@ -149,6 +157,18 @@ export class AlpacaTradingProvider implements AlpacaTradingPort {
       status: value.status,
       tradable: value.tradable,
       fractionable: value.fractionable,
+    };
+  }
+
+  async getPosition(symbol: string): Promise<BrokerPosition | undefined> {
+    const response = await this.request(`/v2/positions/${encodeURIComponent(symbol.toUpperCase())}`, { method: "GET" }, false, true);
+    if (response.status === 404) return undefined;
+    const value = this.parse(positionSchema, await response.json());
+    return {
+      symbol: value.symbol,
+      quantity: value.qty,
+      marketValue: value.market_value,
+      averageEntryPrice: value.avg_entry_price,
     };
   }
 

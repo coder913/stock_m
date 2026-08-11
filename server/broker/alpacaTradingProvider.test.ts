@@ -77,6 +77,27 @@ test("normalizes Paper account and asset decimal fields without numeric coercion
   });
 });
 
+test("normalizes a Paper position and treats an explicit 404 as no position", async () => {
+  const responses = [
+    json({ symbol: "NVDA", qty: "2.50000000", market_value: "418.30000000", avg_entry_price: "150.00000000" }),
+    json({ code: 40410000, message: "position does not exist" }, 404),
+  ];
+  const provider = new AlpacaTradingProvider({
+    baseUrl: "https://paper-api.alpaca.markets",
+    keyId: "paper-id",
+    secretKey: "paper-secret",
+    fetcher: async () => responses.shift()!,
+  });
+
+  await expect(provider.getPosition("nvda")).resolves.toEqual({
+    symbol: "NVDA",
+    quantity: "2.50000000",
+    marketValue: "418.30000000",
+    averageEntryPrice: "150.00000000",
+  });
+  await expect(provider.getPosition("MSFT")).resolves.toBeUndefined();
+});
+
 test("maps submit payload exactly and normalizes the returned order", async () => {
   let submittedBody: unknown;
   const provider = new AlpacaTradingProvider({

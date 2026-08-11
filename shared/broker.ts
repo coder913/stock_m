@@ -20,6 +20,26 @@ export interface PaperOrderRequest {
   limitPrice?: string;
 }
 
+export type PaperOrderDraft = Omit<PaperOrderRequest, "clientOrderId">;
+
+export interface OrderPreviewClaims {
+  previewId: string;
+  expiresAt: string;
+  normalizedOrder: PaperOrderDraft;
+}
+
+export interface OrderPreview extends OrderPreviewClaims {
+  estimatedNotional: string;
+  quote: { price: string; source: string; asOf: string };
+  buyingPower: string;
+  positionBefore: string;
+  estimatedPositionAfter: string;
+  concentrationBefore?: number;
+  estimatedConcentrationAfter?: number;
+  warnings: string[];
+  token: string;
+}
+
 export interface BrokerAccountSnapshot {
   accountId: string;
   status: string;
@@ -42,6 +62,13 @@ export interface BrokerAsset {
   status: string;
   tradable: boolean;
   fractionable: boolean;
+}
+
+export interface BrokerPosition {
+  symbol: string;
+  quantity: string;
+  marketValue: string;
+  averageEntryPrice: string;
 }
 
 export interface BrokerOrder {
@@ -76,6 +103,7 @@ export interface BrokerActivity {
 export interface AlpacaTradingPort {
   getAccount(): Promise<BrokerAccountSnapshot>;
   getAsset(symbol: string): Promise<BrokerAsset>;
+  getPosition(symbol: string): Promise<BrokerPosition | undefined>;
   submitOrder(input: PaperOrderRequest): Promise<BrokerOrder>;
   cancelOrder(remoteOrderId: string): Promise<void>;
   getOrderByClientOrderId(clientOrderId: string): Promise<BrokerOrder | undefined>;

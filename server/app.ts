@@ -22,9 +22,10 @@ import { registerBrowserMigrationRoutes, type BrowserMigrationRouteDependencies 
 import type { HealthService } from "./platform/healthService";
 import { registerInternalSnapshotRoutes, type InternalSnapshotRouteDependencies } from "./routes/internalSnapshotRoutes";
 import { registerNotificationRoutes, type NotificationRouteDependencies } from "./routes/notificationRoutes";
+import { registerPaperTradingRoutes, type PaperTradingRouteDependencies } from "./routes/paperTradingRoutes";
 
 export interface AppDependencies {
-  config: Pick<ServerConfig, "host" | "port" | "providers"> & { publicStatus: { providers: Record<string, { configured: boolean }>; notifications?: ServerConfig["notifications"] } };
+  config: Pick<ServerConfig, "host" | "port" | "providers"> & { publicStatus: { providers: Record<string, { configured: boolean }>; notifications?: ServerConfig["notifications"]; paperTrading?: { enabled: boolean; configured: boolean } } };
   cache: HealthCache;
   refreshRegistry?: RefreshRegistry;
   market?: { gateway: MarketDataGateway; provider: MarketProvider };
@@ -40,6 +41,7 @@ export interface AppDependencies {
   health?: Pick<HealthService, "liveness" | "readiness">;
   internalSnapshots?: InternalSnapshotRouteDependencies;
   notifications?: NotificationRouteDependencies;
+  paperTrading?: PaperTradingRouteDependencies;
   staticDir?: string;
 }
 
@@ -78,6 +80,7 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   if (dependencies.manualPortfolio) registerManualPortfolioRoutes(app, dependencies.manualPortfolio);
   if (dependencies.browserMigration) registerBrowserMigrationRoutes(app, dependencies.browserMigration);
   if (dependencies.notifications) registerNotificationRoutes(app, dependencies.notifications);
+  if (dependencies.paperTrading) registerPaperTradingRoutes(app, dependencies.paperTrading);
   registerCacheRoutes(app, refreshRegistry);
   if (dependencies.staticDir) {
     void app.register(fastifyStatic, { root: resolve(dependencies.staticDir), wildcard: false });

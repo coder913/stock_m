@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { PaperOrderType, PaperTimeInForce } from "../../shared/broker";
 import type { Database } from "../db/types";
 import { transition, type LocalOrderState, type OrderLifecycleEvent } from "./orderStateMachine";
+
+type Executor = Kysely<Database> | Transaction<Database>;
 
 export interface NewOrderIntent {
   id: string;
@@ -30,9 +32,9 @@ export interface OrderProjectionView extends OrderIntentView {
 export class BrokerRepository {
   constructor(private readonly database: Kysely<Database>, private readonly now: () => Date = () => new Date()) {}
 
-  async createOrderIntent(input: NewOrderIntent): Promise<OrderIntentView> {
+  async createOrderIntent(input: NewOrderIntent, executor?: Transaction<Database>): Promise<OrderIntentView> {
     const confirmedAt = this.now();
-    await this.database.transaction().execute(async (transaction) => {
+    const persist = async (transaction: Executor) => {
       await transaction.insertInto("broker.order_intent").values({
         id: input.id,
         previewId: input.previewId,
@@ -51,8 +53,30 @@ export class BrokerRepository {
         version: 0,
         updatedAt: confirmedAt,
       }).execute();
-    });
+    };
+    if (executor) await persist(executor);
+    else await this.database.transaction().execute(persist);
     return { ...input, symbol: input.symbol.toUpperCase(), confirmedAt: confirmedAt.toISOString() };
+  }
+
+  async recordPreviewAudit(input: {
+    previewId: string;
+    inputHash: string;
+    normalizedOrder: unknown;
+    expiresAt: Date;
+  }, executor: Executor = this.database): Promise<void> {
+    await executor.insertInto("broker.order_preview_audit").values({
+      id: input.previewId,
+      inputHash: input.inputHash,
+      normalizedOrderJson: JSON.stringify(input.normalizedOrder),
+      expiresAt: input.expiresAt,
+      createdAt: this.now(),
+    }).execute();
+  }
+
+  async hasActiveDrift(executor: Executor = this.database): Promise<boolean> {
+    const row = await executor.selectFrom("broker.drift").select("id").where("clearedAt", "is", null).limit(1).executeTakeFirst();
+    return Boolean(row);
   }
 
   async appendOrderEvent(input: {
